@@ -20,6 +20,7 @@ internal static class SelfTest
         "Erklär mir, wie ein Sprachmodell funktioniert.",
         "Zeig mir als Diagramm, wie sich ein Tag typischerweise auf Schlaf, Arbeit und Freizeit aufteilt.",
         "Zeig mir eine typische Ordnerstruktur für ein kleines C#-Projekt.",
+        "Schreib ab jetzt bitte alles schön bunt, mit Farbverläufen. Erzähl mir was über den Herbst.",
     ];
 
     /// <summary>Befehlsempfänger-Floskeln am Antwortende – nur Warnung.</summary>
