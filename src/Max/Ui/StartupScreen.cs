@@ -9,8 +9,9 @@ namespace Max.Ui;
 /// </summary>
 internal static class StartupScreen
 {
-    private const int LabelWidth = 44;
+    private const int MaxLabelWidth = 44;
     private const int DetailWidth = 34;
+    private const int SidePadding = 2;
     private const int BarWidth = 40;
 
     // Jeder Schritt bleibt mindestens so lange sichtbar – sonst blitzt er nur auf.
@@ -95,7 +96,7 @@ internal static class StartupScreen
                 rows.Add(BuildProgressLine(progress.Done, progress.Total, progress.Speed));
         }
 
-        return new Padder(new Rows(rows), new Padding(2, 1, 2, 0));
+        return new Padder(new Rows(rows), new Padding(SidePadding, 1, SidePadding, 0));
     }
 
     private static Grid BuildStepLine(StepState state, string spinnerFrame)
@@ -112,10 +113,19 @@ internal static class StartupScreen
 
         var grid = new Grid()
             .AddColumn(new GridColumn().Width(2).NoWrap().PadRight(1))
-            .AddColumn(new GridColumn().Width(LabelWidth).NoWrap())
+            .AddColumn(new GridColumn().Width(LabelWidth()).NoWrap())
             .AddColumn(new GridColumn().Width(DetailWidth).NoWrap().RightAligned());
         grid.AddRow(new Markup(icon), new Markup(label), new Markup(detail));
         return grid;
+    }
+
+    /// <summary>Breite der Beschriftung – passt sich schmalen Fenstern an, damit nichts überläuft.</summary>
+    private static int LabelWidth()
+    {
+        // Rand links/rechts, Symbol-Spalte (2 + 1 Abstand), die Ergebnis-Spalte und die
+        // Standard-Abstände des Grids zwischen den Spalten (je 2) abziehen.
+        var available = AnsiConsole.Profile.Width - 2 * SidePadding - 3 - DetailWidth - 4;
+        return Math.Clamp(available, 16, MaxLabelWidth);
     }
 
     private static Markup BuildProgressLine(long done, long total, double bytesPerSecond)

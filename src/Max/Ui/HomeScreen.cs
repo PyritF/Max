@@ -1,4 +1,3 @@
-using System.Globalization;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -6,7 +5,7 @@ namespace Max.Ui;
 
 /// <summary>
 /// Der Startbildschirm nach dem Hochfahren: roter Kasten mit Begrüßung, Logo, Systeminfo,
-/// Tipps und "Zuletzt" – darunter Eingabezeile und Statuszeile.
+/// Tipps und "Zuletzt".
 /// Baut sich animiert auf: Logo zeilenweise, Begrüßung als Schreibmaschine, dann der Rest.
 /// </summary>
 internal static class HomeScreen
@@ -89,7 +88,6 @@ internal static class HomeScreen
         }
 
         AnsiConsole.WriteLine();
-        WriteInputArea(system);
     }
 
     /// <summary>
@@ -172,28 +170,6 @@ internal static class HomeScreen
             .BorderColor(Theme.Accent)
             .Padding(1, 0) // die Tabelle bringt oben und unten schon je eine Leerzeile mit
             .Expand();
-    }
-
-    /// <summary>Eingabebereich zwischen zwei Linien und Statuszeile darunter.</summary>
-    private static void WriteInputArea(SystemSnapshot system)
-    {
-        var line = new Rule().RuleStyle(new Style(Theme.Border));
-
-        AnsiConsole.Write(line);
-        // TODO (Schritt 3/16): hier kommt die echte Eingabezeile hin.
-        AnsiConsole.MarkupLine($" [{Theme.Tag(Theme.Accent)}]›[/] [{Theme.Tag(Theme.Placeholder)}]Schreib etwas …[/]");
-        AnsiConsole.Write(line);
-
-        var muted = Theme.Tag(Theme.Muted);
-        var status = new Grid()
-            .AddColumn(new GridColumn().NoWrap())
-            .AddColumn(new GridColumn().NoWrap().RightAligned());
-        status.Expand = true;
-        status.AddRow(
-            new Markup($" [{Theme.Tag(Theme.Success)}]●[/] [{muted}]bereit[/]"),
-            new Markup($"[{muted}]/help · Strg+C abbrechen · {system.Now.ToString("HH:mm", CultureInfo.InvariantCulture)}[/] "));
-        AnsiConsole.Write(status);
-        AnsiConsole.WriteLine();
     }
 
     /// <summary>Hebt Befehle in eckigen Klammern hervor: "[/help] zeigt …" → "/help" in Akzentfarbe.</summary>

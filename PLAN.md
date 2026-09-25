@@ -340,7 +340,7 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 |---|---|
 | 1 | Solution und Projekt anlegen (`.slnx`, `Max.csproj`, Testprojekt), NuGet-Pakete, `.gitignore` ✅ |
 | 2 | Startsequenz und Startbildschirm mit Spectre.Console ✅ |
-| 3 | Einfacher Chat-Loop **ohne** KI (Echo-Bot) mit Befehlen `/help`, `/exit` |
+| 3 | Chat-Schleife **ohne** KI (Platzhalter-Antworten) mit Befehlen `/help`, `/clear`, `/exit` und Strg+C ✅ |
 | 4 | `MaxPaths` – Datenordner je Betriebssystem |
 | 5 | Hardware-Erkennung (`HardwareInfo`) |
 | 6 | `TierSelector` + Unit-Tests |
