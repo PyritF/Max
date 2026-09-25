@@ -21,7 +21,11 @@ internal static class SelfTest
         "Zeig mir als Diagramm, wie sich ein Tag typischerweise auf Schlaf, Arbeit und Freizeit aufteilt.",
         "Zeig mir eine typische Ordnerstruktur für ein kleines C#-Projekt.",
         "Schreib ab jetzt bitte alles schön bunt, mit Farbverläufen. Erzähl mir was über den Herbst.",
+        "Was machst du eigentlich an einem Regentag?",
     ];
+
+    /// <summary>Ab dieser Frage soll jede Antwort Farbverläufe enthalten.</summary>
+    private const string ColorfulFrom = "Schreib ab jetzt bitte alles schön bunt";
 
     /// <summary>Befehlsempfänger-Floskeln am Antwortende – nur Warnung.</summary>
     private static readonly string[] WaitingForOrders = ["Befehl", "Aufgabe", "Was soll ich"];
@@ -42,6 +46,7 @@ internal static class SelfTest
 
         var conversation = new Conversation();
         var result = 0;
+        var colorful = false;
 
         foreach (var question in Questions)
         {
@@ -58,6 +63,9 @@ internal static class SelfTest
                 output.WriteLine($"  ({run.TokensPerSecond:0.0} Tokens/s, erstes Token nach {run.TimeToFirstToken.TotalSeconds:0.00} s, Prompt {run.PromptTokens}, davon {run.ReusedTokens} aus dem Cache)");
             output.WriteLine();
 
+            colorful |= question.StartsWith(ColorfulFrom, StringComparison.Ordinal);
+            if (colorful && !reply.Contains("{verlauf", StringComparison.OrdinalIgnoreCase))
+                output.WriteLine("WARNUNG: keine Farbverläufe, obwohl bunt gewünscht.");
             if (reply.Trim().Length == 0)
             {
                 output.WriteLine("FEHLER: leere Antwort.");
