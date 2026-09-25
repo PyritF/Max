@@ -58,18 +58,23 @@ internal sealed class CodeHighlighter
 
         try
         {
-            var result = _grammar.TokenizeLine(line, _state, TimeSpan.FromMilliseconds(50));
+            var result = _grammar.TokenizeLine(line, _state, TimeSpan.FromSeconds(1));
             _state = result.RuleStack;
             var parts = new List<(string, Style)>();
+            var covered = 0;
             foreach (var token in result.Tokens)
             {
-                var start = Math.Min(token.StartIndex, line.Length);
+                var start = Math.Max(covered, Math.Min(token.StartIndex, line.Length));
                 var end = Math.Min(token.EndIndex, line.Length);
                 if (end <= start)
                     continue;
                 parts.Add((line[start..end], StyleFor(engine.Theme, token.Scopes)));
+                covered = end;
             }
-            return parts.Count > 0 ? parts : [(line, _plain)];
+            // Bricht die Zerlegung vorzeitig ab (Zeitlimit), darf trotzdem kein Text verloren gehen.
+            if (covered < line.Length)
+                parts.Add((line[covered..], _plain));
+            return parts;
         }
         catch
         {

@@ -18,7 +18,7 @@ internal sealed class DemoCommand : ICommand
 
     internal const string Showcase = """
         ## Markdown
-        Text mit **fett**, *kursiv*, `code`, {cyan}Farbe{/cyan}, {verlauf}einem Farbverlauf{/verlauf} und Emoji :rocket:.
+        Text mit **fett**, *kursiv*, `code`, {cyan}Farbe{/cyan}, {verlauf}einem Farbverlauf{/verlauf} ({verlauf:grün-blau}auch in eigenen Farben{/verlauf}) und Emoji :rocket:.
 
         - Listen mit Einzug
           - auch verschachtelt
@@ -50,6 +50,7 @@ internal sealed class DemoCommand : ICommand
 
         ```kurve
         Titel: Temperatur
+        Verlauf: grün-blau
         Mo: 12
         Di: 15
         Mi: 11

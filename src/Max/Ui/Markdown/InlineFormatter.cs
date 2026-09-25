@@ -112,7 +112,7 @@ internal sealed class InlineFormatter(Action<string, Style> output)
                     if (!TryApplyTag(tag))
                         EmitLiteral("{" + tag + "}");
                 }
-                else if (!(char.IsLetter(c) || c is '/' or ':' or '-') || _pending.Length > MaxTagLength)
+                else if (!(char.IsLetter(c) || c is '/' or ':' or '-' or ' ' or '=') || _pending.Length > MaxTagLength)
                 {
                     // Doch kein Tag (z. B. "{ x }" in Code-Text) – als Text durchlassen.
                     var literal = _pending.ToString();
@@ -198,10 +198,10 @@ internal sealed class InlineFormatter(Action<string, Style> output)
             FlushGradient();
             return true;
         }
+        // {verlauf}, {verlauf:grün-blau}, {verlauf grün-blau}, {verlauf=grün-blau}
         if (tag.StartsWith("verlauf", StringComparison.OrdinalIgnoreCase) && _gradient is null)
         {
-            var spec = tag.Length > 8 && tag[7] == ':' ? tag[8..] : null;
-            _gradient = Widgets.ChartColors.Gradient(spec);
+            _gradient = Widgets.ChartColors.Gradient(tag.Length > 8 ? tag[8..] : null);
             return true;
         }
 

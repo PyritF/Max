@@ -19,6 +19,15 @@ internal static class ColorTags
         ["cyan"] = new Color(80, 200, 210),
         ["magenta"] = new Color(210, 110, 210),
         ["grau"] = Theme.Muted,
+        ["orange"] = new Color(255, 150, 40),
+        ["pink"] = new Color(255, 105, 180),
+        ["rosa"] = new Color(255, 160, 200),
+        ["lila"] = new Color(170, 110, 230),
+        ["violett"] = new Color(170, 110, 230),
+        ["türkis"] = new Color(64, 224, 208),
+        ["weiß"] = new Color(240, 240, 240),
+        ["weiss"] = new Color(240, 240, 240),
+        ["gold"] = new Color(230, 190, 60),
         ["akzent"] = Theme.Accent,
     };
 

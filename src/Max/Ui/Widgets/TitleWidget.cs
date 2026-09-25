@@ -25,7 +25,8 @@ internal sealed class TitleWidget : IWidget
 
     public IRenderable? Render(WidgetBody body, int width)
     {
-        var text = body.Setting("Text") ?? body.Lines.FirstOrDefault(l => !l.Contains(':'))?.Trim();
+        // Modelle schreiben gern "Titel:" statt "Text:" – beides zählt.
+        var text = body.Setting("Text") ?? body.Setting("Titel") ?? body.Lines.FirstOrDefault(l => !l.Contains(':'))?.Trim();
         if (string.IsNullOrWhiteSpace(text))
             return null;
 

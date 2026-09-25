@@ -62,12 +62,25 @@ internal sealed class WidgetBody(string text)
     public string? Setting(string key) =>
         Pairs(includeSettings: true).FirstOrDefault(p => p.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value;
 
-    /// <summary>Alle "Schlüssel: Wert"-Zeilen (Aufzählungszeichen davor werden ignoriert).</summary>
+    /// <summary>
+    /// Alle "Schlüssel: Wert"-Zeilen (Aufzählungszeichen davor werden ignoriert).
+    /// Auch Tabellen-Zeilen wie "Zeitpunkt: 0 | Wert: 1" oder "| Mo | 12 |" werden verstanden:
+    /// erste Spalte = Name, letzte Spalte = Wert.
+    /// </summary>
     public IEnumerable<(string Key, string Value)> Pairs(bool includeSettings = false)
     {
         foreach (var raw in Lines)
         {
             var line = raw.Trim().TrimStart('-', '*', '•').Trim();
+            if (line.Contains('|'))
+            {
+                var cells = line.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (cells.Length >= 2 && !cells.All(c => c.All(ch => ch is '-' or ':')))
+                {
+                    yield return (CellValue(cells[0]), CellValue(cells[^1]));
+                    continue;
+                }
+            }
             var colon = line.LastIndexOf(':');
             if (colon <= 0)
                 continue;
@@ -77,6 +90,13 @@ internal sealed class WidgetBody(string text)
                 continue;
             yield return (key, value);
         }
+    }
+
+    /// <summary>"Zeitpunkt: 0" → "0" (der Teil nach dem Doppelpunkt), sonst die Zelle selbst.</summary>
+    private static string CellValue(string cell)
+    {
+        var colon = cell.IndexOf(':');
+        return colon >= 0 && colon < cell.Length - 1 ? cell[(colon + 1)..].Trim() : cell.Trim();
     }
 
     /// <summary>Datenpunkte "Name: Zahl" – Zeilen ohne Zahl werden übersprungen.</summary>
@@ -111,12 +131,15 @@ internal static class ChartColors
 
     public static Color At(int index) => Palette[index % Palette.Length];
 
-    /// <summary>"rot-gelb" → zwei Farben; unbekannt → Max-Verlauf.</summary>
-    public static (Color From, Color To) Gradient(string? spec)
+    /// <summary>"rot-gelb", "grün zu blau", "von Rot nach Pink" → zwei Farben; unbekannt → Max-Verlauf.</summary>
+    public static (Color From, Color To) Gradient(string? spec) => TryGradient(spec) ?? (Theme.GradientStart, Theme.GradientEnd);
+
+    public static (Color From, Color To)? TryGradient(string? spec)
     {
-        var parts = (spec ?? "").Split(['-', ' ', '→'], StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length >= 2 && ColorTags.TryGet(parts[0], out var from) && ColorTags.TryGet(parts[1], out var to))
-            return (from, to);
-        return (Theme.GradientStart, Theme.GradientEnd);
+        var colors = (spec ?? "").Split(['-', ' ', '→', '>', ',', '/'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(word => ColorTags.TryGet(word.Trim().TrimEnd('.'), out var c) ? c : (Color?)null)
+            .OfType<Color>()
+            .ToList();
+        return colors.Count >= 2 ? (colors[0], colors[1]) : null;
     }
 }

@@ -161,3 +161,45 @@ public class InlineExtrasTests
     public void EmojiShortcodes(string input, string expected) =>
         Assert.Equal(expected, string.Concat(Run(input).Select(p => p.Text)));
 }
+
+public class ToleranceTests
+{
+    [Fact]
+    public void TableLikeLines_AreUnderstood()
+    {
+        var data = new WidgetBody("Zeitpunkt: 0 | Wert: 1\nZeitpunkt: 1 | Wert: 2,7\n| 2 | 7,4 |").Numbers();
+        Assert.Equal([("0", 1.0), ("1", 2.7), ("2", 7.4)], data);
+    }
+
+    [Theory]
+    [InlineData("grün-blau")]
+    [InlineData("grün zu blau")]
+    [InlineData("von Grün nach Blau")]
+    [InlineData("grün → blau")]
+    public void GradientSpecs(string spec)
+    {
+        ColorTags.TryGet("grün", out var green);
+        ColorTags.TryGet("blau", out var blue);
+        Assert.Equal((green, blue), ChartColors.TryGradient(spec));
+    }
+
+    [Fact]
+    public void TitleWidget_AcceptsTitelInsteadOfText() =>
+        Assert.NotNull(WidgetRegistry.TryRender("titel", "Titel: Hallo\nSchrift: big\nVerlauf: rot-pink", 80));
+
+    [Theory]
+    [InlineData("{verlauf:grün-blau}ab{/verlauf}")]
+    [InlineData("{verlauf grün-blau}ab{/verlauf}")]
+    [InlineData("{verlauf=grün-blau}ab{/verlauf}")]
+    public void GradientTag_Variants(string text)
+    {
+        ColorTags.TryGet("grün", out var green);
+        var parts = new List<(string, Style)>();
+        var formatter = new InlineFormatter((t, s) => parts.Add((t, s)));
+        formatter.StartLine(Style.Plain);
+        formatter.Push(text);
+        formatter.EndLine();
+        Assert.Equal("ab", string.Concat(parts.Select(p => p.Item1)));
+        Assert.Equal(green, parts[0].Item2.Foreground);
+    }
+}

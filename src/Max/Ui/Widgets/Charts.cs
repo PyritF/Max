@@ -17,8 +17,12 @@ internal sealed class BarWidget : IWidget
         var chart = new BarChart().Width(Math.Min(width, 80));
         if (body.Setting("Titel") is { Length: > 0 } title)
             chart.Label($"[bold {Theme.Tag(Theme.Text)}]{Markup.Escape(title)}[/]").LeftAlignLabel();
+        var gradient = ChartColors.TryGradient(body.Setting("Verlauf") ?? body.Setting("Farbe"));
         for (var i = 0; i < data.Count; i++)
-            chart.AddItem(Markup.Escape(data[i].Label), Math.Round(data[i].Value, 2), ChartColors.At(i));
+        {
+            var color = gradient is { } g ? Theme.Blend(g.From, g.To, data.Count == 1 ? 0 : (float)i / (data.Count - 1)) : ChartColors.At(i);
+            chart.AddItem(Markup.Escape(data[i].Label), Math.Round(data[i].Value, 2), color);
+        }
         return chart;
     }
 }
