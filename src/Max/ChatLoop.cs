@@ -15,7 +15,7 @@ internal sealed class ChatLoop
     private readonly IChatBackend _backend;
     private readonly Func<DateTime> _clock;
     private readonly Conversation _conversation = new();
-    private readonly CommandRegistry _commands = CommandRegistry.CreateDefault();
+    private readonly CommandRegistry _commands;
     private readonly CtrlCPolicy _ctrlC = new();
     private readonly ChatView _view;
     private readonly InputBox _input;
@@ -23,8 +23,9 @@ internal sealed class ChatLoop
     // Gesetzt, solange Max antwortet – Strg+C bricht dann nur die Antwort ab.
     private CancellationTokenSource? _reply;
 
-    public ChatLoop(IAnsiConsole console, IChatBackend backend, Func<DateTime> clock)
+    public ChatLoop(IAnsiConsole console, IChatBackend backend, Func<DateTime> clock, CommandRegistry? commands = null)
     {
+        _commands = commands ?? CommandRegistry.CreateDefault();
         var interactive = !Console.IsInputRedirected && !Console.IsOutputRedirected;
         _console = console;
         _backend = backend;

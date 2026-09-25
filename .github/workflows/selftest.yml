@@ -1,0 +1,42 @@
+# Echter Probelauf: lädt das Modell von Hugging Face, startet Max und stellt ein paar feste Fragen.
+# Nur von Hand starten (Actions → Selbsttest → Run workflow).
+name: Selbsttest
+
+on:
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: Stufe (S, M, L, XL)
+        default: S
+        required: true
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      MAX_HOME: ${{ github.workspace }}/.maxhome
+      MAX_TIER: ${{ inputs.tier }}
+      DOTNET_NOLOGO: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Tests
+        run: dotnet test
+
+      # Das Modell nicht bei jedem Lauf neu laden – der Schlüssel ändert sich mit dem Manifest.
+      - uses: actions/cache@v4
+        with:
+          path: .maxhome
+          key: model-${{ inputs.tier }}-${{ hashFiles('manifest.json') }}
+
+      - name: Selbsttest
+        run: dotnet run --project src/Max -c Release -- --selftest < /dev/null
+
+      - name: Protokoll von llama.cpp
+        if: always()
+        run: tail -n 60 .maxhome/logs/llama.log || true

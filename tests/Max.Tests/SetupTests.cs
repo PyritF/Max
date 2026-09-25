@@ -412,7 +412,7 @@ public sealed class InstallStateTests : IDisposable
         paths.EnsureExists();
         File.WriteAllBytes(paths.ModelPart, new byte[42]);
 
-        InstallState.Commit(paths, Tier.M, 3, new DownloadResult(new string('b', 64), 42), new DateTime(2026, 9, 25, 21, 0, 0));
+        InstallState.Commit(paths, Tier.M, new TierEntry(3, "https://x", null, 42, 16384), new DownloadResult(new string('b', 64), 42), new DateTime(2026, 9, 25, 21, 0, 0));
 
         Assert.True(InstallState.IsInstalled(paths));
         Assert.False(File.Exists(paths.ModelPart));
@@ -420,6 +420,16 @@ public sealed class InstallStateTests : IDisposable
         Assert.Equal("M", state.Tier);
         Assert.Equal(3, state.Revision);
         Assert.Equal(42, state.SizeBytes);
+        Assert.Equal(16384, state.ContextSize);
+    }
+
+    [Fact]
+    public void OldStateWithoutContextSize_UsesDefault()
+    {
+        var paths = new MaxPaths(_dir);
+        paths.EnsureExists();
+        File.WriteAllText(paths.State, """{ "tier": "S", "revision": 1, "sha256": "x", "sizeBytes": 1, "installedAt": "2026-09-25T21:00:00" }""");
+        Assert.Equal(InstallState.DefaultContextSize, InstallState.Load(paths)!.ContextSize);
     }
 
     [Fact]
@@ -428,7 +438,7 @@ public sealed class InstallStateTests : IDisposable
         var paths = new MaxPaths(_dir);
         paths.EnsureExists();
         File.WriteAllBytes(paths.ModelPart, new byte[42]);
-        InstallState.Commit(paths, Tier.S, 1, new DownloadResult(new string('b', 64), 42), DateTime.Now);
+        InstallState.Commit(paths, Tier.S, new TierEntry(1, "https://x", null, 42, 8192), new DownloadResult(new string('b', 64), 42), DateTime.Now);
 
         File.WriteAllBytes(paths.Model, new byte[10]);
         Assert.False(InstallState.IsInstalled(paths));

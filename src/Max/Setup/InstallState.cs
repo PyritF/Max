@@ -3,8 +3,11 @@ using System.Text.Json;
 namespace Max.Setup;
 
 /// <summary>Was installiert ist – steht in <c>state.json</c> im Datenordner.</summary>
-internal sealed record InstallState(string Tier, int Revision, string Sha256, long SizeBytes, DateTime InstalledAt)
+/// <param name="ContextSize">Aus dem Manifest; ältere state.json haben den Wert noch nicht.</param>
+internal sealed record InstallState(string Tier, int Revision, string Sha256, long SizeBytes, DateTime InstalledAt, int ContextSize = InstallState.DefaultContextSize)
 {
+    public const int DefaultContextSize = 8192;
+
     public static InstallState? Load(MaxPaths paths)
     {
         try
@@ -33,11 +36,11 @@ internal sealed record InstallState(string Tier, int Revision, string Sha256, lo
     }
 
     /// <summary>Macht aus dem fertig geprüften Download das Modell und merkt sich, was installiert ist.</summary>
-    public static InstallState Commit(MaxPaths paths, Tier tier, int revision, DownloadResult download, DateTime now)
+    public static InstallState Commit(MaxPaths paths, Tier tier, TierEntry entry, DownloadResult download, DateTime now)
     {
         File.Move(paths.ModelPart, paths.Model, overwrite: true);
 
-        var state = new InstallState(tier.ToString(), revision, download.Sha256, download.SizeBytes, now);
+        var state = new InstallState(tier.ToString(), entry.Revision, download.Sha256, download.SizeBytes, now, entry.ContextSize);
         // Erst in eine Hilfsdatei schreiben, dann umbenennen: So ist state.json nie halb geschrieben.
         var temp = paths.State + ".tmp";
         File.WriteAllText(temp, JsonSerializer.Serialize(state, SetupJson.Default.InstallState));

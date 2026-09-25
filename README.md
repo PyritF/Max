@@ -27,4 +27,9 @@ Beim ersten Start richtet Max sich ein und lädt dabei das passende Modell herun
 $env:MAX_HOME = "$env:TEMP\max-test"; $env:MAX_TIER = "S"; dotnet run --project src/Max
 ```
 
+### Selbsttest
+
+`max --selftest` stellt nach dem Start ein paar feste Fragen und gibt Antworten und Tokens pro Sekunde aus.
+Auf GitHub läuft das als Workflow **Selbsttest** (Actions → Selbsttest → Run workflow) – mit echtem Download von Hugging Face.
+
 In Visual Studio: `Max.slnx` öffnen, `Max` als Startprojekt, F5.

@@ -10,7 +10,7 @@
 | Thema | Entscheidung |
 |---|---|
 | Sprache / Plattform | **C# mit .NET 10** |
-| LLM-Engine | **LLamaSharp** (C#-Bindings für llama.cpp) mit Backends für CPU, CUDA und Vulkan |
+| LLM-Engine | **LLamaSharp 0.27** (C#-Bindings für llama.cpp) mit den Backends **CPU und Vulkan**. Vulkan läuft auf NVIDIA, AMD und Intel mit dem normalen Treiber; CUDA (über 200 MB) bleibt vorerst draußen |
 | Oberfläche | **Spectre.Console** im Stil von Claude Code: scrollender Chat, Eingabe unten, Farben, Markdown |
 | Modellformat | **GGUF** (quantisiert, meist Q4_K_M) |
 | Modellquelle | **Hugging Face**: direkte Download-Links, kein eigenes Hosting nötig |
@@ -54,8 +54,12 @@ Max/
 │       │   ├── Updater.cs            (Hintergrund-Download von App und Modell)
 │       │   └── UpdateApplier.cs      (bereitgelegtes Update beim Start aktivieren)
 │       ├── Llm/
-│       │   ├── LlmEngine.cs          (Modell laden, Backend wählen, Tokens streamen)
-│       │   └── ChatTemplate.cs       (Verlauf → Prompt im Format des Modells)
+│       │   ├── LlmEngine.cs          (Modell laden, Backend wählen, Tokens streamen, Cache wiederverwenden)
+│       │   ├── LlmBackend.cs         (System-Prompt + Verlauf → Prompt → Antwort)
+│       │   ├── ChatTemplate.cs       (Verlauf → Prompt im Format des Modells, ChatML)
+│       │   ├── ContextWindow.cs      (Verlauf auf die Kontextlänge kürzen)
+│       │   ├── ThinkFilter.cs        (<think>-Blöcke ausblenden)
+│       │   └── GgufInfo.cs           (Schichtzahl aus dem Dateikopf)
 │       ├── Chat/
 │       │   ├── ChatMessage.cs        (Rollen: system, user, assistant, tool)
 │       │   ├── Conversation.cs       (Verlauf, Kontextlänge, Kürzen)
@@ -360,12 +364,12 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 | 7 | `Manifest` – JSON laden, Fallback aus Embedded Resource ✅ |
 | 8 | `ModelDownloader` mit Fortschrittsbalken, Fortsetzen, SHA-256 ✅ |
 | 9 | Modellauswahl festlegen: aktuelle GGUF-Modelle pro Stufe prüfen, Manifest befüllen ✅ |
-| 10 | `LlmEngine` – Modell laden, Backend wählen, Antwort streamen |
-| 11 | `Conversation` + `ChatSession` – Verlauf, Rollen, Kontext kürzen |
-| 12 | System-Prompt einbinden und Persona testen |
-| 13 | `ChatView` – Streaming-Ausgabe, Denk-Spinner, Strg+C bricht ab |
+| 10 | `LlmEngine` – Modell laden, Backend wählen, Antwort streamen ✅ |
+| 11 | `Conversation` + `ChatSession` – Verlauf, Rollen, Kontext kürzen ✅ |
+| 12 | System-Prompt einbinden und Persona testen ✅ |
+| 13 | `ChatView` – Streaming-Ausgabe, Denk-Spinner, Strg+C bricht ab ✅ |
 | 14 | `MarkdownRenderer` mit Markdig |
-| 15 | `/debug`, `/clear`, Tokens pro Sekunde messen |
+| 15 | `/debug`, `/clear`, Tokens pro Sekunde messen ✅ (Denk-Text-Schalter für `/debug` fehlt noch) |
 | 16 | Bessere Eingabezeile (Verlauf, Mehrzeilen, Autovervollständigung) |
 | 17 | Publish: Single-File-Exe für `win-x64`, danach `linux-x64` |
 | 18 | GitHub Action: Build bei Tag, Release + Manifest |
@@ -466,8 +470,7 @@ public interface ITool
 
 ## 10. Offene Punkte
 
-- [ ] Modellliste aktualisieren: Welche GGUF-Modelle sind zum Start der Umsetzung die besten pro Stufe?
-- [ ] Wie groß wird die Exe mit CUDA-Backend (kann mehrere 100 MB sein)? Eventuell auch das GPU-Backend beim ersten Start nachladen.
+- [ ] Ist Vulkan auf NVIDIA spürbar langsamer als CUDA? Falls ja: CUDA-Backend beim ersten Start nachladen statt in die Exe packen.
 - [ ] Repo auf öffentlich stellen und Zwei-Faktor-Anmeldung auf GitHub prüfen.
 - [ ] Soll ein Pflicht-Update auch einen „Wartungsmodus“ bekommen (Max per Manifest komplett sperren)?
 - [ ] Akzentfarbe und Banner-Design festlegen.

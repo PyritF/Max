@@ -19,6 +19,9 @@ internal sealed class MaxPaths(string root)
 
     public string UpdateDir => Path.Combine(Root, "update");
 
+    /// <summary>Protokoll von llama.cpp – im Terminal hätte es nichts verloren.</summary>
+    public string EngineLog => Path.Combine(Root, "logs", "llama.log");
+
     public void EnsureExists() => Directory.CreateDirectory(Root);
 
     public static MaxPaths Default() => new(ResolveRoot(

@@ -17,11 +17,13 @@ internal sealed class CommandRegistry
         }
     }
 
-    public static CommandRegistry CreateDefault() => new(
+    /// <param name="extra">Zusätzliche Befehle, z. B. /debug, das Zugriff auf das geladene Modell braucht.</param>
+    public static CommandRegistry CreateDefault(params ICommand[] extra) => new(
     [
         new HelpCommand(),
         new ClearCommand(),
         new ExitCommand(),
+        .. extra,
     ]);
 
     /// <summary>Alle Befehle für /help – ohne die versteckten.</summary>
