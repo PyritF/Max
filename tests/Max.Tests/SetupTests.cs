@@ -448,6 +448,66 @@ public sealed class InstallStateTests : IDisposable
     }
 }
 
+public sealed class ModelShelfTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "max-tests-" + Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+            Directory.Delete(_dir, recursive: true);
+    }
+
+    private static void Install(MaxPaths paths, Tier tier, int size)
+    {
+        File.WriteAllBytes(paths.ModelPart, new byte[size]);
+        InstallState.Commit(paths, tier, new TierEntry(1, "https://x", null, size, 8192), new DownloadResult(new string('b', 64), size), DateTime.Now);
+    }
+
+    [Fact]
+    public void Gleiche_Stufe_bleibt_liegen()
+    {
+        var paths = new MaxPaths(_dir);
+        paths.EnsureExists();
+        Install(paths, Tier.L, 50);
+
+        Assert.False(ModelShelf.Prepare(paths, Tier.L));
+        Assert.True(InstallState.IsInstalled(paths));
+    }
+
+    [Fact]
+    public void Neue_Stufe_legt_das_alte_Modell_beiseite_und_verlangt_die_Einrichtung()
+    {
+        var paths = new MaxPaths(_dir);
+        paths.EnsureExists();
+        Install(paths, Tier.L, 50);
+        File.WriteAllBytes(paths.ModelPart, new byte[3]);
+
+        Assert.True(ModelShelf.Prepare(paths, Tier.S));
+
+        Assert.False(InstallState.IsInstalled(paths));
+        Assert.False(File.Exists(paths.ModelPart));
+        Assert.Equal(50, new FileInfo(ModelShelf.ModelFile(paths, "L")).Length);
+        Assert.Equal(["L"], ModelShelf.Shelved(paths));
+    }
+
+    [Fact]
+    public void Zurueckwechseln_holt_das_beiseitegelegte_Modell()
+    {
+        var paths = new MaxPaths(_dir);
+        paths.EnsureExists();
+        Install(paths, Tier.L, 50);
+        ModelShelf.Prepare(paths, Tier.S);
+        Install(paths, Tier.S, 20);
+
+        ModelShelf.Prepare(paths, Tier.L);
+
+        Assert.True(InstallState.IsInstalled(paths));
+        Assert.Equal("L", InstallState.Load(paths)!.Tier);
+        Assert.Equal(["S"], ModelShelf.Shelved(paths));
+    }
+}
+
 /// <summary>Ersetzt das Netz in Tests: Jede Anfrage beantwortet die übergebene Funktion.</summary>
 internal sealed class FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
 {

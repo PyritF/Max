@@ -49,6 +49,13 @@ internal static class TierSelector
         return TryParse(overrideValue, out var forced) ? forced : Select(hw);
     }
 
+    /// <summary>Die erzwungene Stufe aus <c>MAX_TIER</c>, falls gesetzt.</summary>
+    public static Tier? Forced(string? overrideValue = null)
+    {
+        overrideValue ??= Environment.GetEnvironmentVariable("MAX_TIER");
+        return TryParse(overrideValue, out var forced) ? forced : null;
+    }
+
     public static bool TryParse(string? value, out Tier tier) =>
         Enum.TryParse(value?.Trim(), ignoreCase: true, out tier) && Enum.IsDefined(tier);
 }

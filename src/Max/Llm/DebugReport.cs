@@ -44,6 +44,8 @@ internal static class DebugReport
         rows.Add(("GPU", gpu is null ? "keine erkannt" : $"{gpu.Name} · {Format.Memory(gpu.VramBytes)}"));
         rows.Add(("RAM", Format.Memory(system.Hardware.RamBytes)));
         rows.Add(("Datenordner", paths.Root));
+        if (ModelShelf.Shelved(paths).ToList() is { Count: > 0 } shelved)
+            rows.Add(("Beiseitegelegt", string.Join(", ", shelved) + " (mit --stufe wechseln)"));
         return rows;
     }
 

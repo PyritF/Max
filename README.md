@@ -20,12 +20,22 @@ Beim ersten Start richtet Max sich ein und lädt dabei das passende Modell herun
 | Umgebungsvariable | Wirkung |
 |---|---|
 | `MAX_HOME` | anderer Datenordner, z. B. zum Testen der Einrichtung |
-| `MAX_TIER` | Stufe erzwingen: `S`, `M`, `L` oder `XL` |
+| `MAX_TIER` | Stufe erzwingen: `S`, `M`, `L` oder `XL` (wie `--stufe`) |
 | `MAX_MANIFEST_URL` | Manifest von einer anderen Adresse laden |
 
 ```powershell
 $env:MAX_HOME = "$env:TEMP\max-test"; $env:MAX_TIER = "S"; dotnet run --project src/Max
 ```
+
+### Andere Stufe ausprobieren
+
+```powershell
+dotnet run --project src/Max -- --stufe S
+```
+
+Das bisherige Modell wird nicht gelöscht, sondern nach `models/<Stufe>.bin` im Datenordner beiseitegelegt.
+Fehlt die gewünschte Stufe, lädt Max sie herunter; beim Zurückwechseln (`--stufe L`) ist das alte Modell sofort wieder da.
+Ohne `--stufe` startet Max mit der zuletzt benutzten Stufe. `/debug` zeigt, welche Stufen beiseiteliegen.
 
 ### Selbsttest
 
