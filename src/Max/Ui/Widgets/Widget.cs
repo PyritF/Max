@@ -57,6 +57,13 @@ internal sealed class WidgetBody(string text)
 
     public string Text { get; } = text.ReplaceLineEndings("\n").Trim('\n');
 
+    /// <summary>Eine Zeile wie "Titel: …" oder "Verlauf: rot-pink" – Einstellung, kein Inhalt.</summary>
+    public static bool IsSettingLine(string line)
+    {
+        var colon = line.IndexOf(':');
+        return colon > 0 && SettingKeys.Contains(line[..colon].Trim().TrimStart('-', '*', '•').Trim());
+    }
+
     public IReadOnlyList<string> Lines => Text.Split('\n');
 
     public string? Setting(string key) =>

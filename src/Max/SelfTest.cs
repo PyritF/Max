@@ -27,6 +27,10 @@ internal static class SelfTest
     /// <summary>Ab dieser Frage soll jede Antwort Farbverläufe enthalten.</summary>
     private const string ColorfulFrom = "Schreib ab jetzt bitte alles schön bunt";
 
+    /// <summary>Plauderfragen – hier gehört kein Element (Diagramm, Kasten …) in die Antwort.</summary>
+    private static readonly HashSet<string> SmallTalk =
+        ["Wer bist du?", "Na, alles klar?", "Ich hatte heute einen langen Tag.", "Was machst du eigentlich an einem Regentag?"];
+
     /// <summary>Befehlsempfänger-Floskeln am Antwortende – nur Warnung.</summary>
     private static readonly string[] WaitingForOrders = ["Befehl", "Aufgabe", "Was soll ich"];
 
@@ -64,6 +68,8 @@ internal static class SelfTest
                 output.WriteLine($"  ({run.TokensPerSecond:0.0} Tokens/s, erstes Token nach {run.TimeToFirstToken.TotalSeconds:0.00} s, Prompt {run.PromptTokens}, davon {run.ReusedTokens} aus dem Cache)");
             output.WriteLine();
 
+            if (SmallTalk.Contains(question) && reply.Contains("```", StringComparison.Ordinal))
+                output.WriteLine("WARNUNG: Element bei Smalltalk.");
             if (reply.Contains("```frage", StringComparison.OrdinalIgnoreCase)) withQuestion++;
             if (reply.Contains("```kasten", StringComparison.OrdinalIgnoreCase)) withBox++;
             colorful |= question.StartsWith(ColorfulFrom, StringComparison.Ordinal);

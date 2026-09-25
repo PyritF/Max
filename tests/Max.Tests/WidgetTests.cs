@@ -43,12 +43,20 @@ public class WidgetTests
     [InlineData("balken", "keine Zahlen hier")]
     [InlineData("kurve", "Nur: 1")]
     [InlineData("spalten", "nur eine Spalte")]
-    [InlineData("titel", "Schrift: slant")]
-    public void BrokenWidget_FallsBackToCodeBlock(string name, string body)
+    [InlineData("balken", "Titel: Status\nStatus: OK")]
+    public void BrokenWidget_FallsBackToPlainText(string name, string body)
     {
         var output = Render($"```{name}\n{body}\n```");
-        Assert.Contains("┌ " + name, output);
-        Assert.Contains(body.Split('\n')[0], output);
+        Assert.DoesNotContain(name, output);
+        Assert.DoesNotContain("┌", output);
+        Assert.DoesNotContain("Titel:", output);
+        Assert.Contains(body.Split('\n')[^1], output);
+    }
+
+    [Fact]
+    public void BrokenTitle_ShowsNothing()
+    {
+        Assert.Equal("◆", Render("```titel\nSchrift: slant\n```").Trim());
     }
 
     [Fact]

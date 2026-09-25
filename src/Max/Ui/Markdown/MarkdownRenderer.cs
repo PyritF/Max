@@ -373,11 +373,13 @@ internal sealed partial class MarkdownRenderer
             return;
         }
 
-        // Nicht deutbar: einfach als Code zeigen – lieber roh als gar nicht.
-        OpenCodeBlock(name);
+        // Nicht deutbar: den Inhalt als normalen Text zeigen – ohne Rahmen und ohne Einstellungszeilen wie "Titel: …".
         foreach (var line in body.TrimEnd('\n').Split('\n'))
-            WriteCodeLine(line);
-        CloseCodeBlock();
+        {
+            if (WidgetBody.IsSettingLine(line))
+                continue;
+            CompleteLine(line);
+        }
     }
 
     /// <summary>Die Frage fett in den Text; die Antworten kommen ins Auswahlmenü (oder hier als Liste).</summary>
