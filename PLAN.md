@@ -280,6 +280,24 @@ Zusätzlich kann das Manifest ein `disabled: true` („Not-Aus“) und eine `mes
 - **Streaming**: Die Antwort erscheint Token für Token.
 - **Denk-Anzeige**: Während das Modell „denkt“ (z. B. im Qwen3-Thinking-Modus), läuft ein dezenter Spinner wie `◆ …`. Der Denk-Text selbst wird nicht angezeigt, außer unter `/debug`.
 - **Markdown**: Spectre.Console rendert kein Markdown von Haus aus. Ein eigener `MarkdownRenderer` formatiert schon während des Streamings, Zeile für Zeile: Überschriften, fett/kursiv, `code`, Listen, Zitate, Code-Blöcke mit Rahmen und Tabellen. Dazu kommen Max' Farb-Tags (`{rot}…{/rot}`). Ohne Markdig, weil ein Parser für fertige Dokumente beim Streamen nicht hilft.
+- **Syntax-Hervorhebung**: Code-Blöcke werden automatisch eingefärbt (TextMateSharp mit den Grammatiken aus VS Code, Theme „Dark+“), Zeile für Zeile beim Streamen.
+- **Darstellungs-Elemente (Widgets)**: Max kann per Code-Block mit besonderem Namen zeichnen, der Inhalt besteht aus einfachen „Name: Wert“-Zeilen. Ist der Inhalt nicht deutbar, erscheint er als normaler Code.
+
+  | Widget | Zeigt |
+  |---|---|
+  | `balken` | Balkendiagramm |
+  | `anteile` | Aufteilung eines Ganzen, mit Legende |
+  | `kurve` | Liniendiagramm aus Braille-Zeichen |
+  | `fortschritt` | Fortschrittsbalken |
+  | `baum` | Ordner und Gliederungen |
+  | `kasten` | Hinweis mit Titel und Rahmen |
+  | `spalten` | Abschnitte nebeneinander |
+  | `kalender` | Monat mit markierten Tagen |
+  | `titel` | großer FIGlet-Schriftzug mit Farbverlauf |
+
+  Im Fließtext: `{verlauf}…{/verlauf}` für einen Farbverlauf, `--- Titel ---` für eine Linie mit Überschrift, Emoji-Kürzel wie `:rocket:`.
+  - Eingebaute Schriften: small, slant, big, banner, block, shadow, smslant, mini, script, standard (FIGlet, BSD-Lizenz). Eigene `.flf`-Dateien gehören in `fonts/` im Datenordner.
+  - Der versteckte Befehl `/demo` zeigt alles auf einmal, `/demo schriften` alle Schriften.
 - **Eingabezeile**: zuerst einfach, später mit Verlauf (↑/↓), mehrzeiliger Eingabe und Autovervollständigung für `/`-Befehle.
 - **Farben**: eine feste, zurückhaltende Palette mit einer Akzentfarbe für Max (z. B. Cyan oder Bernstein).
 - **Strg+C** bricht die laufende Antwort ab, beendet aber nicht Max.
@@ -369,6 +387,7 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 | 12 | System-Prompt einbinden und Persona testen ✅ |
 | 13 | `ChatView` – Streaming-Ausgabe, Denk-Spinner, Strg+C bricht ab ✅ |
 | 14 | `MarkdownRenderer` – eigener, streamender Renderer (Überschriften, Listen, Code-Blöcke, Tabellen, Zitate, Farb-Tags) ✅ |
+| 14a | Syntax-Hervorhebung, Widgets (Diagramme, Baum, Kasten, Spalten, Kalender, Titel), Farbverlauf, `/demo` ✅ |
 | 15 | `/debug`, `/clear`, Tokens pro Sekunde messen ✅ (Denk-Text-Schalter für `/debug` fehlt noch) |
 | 16 | Eigene Eingabezeile: Einfügen ohne Abschicken, Shift/Alt+Enter und `\`+Enter für neue Zeilen, ↑/↓-Verlauf (gespeichert), Tab für Befehle ✅ |
 | 17 | Publish: Single-File-Exe für `win-x64`, danach `linux-x64` |

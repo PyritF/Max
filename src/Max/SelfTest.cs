@@ -18,6 +18,8 @@ internal static class SelfTest
         "Erkläre in zwei Sätzen, warum der Himmel blau ist.",
         "Ich hatte heute einen langen Tag.",
         "Erklär mir, wie ein Sprachmodell funktioniert.",
+        "Zeig mir als Diagramm, wie sich ein Tag typischerweise auf Schlaf, Arbeit und Freizeit aufteilt.",
+        "Zeig mir eine typische Ordnerstruktur für ein kleines C#-Projekt.",
     ];
 
     /// <summary>Befehlsempfänger-Floskeln am Antwortende – nur Warnung.</summary>

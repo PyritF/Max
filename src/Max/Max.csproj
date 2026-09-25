@@ -12,12 +12,15 @@
     <PackageReference Include="LLamaSharp.Backend.Cpu" Version="0.27.0" />
     <PackageReference Include="LLamaSharp.Backend.Vulkan" Version="0.27.0" />
     <PackageReference Include="Spectre.Console" Version="0.57.2" />
+    <PackageReference Include="TextMateSharp.Grammars" Version="2.0.4" />
   </ItemGroup>
 
   <!-- Eingebaut: das Manifest (erster Start klappt auch, wenn GitHub kurz nicht erreichbar ist) und Max' System-Prompt. -->
   <ItemGroup>
     <EmbeddedResource Include="..\..\manifest.json" LogicalName="manifest.json" />
     <EmbeddedResource Include="Persona\system-prompt.md" LogicalName="system-prompt.md" />
+    <!-- FIGlet-Schriften für große Schriftzüge (BSD-Lizenz, siehe Ui/Fonts/LICENSE-figlet.txt). -->
+    <EmbeddedResource Include="Ui\Fonts\*.flf" LogicalName="font.%(Filename).flf" />
   </ItemGroup>
 
   <!-- Erlaubt dem Testprojekt, auch auf "internal"-Klassen zuzugreifen. -->

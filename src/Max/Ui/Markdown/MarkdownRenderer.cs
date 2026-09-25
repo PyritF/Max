@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using Max.Ui.Widgets;
 using Spectre.Console;
 
 namespace Max.Ui.Markdown;
@@ -29,6 +30,10 @@ internal sealed partial class MarkdownRenderer
     private Mode _mode = Mode.LineStart;
     private bool _inCode;
     private bool _inMarkdownFence;
+    private CodeHighlighter? _highlighter;
+    // Offener Widget-Block (```balken …): Name und gesammelter Inhalt.
+    private string? _widget;
+    private readonly StringBuilder _widgetBody = new();
 
     public MarkdownRenderer(IAnsiConsole console, WrapWriter writer)
     {
@@ -71,7 +76,7 @@ internal sealed partial class MarkdownRenderer
             }
 
             _line.Append(c);
-            if (_mode == Mode.LineStart && !_inCode)
+            if (_mode == Mode.LineStart && !_inCode && _widget is null)
                 TryDecideLineStart();
         }
 
@@ -87,6 +92,8 @@ internal sealed partial class MarkdownRenderer
             CompleteLine(_line.ToString());
         _line.Clear();
 
+        if (_widget is not null)
+            CloseWidget();
         if (_inCode)
             CloseCodeBlock();
         FlushTable();
@@ -111,8 +118,8 @@ internal sealed partial class MarkdownRenderer
         if (content.Length == 0)
             return;
 
-        // Code-Zaun und Tabellenzeile werden als Ganzes gebraucht.
-        if (content.StartsWith("```", StringComparison.Ordinal) || content.StartsWith('|'))
+        // Code-Zaun, Tabellenzeile und Linie (evtl. mit Titel: "--- Titel ---") werden als Ganzes gebraucht.
+        if (content.StartsWith("```", StringComparison.Ordinal) || content.StartsWith('|') || content.StartsWith("---", StringComparison.Ordinal))
         {
             _mode = Mode.WholeLine;
             return;
@@ -203,6 +210,15 @@ internal sealed partial class MarkdownRenderer
     {
         var trimmed = line.Trim();
 
+        if (_widget is not null)
+        {
+            if (trimmed.StartsWith("```", StringComparison.Ordinal))
+                CloseWidget();
+            else
+                _widgetBody.Append(line).Append('\n');
+            return;
+        }
+
         if (_inCode)
         {
             if (trimmed.StartsWith("```", StringComparison.Ordinal))
@@ -220,6 +236,11 @@ internal sealed partial class MarkdownRenderer
                 _inMarkdownFence = false;               // Ende eines ```markdown-Blocks – einfach weglassen
             else if (language is "markdown" or "md")
                 _inMarkdownFence = true;                // Markdown im Code-Block: selbst formatieren statt roh zeigen
+            else if (WidgetRegistry.IsWidget(language))
+            {
+                _widget = language;                     // Diagramm, Baum, Kasten … – wird am Blockende gezeichnet
+                _widgetBody.Clear();
+            }
             else
                 OpenCodeBlock(language);
             return;
@@ -236,6 +257,14 @@ internal sealed partial class MarkdownRenderer
         if (trimmed.Length == 0)
         {
             _writer.BlankLine();
+            return;
+        }
+
+        if (TitledRuleRegex().Match(trimmed) is { Success: true } titled)
+        {
+            var rule = new Rule($"[bold {Theme.Tag(Theme.Text)}]{InlineFormatter.ToMarkup(titled.Groups[1].Value, new Style(Theme.Text, decoration: Decoration.Bold))}[/]")
+                .RuleStyle(Border).LeftJustified();
+            WriteExternal(rule);
             return;
         }
 
@@ -259,6 +288,7 @@ internal sealed partial class MarkdownRenderer
     private void OpenCodeBlock(string language)
     {
         _inCode = true;
+        _highlighter = new CodeHighlighter(language, Code);
         var label = language.Length > 0 ? " " + language : "";
         _writer.StartLine([("┌", Border), (label, Label)], []);
         _writer.EndLine();
@@ -268,13 +298,18 @@ internal sealed partial class MarkdownRenderer
     {
         _writer.StartLine([("│ ", Border)], [("│ ", Border)]);
         if (line.Length > 0)
-            _writer.Write(line.Replace("\t", "    "), Code);
+        {
+            var text = line.Replace("\t", "    ");
+            foreach (var (part, style) in _highlighter?.Highlight(text) ?? [(text, Code)])
+                _writer.Write(part, style);
+        }
         _writer.EndLine();
     }
 
     private void CloseCodeBlock()
     {
         _inCode = false;
+        _highlighter = null;
         _writer.StartLine([("└", Border)], []);
         _writer.EndLine();
     }
@@ -305,8 +340,37 @@ internal sealed partial class MarkdownRenderer
         foreach (var row in body)
             table.AddRow(Enumerable.Range(0, columns).Select(i => new Markup(InlineFormatter.ToMarkup(i < row.Count ? row[i] : "", Normal))).ToArray());
 
+        WriteExternal(table);
+    }
+
+    // ── Widgets ──
+
+    private void CloseWidget()
+    {
+        var name = _widget!;
+        var body = _widgetBody.ToString();
+        _widget = null;
+        _widgetBody.Clear();
+
+        if (WidgetRegistry.TryRender(name, body, _writer.LineWidth) is { } widget)
+        {
+            WriteExternal(widget);
+            return;
+        }
+
+        // Nicht deutbar: einfach als Code zeigen – lieber roh als gar nicht.
+        OpenCodeBlock(name);
+        foreach (var line in body.TrimEnd('\n').Split('\n'))
+            WriteCodeLine(line);
+        CloseCodeBlock();
+    }
+
+    /// <summary>Etwas, das Spectre selbst zeichnet (Tabelle, Widget, Linie), eingerückt unter Max' Text.</summary>
+    private void WriteExternal(Spectre.Console.Rendering.IRenderable renderable)
+    {
+        FlushTable();
         _writer.BeforeExternalBlock();
-        _console.Write(new Padder(table, new Padding(_writer.MaxColumn - _writer.LineWidth, 0, 0, 0)));
+        _console.Write(new Padder(renderable, new Padding(_writer.MaxColumn - _writer.LineWidth, 0, 0, 0)));
         _writer.AfterExternalBlock();
     }
 
@@ -323,6 +387,9 @@ internal sealed partial class MarkdownRenderer
 
     [GeneratedRegex(@"^([-*_])( *\1){2,} *$")]
     private static partial Regex RuleRegex();
+
+    [GeneratedRegex(@"^-{3,}\s+(.+?)\s*-*$")]
+    private static partial Regex TitledRuleRegex();
 
     [GeneratedRegex(@"^:?-{2,}:?$")]
     private static partial Regex SeparatorRegex();

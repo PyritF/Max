@@ -14,6 +14,7 @@ if (AnsiConsole.Profile.Width <= 0)
     AnsiConsole.Profile.Width = 100;
 
 var paths = MaxPaths.Default();
+Max.Ui.Widgets.TitleWidget.UserFontDirectory = Path.Combine(paths.Root, "fonts");
 var demo = args.Contains("--demo-first-start");
 
 // Weiterleitungen folgt der Downloader selbst (siehe ModelDownloader); Zeitlimits setzt jede Anfrage selbst.
@@ -69,6 +70,6 @@ await HomeScreen.ShowAsync(system);
 
 // 3. Chat – in der Demo ohne Modell mit Platzhalter-Antworten.
 IChatBackend backend = llm ?? (IChatBackend)new PlaceholderBackend();
-var commands = CommandRegistry.CreateDefault(new DebugCommand(() => DebugReport.Build(engine, llm, paths, system)));
+var commands = CommandRegistry.CreateDefault(new DebugCommand(() => DebugReport.Build(engine, llm, paths, system)), new DemoCommand());
 await new ChatLoop(AnsiConsole.Console, backend, () => DateTime.Now, commands, paths.History).RunAsync();
 return 0;
