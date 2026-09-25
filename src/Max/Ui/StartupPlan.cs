@@ -1,9 +1,8 @@
+using Max.Setup;
+
 namespace Max.Ui;
 
-/// <summary>
-/// Welche Schritte beim Start laufen. Solange die echten Bausteine (Update-Check, Download,
-/// Modell laden) noch fehlen, stehen hier Platzhalter mit kurzer Wartezeit.
-/// </summary>
+/// <summary>Welche Schritte beim Start laufen.</summary>
 internal static class StartupPlan
 {
     public static IReadOnlyList<StartupStep> Normal(Action<SystemSnapshot> onHardware) =>
@@ -16,8 +15,40 @@ internal static class StartupPlan
     ];
 
     /// <summary>
-    /// Vorschau des ersten Starts mit simuliertem Download (<c>max --demo-first-start</c>).
-    /// Wird ersetzt, sobald es den echten Download gibt (Schritt 8).
+    /// Der erste Start: Hardware prüfen, passende Stufe wählen, Modell laden und einrichten.
+    /// Die Stufe bleibt unsichtbar – der Nutzer sieht nur "Download Max".
+    /// </summary>
+    public static IReadOnlyList<StartupStep> Setup(MaxPaths paths, HttpClient http, Action<SystemSnapshot> onHardware)
+    {
+        var tier = Tier.S;
+        TierEntry? entry = null;
+        DownloadResult? download = null;
+
+        return
+        [
+            Hardware(system =>
+            {
+                tier = TierSelector.Resolve(system.Hardware);
+                onHardware(system);
+            }),
+            new("Download Max", async (progress, ct) =>
+            {
+                var manifest = await ManifestSource.LoadAsync(http, ct);
+                entry = manifest.For(tier) ?? throw new SetupException("Für diesen Rechner ist gerade kein Download hinterlegt.");
+                download = await new ModelDownloader(http).DownloadAsync(entry, paths, progress, ct);
+                return $"{Format.Gigabytes(download.SizeBytes)} GB";
+            }),
+            new("Richte Max ein", (_, _) =>
+            {
+                InstallState.Commit(paths, tier, entry!.Revision, download!, DateTime.Now);
+                return Task.FromResult("fertig");
+            }),
+        ];
+    }
+
+    /// <summary>
+    /// Vorschau des ersten Starts mit simuliertem Download (<c>max --demo-first-start</c>) –
+    /// lädt nichts und schreibt nichts.
     /// </summary>
     public static IReadOnlyList<StartupStep> FirstStartDemo(Action<SystemSnapshot> onHardware) =>
     [
@@ -27,11 +58,12 @@ internal static class StartupPlan
     ];
 
     private static StartupStep Hardware(Action<SystemSnapshot> onHardware) =>
-        new("Analysiere Hardware", (_, _) =>
+        new("Analysiere Hardware", async (_, ct) =>
         {
-            var system = SystemSnapshot.Capture();
+            // Eigener Thread: nvidia-smi kann einen Moment brauchen, der Spinner soll weiterlaufen.
+            var system = await Task.Run(SystemSnapshot.Capture, ct);
             onHardware(system);
-            return Task.FromResult(system.Summary);
+            return system.Summary;
         });
 
     private static async Task<string> SimulateDownloadAsync(StepProgress progress, CancellationToken ct)

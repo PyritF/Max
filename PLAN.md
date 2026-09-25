@@ -70,8 +70,13 @@ Max/
 │       ├── Commands/
 │       │   ├── ICommand.cs
 │       │   └── …                     (/help, /clear, /debug, /exit, …)
-│       └── Config/
-│           └── MaxPaths.cs           (Datenordner je Betriebssystem)
+│       └── Setup/
+│           ├── MaxPaths.cs           (Datenordner je Betriebssystem)
+│           ├── HardwareInfo.cs       (RAM, GPU, VRAM)
+│           ├── TierSelector.cs       (Stufe S/M/L/XL)
+│           ├── Manifest.cs           (manifest.json laden, Fallback aus der Exe)
+│           ├── ModelDownloader.cs    (fortsetzbar, SHA-256)
+│           └── InstallState.cs       (state.json)
 │   ── später (Phase 2) ──
 │       ├── Tools/                    (ITool + konkrete Tools)
 │       └── Agent/                    (Agent-Loop, Berechtigungen)
@@ -96,7 +101,9 @@ Ui  ──►  ChatSession  ──►  LlmEngine
 | System | Pfad |
 |---|---|
 | Windows | `%LOCALAPPDATA%\Max\` |
-| Linux | `~/.local/share/max/` |
+| Linux | `$XDG_DATA_HOME/max/` bzw. `~/.local/share/max/` |
+
+Mit `MAX_HOME` lässt sich der Ordner verlegen (Tests, Ausprobieren).
 
 Inhalt: `core.bin` (Modell), `state.json` (installierte Stufe, Version, Prüfsumme), `history/` (gespeicherte Chats, optional), `logs/`.
 
@@ -106,20 +113,26 @@ Inhalt: `core.bin` (Modell), `state.json` (installierte Stufe, Version, Prüfsum
 
 Max ermittelt beim Start RAM, GPU und VRAM und wählt daraus eine Stufe. Die Stufe ist **nur intern** und erscheint nur unter `/debug`.
 
-| Stufe | Hardware (grob) | Modell (Stand der Planung) | Größe |
+| Stufe | Hardware | Modell (Stand Sept. 2026) | Größe (Q4_K_M) |
 |---|---|---|---|
-| S | nur CPU, < 8 GB RAM | Qwen3-1.7B | ~1,1 GB |
-| M | 8–16 GB RAM oder GPU mit ~6 GB | Qwen3-4B | ~2,5 GB |
-| L | GPU mit 8–12 GB | Qwen3-8B | ~5 GB |
-| XL | GPU ab 16 GB oder ≥ 32 GB RAM | Qwen3-30B-A3B oder gpt-oss-20b | ~12–18 GB |
+| S | alles darunter | Qwen3.5-2B | ~1,3 GB |
+| M | ab 8 GB RAM oder GPU ab 6 GB | Qwen3.5-4B | ~2,7 GB |
+| L | GPU ab 8 GB | Qwen3.5-9B | ~5,7 GB |
+| XL | GPU ab 16 GB oder ab 48 GB RAM | Qwen3.5-35B-A3B (MoE, 3B aktiv) | ~21 GB |
 
-> ⚠️ Die Modellliste wird **kurz vor der Umsetzung neu geprüft**, weil ständig neue und bessere Modelle erscheinen. Wichtigstes Kriterium ist zuverlässiges Tool-Calling (für Phase 2) und gutes Deutsch.
+- **Warum Qwen3.5:** gutes Deutsch, Tool-Calling (Phase 2), Apache-2.0-Lizenz, eine Familie für alle Stufen (gleiches Chat-Format). LLamaSharp 0.27 unterstützt die Architektur ausdrücklich.
+- **Quelle:** die GGUF-Dateien von `unsloth` auf Hugging Face.
+- **Prüfsumme:** Steht im Manifest `sha256: null`, nimmt Max die SHA-256, die Hugging Face beim Download mitschickt (`X-Linked-ETag`). Soll eine Datei fest angepinnt werden, trägt man ihre Prüfsumme ins Manifest ein.
+- **Kandidat für später:** Qwen3.6-35B-A3B für XL, sobald geprüft ist, dass LLamaSharp es lädt (Schritt 10).
+- XL ohne GPU erst ab 48 GB RAM: Das 21-GB-Modell braucht Platz, und das System will auch noch leben.
 
-**Hardware-Erkennung:**
-- RAM: `GC.GetGCMemoryInfo().TotalAvailableMemoryBytes`, alternativ WMI unter Windows oder `/proc/meminfo` unter Linux
-- NVIDIA-GPU und VRAM: `nvidia-smi --query-gpu=name,memory.total --format=csv` bzw. NVML
-- Andere GPUs: Vulkan-Abfrage bzw. DXGI unter Windows; sonst läuft Max vorsichtig auf der CPU
-- Die Grenzwerte liegen in einer Konfiguration und sind nicht hart im Code verdrahtet
+**Hardware-Erkennung** (`Setup/HardwareInfo.cs`):
+- RAM: `GC.GetGCMemoryInfo().TotalAvailableMemoryBytes`
+- NVIDIA: `nvidia-smi --query-gpu=name,memory.total --format=csv,noheader,nounits`
+- Andere GPUs unter Windows: Registry (`HardwareInformation.qwMemorySize` der Grafikkarten-Treiber); WMI schneidet bei 4 GB ab und taugt nicht
+- Unter 2 GB Grafikspeicher (integrierte Grafik) zählt als „keine GPU“
+- Grenzwerte im Record `TierRules`, mit 10 % Toleranz (eine 16-GB-Karte meldet z. B. 15,99 GB)
+- `MAX_TIER=S|M|L|XL` erzwingt eine Stufe (Tests, Fehlersuche)
 
 ### Manifest (`manifest.json`)
 
@@ -341,12 +354,12 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 | 1 | Solution und Projekt anlegen (`.slnx`, `Max.csproj`, Testprojekt), NuGet-Pakete, `.gitignore` ✅ |
 | 2 | Startsequenz und Startbildschirm mit Spectre.Console ✅ |
 | 3 | Chat-Schleife **ohne** KI (Platzhalter-Antworten) mit Befehlen `/help`, `/clear`, `/exit` und Strg+C ✅ |
-| 4 | `MaxPaths` – Datenordner je Betriebssystem |
-| 5 | Hardware-Erkennung (`HardwareInfo`) |
-| 6 | `TierSelector` + Unit-Tests |
-| 7 | `Manifest` – JSON laden, Fallback aus Embedded Resource |
-| 8 | `ModelDownloader` mit Fortschrittsbalken, Fortsetzen, SHA-256 |
-| 9 | Modellauswahl festlegen: aktuelle GGUF-Modelle pro Stufe prüfen, Manifest befüllen |
+| 4 | `MaxPaths` – Datenordner je Betriebssystem ✅ |
+| 5 | Hardware-Erkennung (`HardwareInfo`) ✅ |
+| 6 | `TierSelector` + Unit-Tests ✅ |
+| 7 | `Manifest` – JSON laden, Fallback aus Embedded Resource ✅ |
+| 8 | `ModelDownloader` mit Fortschrittsbalken, Fortsetzen, SHA-256 ✅ |
+| 9 | Modellauswahl festlegen: aktuelle GGUF-Modelle pro Stufe prüfen, Manifest befüllen ✅ |
 | 10 | `LlmEngine` – Modell laden, Backend wählen, Antwort streamen |
 | 11 | `Conversation` + `ChatSession` – Verlauf, Rollen, Kontext kürzen |
 | 12 | System-Prompt einbinden und Persona testen |

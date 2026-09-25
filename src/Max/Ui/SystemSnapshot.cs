@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Max.Setup;
 
 namespace Max.Ui;
 
@@ -8,7 +9,7 @@ internal sealed record SystemSnapshot(
     string UserName,
     string OsName,
     int CpuCores,
-    long TotalMemoryBytes,
+    HardwareInfo Hardware,
     string WorkingDirectory)
 {
     public static SystemSnapshot Capture() => new(
@@ -16,8 +17,10 @@ internal sealed record SystemSnapshot(
         UserName: Environment.UserName,
         OsName: GetOsName(),
         CpuCores: Environment.ProcessorCount,
-        TotalMemoryBytes: GC.GetGCMemoryInfo().TotalAvailableMemoryBytes,
+        Hardware: HardwareInfo.Detect(),
         WorkingDirectory: Environment.CurrentDirectory);
+
+    public long TotalMemoryBytes => Hardware.RamBytes;
 
     /// <summary>Kurzbeschreibung, z. B. "Windows 11 · 16 Kerne · 32 GB".</summary>
     public string Summary => $"{OsName} · {CpuCores} Kerne · {Format.Memory(TotalMemoryBytes)}";

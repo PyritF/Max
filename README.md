@@ -13,4 +13,18 @@ dotnet run --project src/Max
 dotnet run --project src/Max -- --demo-first-start   # Vorschau: erster Start mit Download
 ```
 
+Beim ersten Start richtet Max sich ein und lädt dabei das passende Modell herunter (1–21 GB, je nach Rechner).
+
+### Schalter für Entwickler
+
+| Umgebungsvariable | Wirkung |
+|---|---|
+| `MAX_HOME` | anderer Datenordner, z. B. zum Testen der Einrichtung |
+| `MAX_TIER` | Stufe erzwingen: `S`, `M`, `L` oder `XL` |
+| `MAX_MANIFEST_URL` | Manifest von einer anderen Adresse laden |
+
+```powershell
+$env:MAX_HOME = "$env:TEMP\max-test"; $env:MAX_TIER = "S"; dotnet run --project src/Max
+```
+
 In Visual Studio: `Max.slnx` öffnen, `Max` als Startprojekt, F5.

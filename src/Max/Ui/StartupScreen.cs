@@ -1,3 +1,4 @@
+using Max.Setup;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
@@ -6,6 +7,8 @@ namespace Max.Ui;
 /// <summary>
 /// Die Startsequenz: Schritte laufen nacheinander, jeder mit Spinner und am Ende einem Häkchen.
 /// Ein Schritt, der Fortschritt meldet (Download), bekommt zusätzlich einen Fortschrittsbalken.
+/// Scheitert ein Schritt (<see cref="SetupException"/> oder Abbruch mit Strg+C), steht ein ✗ mit
+/// der Meldung da, und die Ausnahme wird danach weitergereicht.
 /// </summary>
 internal static class StartupScreen
 {
@@ -20,13 +23,14 @@ internal static class StartupScreen
     private static readonly TimeSpan PauseAtEnd = TimeSpan.FromMilliseconds(500);
     private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(80);
 
-    private enum StepStatus { Pending, Running, Done }
+    private enum StepStatus { Pending, Running, Done, Failed }
 
     private sealed class StepState(StartupStep step)
     {
         public StartupStep Step { get; } = step;
         public StepStatus Status { get; set; } = StepStatus.Pending;
         public string Detail { get; set; } = "";
+        public string? Error { get; set; }
         public StepProgress Progress { get; } = new();
     }
 
@@ -38,19 +42,28 @@ internal static class StartupScreen
 
         IRenderable Render() => BuildView(title, subtitle, states, frames[frame % frames.Count]);
 
+        Exception? failure = null;
+
         // Ohne echtes Terminal (z. B. Ausgabe in eine Datei): Schritte ohne Animation ausführen.
         if (Console.IsOutputRedirected)
         {
             foreach (var state in states)
             {
-                state.Detail = await state.Step.Run(state.Progress, ct);
-                state.Status = StepStatus.Done;
+                failure = await CompleteAsync(state, state.Step.Run(state.Progress, ct));
+                if (failure is not null)
+                    break;
             }
             AnsiConsole.Write(Render());
-            return;
+        }
+        else
+        {
+            await RunLiveAsync();
         }
 
-        await AnsiConsole.Live(Render())
+        if (failure is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(failure);
+
+        async Task RunLiveAsync() => await AnsiConsole.Live(Render())
             .AutoClear(false)
             .StartAsync(async ctx =>
             {
@@ -65,17 +78,40 @@ internal static class StartupScreen
                     {
                         frame++;
                         ctx.UpdateTarget(Render());
-                        await Task.WhenAny(Task.WhenAll(work, minimum), Task.Delay(FrameInterval, ct));
+                        await Task.WhenAny(Task.WhenAll(work, minimum), Task.Delay(FrameInterval)); // ohne ct: nach Strg+C sonst Dauerschleife
                     }
 
-                    state.Detail = await work;
-                    state.Status = StepStatus.Done;
+                    failure = await CompleteAsync(state, work);
                     ctx.UpdateTarget(Render());
+                    if (failure is not null)
+                        return;
                     await Task.Delay(PauseBetweenSteps, ct);
                 }
 
                 await Task.Delay(PauseAtEnd, ct);
             });
+    }
+
+    /// <summary>Wartet auf den Schritt und hält Erfolg oder Fehler fest. Liefert den Fehler, falls einer auftrat.</summary>
+    private static async Task<Exception?> CompleteAsync(StepState state, Task<string> work)
+    {
+        try
+        {
+            state.Detail = await work;
+            state.Status = StepStatus.Done;
+            return null;
+        }
+        catch (Exception e) when (e is SetupException or OperationCanceledException)
+        {
+            state.Status = StepStatus.Failed;
+            state.Error = e switch
+            {
+                SetupException setup => setup.Message,
+                _ when state.Progress.Read().HasProgress => "Abgebrochen. Beim nächsten Start geht es hier weiter.",
+                _ => "Abgebrochen.",
+            };
+            return e;
+        }
     }
 
     private static IRenderable BuildView(string title, string? subtitle, List<StepState> states, string spinnerFrame)
@@ -94,6 +130,12 @@ internal static class StartupScreen
             var progress = state.Progress.Read();
             if (state.Status == StepStatus.Running && progress.HasProgress)
                 rows.Add(BuildProgressLine(progress.Done, progress.Total, progress.Speed));
+
+            if (state.Error is not null)
+            {
+                rows.Add(Text.Empty);
+                rows.Add(new Markup($"   [{Theme.Tag(Theme.Text)}]{Markup.Escape(state.Error)}[/]"));
+            }
         }
 
         return new Padder(new Rows(rows), new Padding(SidePadding, 1, SidePadding, 0));
@@ -103,9 +145,12 @@ internal static class StartupScreen
     {
         var running = state.Status == StepStatus.Running;
 
-        var icon = running
-            ? $"[{Theme.Tag(Theme.Accent)}]{Markup.Escape(spinnerFrame)}[/]"
-            : $"[{Theme.Tag(Theme.Success)}]✓[/]";
+        var icon = state.Status switch
+        {
+            StepStatus.Running => $"[{Theme.Tag(Theme.Accent)}]{Markup.Escape(spinnerFrame)}[/]",
+            StepStatus.Failed => $"[bold {Theme.Tag(Theme.Accent)}]✗[/]",
+            _ => $"[{Theme.Tag(Theme.Success)}]✓[/]",
+        };
         var label = running
             ? $"[{Theme.Tag(Theme.Text)}]{Markup.Escape(state.Step.Label)} …[/]"
             : $"[{Theme.Tag(Theme.Dim)}]{Markup.Escape(state.Step.Label)}[/]";

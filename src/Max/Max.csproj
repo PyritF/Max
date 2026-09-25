@@ -11,6 +11,11 @@
     <PackageReference Include="Spectre.Console" Version="0.57.2" />
   </ItemGroup>
 
+  <!-- Eingebaute Kopie des Manifests: Damit klappt der erste Start auch, wenn GitHub kurz nicht erreichbar ist. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\manifest.json" LogicalName="manifest.json" />
+  </ItemGroup>
+
   <!-- Erlaubt dem Testprojekt, auch auf "internal"-Klassen zuzugreifen. -->
   <ItemGroup>
     <InternalsVisibleTo Include="Max.Tests" />
