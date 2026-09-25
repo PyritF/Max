@@ -62,6 +62,18 @@ public class WidgetTests
     private static string DemoShowcase() => Max.Commands.DemoCommand.Showcase;
 
     [Fact]
+    public void Tree_UnderstandsDrawnTreeLines()
+    {
+        // So hat das Modell im Selbsttest geantwortet.
+        var output = Render("```baum\nCSharpProjekt/\n├── src/\n│   ├── App/\n│   └── Models/\n├── bin/\n└── Program.cs\n```");
+        var lines = output.Split('\n').Select(l => l.TrimEnd()).ToList();
+        var app = lines.Single(l => l.Contains("App/"));
+        var src = lines.Single(l => l.Contains("src/"));
+        Assert.True(app.IndexOf("App/") > src.IndexOf("src/"), "App/ muss unter src/ eingerückt sein.");
+        Assert.Contains(lines, l => l.TrimStart().StartsWith("CSharpProjekt/"));
+    }
+
+    [Fact]
     public void TitledRule_ShowsTitle()
     {
         var output = Render("--- Abschnitt ---\nText");

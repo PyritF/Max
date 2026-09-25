@@ -14,7 +14,7 @@ internal sealed class TreeWidget : IWidget
     {
         var items = body.Lines
             .Where(l => l.Trim().Length > 0 && !l.TrimStart().StartsWith("Titel:", StringComparison.OrdinalIgnoreCase))
-            .Select(l => (Indent: l.Length - l.TrimStart().Length, Text: l.Trim().TrimStart('-', '*', '•', '├', '└', '│', '─', ' ').Trim()))
+            .Select(l => (Indent: IndentOf(l), Text: l.Trim().TrimStart(TreeGlyphs).Trim()))
             .Where(i => i.Text.Length > 0)
             .ToList();
         if (items.Count == 0)
@@ -36,6 +36,18 @@ internal sealed class TreeWidget : IWidget
             stack.Add((item.Indent, node));
         }
         return tree;
+    }
+
+    /// <summary>Zeichen, mit denen Modelle Bäume gern selbst malen ("│   ├── src/") – zählen als Einrückung.</summary>
+    private static readonly char[] TreeGlyphs = [' ', '\t', '-', '*', '•', '├', '└', '│', '─', '┣', '┗', '┃', '━', '|', '`', '+'];
+
+    /// <summary>Position des ersten echten Zeichens – so klappt es mit Leerzeichen und mit gemalten Linien.</summary>
+    internal static int IndentOf(string line)
+    {
+        var i = 0;
+        while (i < line.Length && TreeGlyphs.Contains(line[i]))
+            i++;
+        return i;
     }
 
     private static IRenderable Label(string text, bool isRoot)
