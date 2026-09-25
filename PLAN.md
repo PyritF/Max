@@ -279,7 +279,7 @@ Zusätzlich kann das Manifest ein `disabled: true` („Not-Aus“) und eine `mes
 - **Scrollender Chat** ohne Vollbild-Fenster. Die Ausgabe läuft einfach im Terminal weiter.
 - **Streaming**: Die Antwort erscheint Token für Token.
 - **Denk-Anzeige**: Während das Modell „denkt“ (z. B. im Qwen3-Thinking-Modus), läuft ein dezenter Spinner wie `◆ …`. Der Denk-Text selbst wird nicht angezeigt, außer unter `/debug`.
-- **Markdown**: Spectre.Console rendert kein Markdown von Haus aus. Wir bauen einen eigenen kleinen `MarkdownRenderer` (mit **Markdig** zum Parsen) für Überschriften, fett, Listen, Codeblöcke und Tabellen. Während des Streamings kommt die Ausgabe als Rohtext, danach wird sie sauber formatiert.
+- **Markdown**: Spectre.Console rendert kein Markdown von Haus aus. Ein eigener `MarkdownRenderer` formatiert schon während des Streamings, Zeile für Zeile: Überschriften, fett/kursiv, `code`, Listen, Zitate, Code-Blöcke mit Rahmen und Tabellen. Dazu kommen Max' Farb-Tags (`{rot}…{/rot}`). Ohne Markdig, weil ein Parser für fertige Dokumente beim Streamen nicht hilft.
 - **Eingabezeile**: zuerst einfach, später mit Verlauf (↑/↓), mehrzeiliger Eingabe und Autovervollständigung für `/`-Befehle.
 - **Farben**: eine feste, zurückhaltende Palette mit einer Akzentfarbe für Max (z. B. Cyan oder Bernstein).
 - **Strg+C** bricht die laufende Antwort ab, beendet aber nicht Max.
@@ -368,7 +368,7 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 | 11 | `Conversation` + `ChatSession` – Verlauf, Rollen, Kontext kürzen ✅ |
 | 12 | System-Prompt einbinden und Persona testen ✅ |
 | 13 | `ChatView` – Streaming-Ausgabe, Denk-Spinner, Strg+C bricht ab ✅ |
-| 14 | `MarkdownRenderer` mit Markdig |
+| 14 | `MarkdownRenderer` – eigener, streamender Renderer (Überschriften, Listen, Code-Blöcke, Tabellen, Zitate, Farb-Tags) ✅ |
 | 15 | `/debug`, `/clear`, Tokens pro Sekunde messen ✅ (Denk-Text-Schalter für `/debug` fehlt noch) |
 | 16 | Bessere Eingabezeile (Verlauf, Mehrzeilen, Autovervollständigung) |
 | 17 | Publish: Single-File-Exe für `win-x64`, danach `linux-x64` |
