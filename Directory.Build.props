@@ -1,0 +1,10 @@
+<Project>
+  <!-- Gilt automatisch für ALLE Projekte unterhalb dieses Ordners. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>

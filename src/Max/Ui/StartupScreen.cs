@@ -1,0 +1,136 @@
+using Spectre.Console;
+using Spectre.Console.Rendering;
+
+namespace Max.Ui;
+
+/// <summary>
+/// Die Startsequenz: Schritte laufen nacheinander, jeder mit Spinner und am Ende einem Häkchen.
+/// Ein Schritt, der Fortschritt meldet (Download), bekommt zusätzlich einen Fortschrittsbalken.
+/// </summary>
+internal static class StartupScreen
+{
+    private const int LabelWidth = 44;
+    private const int DetailWidth = 34;
+    private const int BarWidth = 40;
+
+    // Jeder Schritt bleibt mindestens so lange sichtbar – sonst blitzt er nur auf.
+    private static readonly TimeSpan MinStepDuration = TimeSpan.FromMilliseconds(450);
+    private static readonly TimeSpan PauseBetweenSteps = TimeSpan.FromMilliseconds(180);
+    private static readonly TimeSpan PauseAtEnd = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(80);
+
+    private enum StepStatus { Pending, Running, Done }
+
+    private sealed class StepState(StartupStep step)
+    {
+        public StartupStep Step { get; } = step;
+        public StepStatus Status { get; set; } = StepStatus.Pending;
+        public string Detail { get; set; } = "";
+        public StepProgress Progress { get; } = new();
+    }
+
+    public static async Task RunAsync(string title, string? subtitle, IReadOnlyList<StartupStep> steps, CancellationToken ct = default)
+    {
+        var states = steps.Select(s => new StepState(s)).ToList();
+        var frames = AnsiConsole.Profile.Capabilities.Unicode ? Spinner.Known.Dots.Frames : Spinner.Known.Ascii.Frames;
+        var frame = 0;
+
+        IRenderable Render() => BuildView(title, subtitle, states, frames[frame % frames.Count]);
+
+        // Ohne echtes Terminal (z. B. Ausgabe in eine Datei): Schritte ohne Animation ausführen.
+        if (Console.IsOutputRedirected)
+        {
+            foreach (var state in states)
+            {
+                state.Detail = await state.Step.Run(state.Progress, ct);
+                state.Status = StepStatus.Done;
+            }
+            AnsiConsole.Write(Render());
+            return;
+        }
+
+        await AnsiConsole.Live(Render())
+            .AutoClear(false)
+            .StartAsync(async ctx =>
+            {
+                foreach (var state in states)
+                {
+                    state.Status = StepStatus.Running;
+                    var work = state.Step.Run(state.Progress, ct);
+                    var minimum = Task.Delay(MinStepDuration, ct);
+
+                    // Solange gearbeitet wird: Spinner drehen, Fortschritt neu zeichnen.
+                    while (!work.IsCompleted || !minimum.IsCompleted)
+                    {
+                        frame++;
+                        ctx.UpdateTarget(Render());
+                        await Task.WhenAny(Task.WhenAll(work, minimum), Task.Delay(FrameInterval, ct));
+                    }
+
+                    state.Detail = await work;
+                    state.Status = StepStatus.Done;
+                    ctx.UpdateTarget(Render());
+                    await Task.Delay(PauseBetweenSteps, ct);
+                }
+
+                await Task.Delay(PauseAtEnd, ct);
+            });
+    }
+
+    private static IRenderable BuildView(string title, string? subtitle, List<StepState> states, string spinnerFrame)
+    {
+        var rows = new List<IRenderable>
+        {
+            new Markup($"[bold {Theme.Tag(Theme.Accent)}]{Theme.Symbol}[/] [bold {Theme.Tag(Theme.Text)}]{Markup.Escape(title)}[/]"),
+            new Markup(subtitle is null ? "" : $"[{Theme.Tag(Theme.Muted)}]{Markup.Escape(subtitle)}[/]"),
+            Text.Empty,
+        };
+
+        foreach (var state in states.Where(s => s.Status != StepStatus.Pending))
+        {
+            rows.Add(BuildStepLine(state, spinnerFrame));
+
+            var progress = state.Progress.Read();
+            if (state.Status == StepStatus.Running && progress.HasProgress)
+                rows.Add(BuildProgressLine(progress.Done, progress.Total, progress.Speed));
+        }
+
+        return new Padder(new Rows(rows), new Padding(2, 1, 2, 0));
+    }
+
+    private static Grid BuildStepLine(StepState state, string spinnerFrame)
+    {
+        var running = state.Status == StepStatus.Running;
+
+        var icon = running
+            ? $"[{Theme.Tag(Theme.Accent)}]{Markup.Escape(spinnerFrame)}[/]"
+            : $"[{Theme.Tag(Theme.Success)}]✓[/]";
+        var label = running
+            ? $"[{Theme.Tag(Theme.Text)}]{Markup.Escape(state.Step.Label)} …[/]"
+            : $"[{Theme.Tag(Theme.Dim)}]{Markup.Escape(state.Step.Label)}[/]";
+        var detail = running ? "" : $"[{Theme.Tag(Theme.Muted)}]{Markup.Escape(state.Detail)}[/]";
+
+        var grid = new Grid()
+            .AddColumn(new GridColumn().Width(2).NoWrap().PadRight(1))
+            .AddColumn(new GridColumn().Width(LabelWidth).NoWrap())
+            .AddColumn(new GridColumn().Width(DetailWidth).NoWrap().RightAligned());
+        grid.AddRow(new Markup(icon), new Markup(label), new Markup(detail));
+        return grid;
+    }
+
+    private static Markup BuildProgressLine(long done, long total, double bytesPerSecond)
+    {
+        var fraction = total > 0 ? Math.Clamp((double)done / total, 0, 1) : 0;
+        var filled = (int)(fraction * BarWidth);
+        var eta = bytesPerSecond > 0 ? TimeSpan.FromSeconds((total - done) / bytesPerSecond) : TimeSpan.Zero;
+
+        var bar = $"[{Theme.Tag(Theme.Accent)}]{new string('━', filled)}[/][{Theme.Tag(Theme.Track)}]{new string('━', BarWidth - filled)}[/]";
+        var muted = Theme.Tag(Theme.Muted);
+
+        return new Markup(
+            $"   {bar}  [{Theme.Tag(Theme.Text)}]{(int)(fraction * 100),3} %[/]  " +
+            $"[{muted}]{Format.Gigabytes(done)} / {Format.Gigabytes(total)} GB[/]  " +
+            $"[{muted}]{Format.Speed(bytesPerSecond)}[/]  " +
+            $"[{muted}]{Format.Duration(eta)}[/]");
+    }
+}

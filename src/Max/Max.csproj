@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Name der fertigen Datei: max.exe (Windows) bzw. max (Linux) -->
+    <AssemblyName>max</AssemblyName>
+    <RootNamespace>Max</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.57.2" />
+  </ItemGroup>
+
+  <!-- Erlaubt dem Testprojekt, auch auf "internal"-Klassen zuzugreifen. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Max.Tests" />
+  </ItemGroup>
+
+</Project>

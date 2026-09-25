@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Max/Max.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Max.Tests/Max.Tests.csproj" />
+  </Folder>
+</Solution>
