@@ -30,6 +30,8 @@ var demo = args.Contains("--demo-first-start");
 using var http = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false }) { Timeout = Timeout.InfiniteTimeSpan };
 http.DefaultRequestHeaders.UserAgent.ParseAdd($"Max/{typeof(Program).Assembly.GetName().Version?.ToString(3)}");
 
+var thinking = ThinkingSwitch.Load(paths);
+
 SystemSnapshot? system = null;
 LlmEngine? engine = null;
 LlmBackend? llm = null;
@@ -48,9 +50,9 @@ using (var startup = new CancellationTokenSource())
         if (demo)
             await StartupScreen.RunAsync("Einrichtung", setupSubtitle, StartupPlan.FirstStartDemo(OnHardware), startup.Token);
         else if (!InstallState.IsInstalled(paths))
-            await StartupScreen.RunAsync("Einrichtung", setupSubtitle, StartupPlan.Setup(paths, http, OnHardware, OnLoaded), startup.Token);
+            await StartupScreen.RunAsync("Einrichtung", setupSubtitle, StartupPlan.Setup(paths, http, () => thinking.Enabled, OnHardware, OnLoaded), startup.Token);
         else
-            await StartupScreen.RunAsync("Max startet", null, StartupPlan.Normal(paths, OnHardware, OnLoaded), startup.Token);
+            await StartupScreen.RunAsync("Max startet", null, StartupPlan.Normal(paths, () => thinking.Enabled, OnHardware, OnLoaded), startup.Token);
     }
     catch (Exception e) when (e is SetupException or OperationCanceledException)
     {
@@ -79,6 +81,8 @@ await HomeScreen.ShowAsync(system);
 
 // 3. Chat – in der Demo ohne Modell mit Platzhalter-Antworten.
 IChatBackend backend = llm ?? (IChatBackend)new PlaceholderBackend();
-var commands = CommandRegistry.CreateDefault(new DebugCommand(() => DebugReport.Build(engine, llm, paths, system)), new DemoCommand());
+var commands = CommandRegistry.CreateDefault(new ThinkCommand(thinking), new DebugCommand(() => DebugReport.Build(engine, llm, paths, system)), new DemoCommand());
 await new ChatLoop(AnsiConsole.Console, backend, () => DateTime.Now, commands, paths.History).RunAsync();
+if (llm is not null)
+    await llm.CompleteAsync(); // erst fertig nachrechnen, dann das Modell freigeben
 return 0;

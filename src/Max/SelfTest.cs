@@ -59,14 +59,28 @@ internal static class SelfTest
             output.WriteLine($"› {question}");
 
             var reply = "";
+            var thought = "";
             await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
-                reply += chunk;
+            {
+                if (chunk.IsThinking)
+                    thought += chunk.Text;
+                else
+                    reply += chunk.Text;
+            }
             conversation.AddAssistant(reply);
 
+            if (thought.Trim().Length > 0)
+                output.WriteLine($"  ✻ {Shorten(thought.Trim().ReplaceLineEndings(" "), 400)}");
             output.WriteLine($"◆ {reply}");
-            if (engine.LastRun is { } run)
-                output.WriteLine($"  ({run.TokensPerSecond:0.0} Tokens/s, erstes Token nach {run.TimeToFirstToken.TotalSeconds:0.00} s, Prompt {run.PromptTokens}, davon {run.ReusedTokens} aus dem Cache)");
+            if (backend.LastRun is { } run)
+            {
+                output.WriteLine($"  ({run.TokensPerSecond:0.0} Tokens/s, erstes Token nach {run.TimeToFirstToken.TotalSeconds:0.00} s, " +
+                                 $"nachgedacht {run.ThinkingTime.TotalSeconds:0.0} s / {run.ThinkingTokens} Tokens, " +
+                                 $"Prompt {run.PromptTokens}, davon {run.ReusedTokens} aus dem Cache, Reparaturen {run.Repairs})");
+            }
             output.WriteLine();
+            if (Forbidden.FirstOrDefault(name => thought.Contains(name, StringComparison.OrdinalIgnoreCase)) is { } thoughtName)
+                output.WriteLine($"WARNUNG: \"{thoughtName}\" im Nachdenken (wird in der Anzeige ersetzt).");
 
             if (SmallTalk.Contains(question) && reply.Contains("```", StringComparison.Ordinal))
                 output.WriteLine("WARNUNG: Element bei Smalltalk.");
@@ -92,9 +106,12 @@ internal static class SelfTest
             }
         }
 
+        await backend.CompleteAsync();
         output.WriteLine($"Auswahlmenü in {withQuestion}, Kasten in {withBox} von {Questions.Length} Antworten.");
         if (withQuestion > Questions.Length / 2 || withBox > Questions.Length / 2)
             output.WriteLine("WARNUNG: Elemente zu gleichförmig eingesetzt.");
         return result;
     }
+
+    private static string Shorten(string text, int max) => text.Length <= max ? text : text[..(max - 1)] + "…";
 }

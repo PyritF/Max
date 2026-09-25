@@ -10,9 +10,9 @@
     }
   },
   "tiers": {
-    "S":  { "revision": 1, "url": "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf",         "sha256": null, "sizeBytes": 1280000000,  "contextSize": 8192 },
-    "M":  { "revision": 1, "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",         "sha256": null, "sizeBytes": 2740000000,  "contextSize": 16384 },
-    "L":  { "revision": 1, "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",         "sha256": null, "sizeBytes": 5680000000,  "contextSize": 16384 },
-    "XL": { "revision": 1, "url": "https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF/resolve/main/Qwen3.5-35B-A3B-Q4_K_M.gguf", "sha256": null, "sizeBytes": 21200000000, "contextSize": 32768 }
+    "S":  { "revision": 1, "url": "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf",         "sha256": null, "sizeBytes": 1280000000,  "contextSize": 8192,  "thinkingBudget": 384 },
+    "M":  { "revision": 1, "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",         "sha256": null, "sizeBytes": 2740000000,  "contextSize": 16384, "thinkingBudget": 512 },
+    "L":  { "revision": 1, "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",         "sha256": null, "sizeBytes": 5680000000,  "contextSize": 16384, "thinkingBudget": 1024 },
+    "XL": { "revision": 1, "url": "https://huggingface.co/unsloth/Qwen3.5-35B-A3B-GGUF/resolve/main/Qwen3.5-35B-A3B-Q4_K_M.gguf", "sha256": null, "sizeBytes": 21200000000, "contextSize": 32768, "thinkingBudget": 1536 }
   }
 }

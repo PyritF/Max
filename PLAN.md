@@ -58,7 +58,10 @@ Max/
 │       │   ├── LlmBackend.cs         (System-Prompt + Verlauf → Prompt → Antwort)
 │       │   ├── ChatTemplate.cs       (Verlauf → Prompt im Format des Modells, ChatML)
 │       │   ├── ContextWindow.cs      (Verlauf auf die Kontextlänge kürzen)
-│       │   ├── ThinkFilter.cs        (<think>-Blöcke ausblenden)
+│       │   ├── ThinkSplitter.cs      (Nachdenken und Antwort trennen)
+│       │   ├── AnswerGrammar.cs      (GBNF: nur gültige Tags und Elemente)
+│       │   ├── GrammarSampler.cs     (Token ziehen, mit Grammatik-Prüfung)
+│       │   ├── ElementGate.cs        (Elemente zurückhalten, prüfen, ggf. neu erzeugen)
 │       │   └── GgufInfo.cs           (Schichtzahl aus dem Dateikopf)
 │       ├── Chat/
 │       │   ├── ChatMessage.cs        (Rollen: system, user, assistant, tool)
@@ -299,6 +302,9 @@ Zusätzlich kann das Manifest ein `disabled: true` („Not-Aus“) und eine `mes
   Im Fließtext: `{verlauf}…{/verlauf}` für einen Farbverlauf, `--- Titel ---` für eine Linie mit Überschrift, Emoji-Kürzel wie `:rocket:`.
   - Eingebaute Schriften: small, slant, big, banner, block, shadow, smslant, mini, script, standard (FIGlet, BSD-Lizenz). Eigene `.flf`-Dateien gehören in `fonts/` im Datenordner.
   - Der versteckte Befehl `/demo` zeigt alles auf einmal, `/demo schriften` alle Schriften.
+- **Nachdenken:** Vor jeder Antwort denkt Max nach (Denkmodus des Modells). Der Denk-Text läuft grau und kursiv mit (letzte 6 Zeilen) und verschwindet, sobald die Antwort beginnt. Budget je Stufe im Manifest (`thinkingBudget`: S 384, M 512, L 1024, XL 1536 Tokens), danach wird das Nachdenken beendet. `/denken an|aus` schaltet es, gemerkt in `settings.json`. Das Nachdenken kommt nicht in den Verlauf: Vor der Antwort merkt sich die Engine einen Zwischenstand (`LLamaContext.GetState`), springt danach zurück und rechnet nur die Antwort in Verlaufsform nach – im Hintergrund, der Cache passt weiter Token für Token.
+- **Feste Schreibweise:** Die Antwort wird mit einer Grammatik (GBNF, `AnswerGrammar`) erzeugt. `{…}` gibt es nur als bekanntes Farb-Tag, ```` ``` ```` nur mit bekannter Sprache oder als Element mit vorgegebenem Zeilenformat. Geprüft wird nur das gezogene Token, nur bei einem ungültigen die ganze Auswahl. `MAX_GRAMMAR=0` schaltet sie ab.
+- **Reparatur:** Elemente werden bis zum Blockende zurückgehalten (`ElementGate`) und mit derselben Logik geprüft, die sie zeichnet. Ist ein Block kaputt, geht die Engine auf den Stand nach der Kopfzeile zurück und erzeugt den Inhalt neu (Temperatur 0,3, höchstens zweimal), sonst wird er weggelassen.
 - **Eingabezeile**: zuerst einfach, später mit Verlauf (↑/↓), mehrzeiliger Eingabe und Autovervollständigung für `/`-Befehle.
 - **Farben**: eine feste, zurückhaltende Palette mit einer Akzentfarbe für Max (z. B. Cyan oder Bernstein).
 - **Strg+C** bricht die laufende Antwort ab, beendet aber nicht Max.
@@ -390,6 +396,7 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 | 14 | `MarkdownRenderer` – eigener, streamender Renderer (Überschriften, Listen, Code-Blöcke, Tabellen, Zitate, Farb-Tags) ✅ |
 | 14a | Syntax-Hervorhebung, Widgets (Diagramme, Baum, Kasten, Spalten, Kalender, Titel), Farbverlauf, `/demo` ✅ |
 | 14b | Rückfragen mit Auswahlmenü (`frage`) ✅ |
+| 14c | Sichtbares Nachdenken (grau, live, Budget je Stufe, `/denken`), feste Schreibweise per Grammatik, unsichtbare Reparatur kaputter Elemente ✅ |
 | 15 | `/debug`, `/clear`, Tokens pro Sekunde messen ✅ (Denk-Text-Schalter für `/debug` fehlt noch) |
 | 16 | Eigene Eingabezeile: Einfügen ohne Abschicken, Shift/Alt+Enter und `\`+Enter für neue Zeilen, ↑/↓-Verlauf (gespeichert), Tab für Befehle ✅ |
 | 17 | Publish: Single-File-Exe für `win-x64`, danach `linux-x64` |

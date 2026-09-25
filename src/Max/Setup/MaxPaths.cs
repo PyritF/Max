@@ -17,6 +17,9 @@ internal sealed class MaxPaths(string root)
 
     public string State => Path.Combine(Root, "state.json");
 
+    /// <summary>Einstellungen, die man in Max selbst ändert (z. B. /denken).</summary>
+    public string Settings => Path.Combine(Root, "settings.json");
+
     public string UpdateDir => Path.Combine(Root, "update");
 
     /// <summary>Frühere Eingaben für ↑/↓.</summary>

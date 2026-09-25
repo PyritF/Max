@@ -24,15 +24,21 @@ internal static class DebugReport
             var info = engine.Info;
             rows.Add(("Modell", $"{info.Description} ({info.Architecture})"));
             rows.Add(("Backend", info.GpuLayers > 0 ? $"{info.Backend} · {Math.Min(info.GpuLayers, info.LayerCount)}/{info.LayerCount} Schichten auf der GPU" : "CPU"));
-            rows.Add(("Kontext", $"{engine.CachedTokens:N0} / {info.ContextSize:N0} Tokens".Replace(',', '.')));
+            rows.Add(("Kontext", $"{engine.CachedCount:N0} / {info.ContextSize:N0} Tokens".Replace(',', '.')));
             rows.Add(("Ladezeit", Seconds(info.LoadTime)));
             if (backend?.WarmUpTime is { } warmUp)
                 rows.Add(("Aufwärmen", Seconds(warmUp)));
 
-            if (engine.LastRun is { } run)
+            if (backend is not null)
+                rows.Add(("Denken", backend.ThinkingEnabled ? "an" : "aus"));
+            if (backend?.LastRun is { } run)
             {
                 rows.Add(("Letzte Antwort", $"{run.TokensPerSecond.ToString("0.0", German)} Tokens/s · {run.GeneratedTokens} Tokens"));
+                if (run.ThinkingTokens > 0)
+                    rows.Add(("Nachgedacht", $"{Seconds(run.ThinkingTime)} · {run.ThinkingTokens} Tokens"));
                 rows.Add(("Erstes Token nach", $"{Seconds(run.TimeToFirstToken)} · Prompt {run.PromptTokens} Tokens, davon {run.ReusedTokens} aus dem Cache"));
+                if (run.Repairs > 0)
+                    rows.Add(("Reparaturen", run.Repairs.ToString(German)));
             }
         }
         else

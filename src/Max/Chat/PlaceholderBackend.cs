@@ -23,7 +23,7 @@ internal sealed class PlaceholderBackend(TimeSpan thinkDelay, TimeSpan wordDelay
     {
     }
 
-    public async IAsyncEnumerable<string> StreamReplyAsync(
+    public async IAsyncEnumerable<ReplyChunk> StreamReplyAsync(
         Conversation conversation,
         [EnumeratorCancellation] CancellationToken ct)
     {
@@ -36,7 +36,7 @@ internal sealed class PlaceholderBackend(TimeSpan thinkDelay, TimeSpan wordDelay
         for (var i = 0; i < words.Length; i++)
         {
             ct.ThrowIfCancellationRequested();
-            yield return i < words.Length - 1 ? words[i] + " " : words[i];
+            yield return new ReplyChunk(i < words.Length - 1 ? words[i] + " " : words[i]);
             await Task.Delay(wordDelay, ct);
         }
     }

@@ -5,6 +5,8 @@
     <!-- Name der fertigen Datei: max.exe (Windows) bzw. max (Linux) -->
     <AssemblyName>max</AssemblyName>
     <RootNamespace>Max</RootNamespace>
+    <!-- Für den Zugriff auf den Modell-Zustand (Zwischenstände, siehe LlmEngine.Restore) -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

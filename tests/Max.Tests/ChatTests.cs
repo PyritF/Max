@@ -47,7 +47,7 @@ public class PlaceholderBackendTests
 
         var chunks = new List<string>();
         await foreach (var chunk in Backend().StreamReplyAsync(conversation, CancellationToken.None))
-            chunks.Add(chunk);
+            chunks.Add(chunk.Text);
 
         Assert.True(chunks.Count > 1, "Die Antwort soll in mehreren Stücken kommen.");
         Assert.Contains("Wie spät ist es?", string.Concat(chunks));
@@ -181,6 +181,33 @@ public class ChatViewTests
     }
 
     [Fact]
+    public async Task Nachdenken_erscheint_nicht_ohne_Terminal_und_zaehlt_nicht_zur_Antwort()
+    {
+        var console = new TestConsole();
+        var view = new ChatView(console, animate: false);
+
+        var text = await view.StreamReplyAsync(Gemischt(("überlege", true), ("Antwort", false)), CancellationToken.None);
+
+        Assert.Equal("Antwort", text);
+        Assert.DoesNotContain("überlege", console.Output);
+    }
+
+    [Fact]
+    public async Task Nachdenken_verschwindet_wenn_die_Antwort_kommt()
+    {
+        var console = new TestConsole().Width(60).EmitAnsiSequences();
+        var view = new ChatView(console, animate: true);
+
+        await view.StreamReplyAsync(Gemischt(("Ich überlege gerade", true), ("Antwort", false)), CancellationToken.None);
+
+        var output = console.Output;
+        var thought = output.IndexOf("überlege", StringComparison.Ordinal);
+        var erase = output.LastIndexOf("\u001b[J", StringComparison.Ordinal);
+        var answer = output.IndexOf("Antwort", StringComparison.Ordinal);
+        Assert.True(thought >= 0 && erase > thought && answer > erase, "Erst Nachdenken, dann löschen, dann die Antwort.");
+    }
+
+    [Fact]
     public async Task Cursor_ist_waehrend_der_Antwort_versteckt_und_danach_wieder_da()
     {
         var console = new TestConsole().EmitAnsiSequences();
@@ -193,21 +220,30 @@ public class ChatViewTests
         Assert.True(hide >= 0 && show > hide, "Cursor soll erst versteckt und am Ende wieder gezeigt werden.");
     }
 
-    private static async IAsyncEnumerable<string> Stuecke(params string[] teile)
+    private static async IAsyncEnumerable<ReplyChunk> Stuecke(params string[] teile)
     {
         foreach (var teil in teile)
         {
             await Task.Yield();
-            yield return teil;
+            yield return new ReplyChunk(teil);
         }
     }
 
-    private static async IAsyncEnumerable<string> StueckeMitAbbruch(CancellationTokenSource cts, string erster = "Erster Teil ")
+    private static async IAsyncEnumerable<ReplyChunk> Gemischt(params (string Text, bool Thinking)[] teile)
     {
-        yield return erster;
+        foreach (var (text, thinking) in teile)
+        {
+            await Task.Yield();
+            yield return new ReplyChunk(text, thinking);
+        }
+    }
+
+    private static async IAsyncEnumerable<ReplyChunk> StueckeMitAbbruch(CancellationTokenSource cts, string erster = "Erster Teil ")
+    {
+        yield return new ReplyChunk(erster);
         await cts.CancelAsync();
         cts.Token.ThrowIfCancellationRequested();
-        yield return "kommt nie an";
+        yield return new ReplyChunk("kommt nie an");
     }
 }
 
@@ -237,5 +273,49 @@ public class CtrlCPolicyTests
         policy.Press(Start);
 
         Assert.Equal(CtrlCPolicy.Action.ShowHint, policy.Press(Start.AddSeconds(3)));
+    }
+}
+
+public class ThinkingViewTests
+{
+    [Fact]
+    public void Zeigt_nur_die_letzten_Zeilen()
+    {
+        var lines = ThinkingView.LastLines(string.Join(" ", Enumerable.Range(1, 60).Select(i => "wort" + i)), 30, ThinkingView.VisibleLines);
+        Assert.Equal(ThinkingView.VisibleLines, lines.Count);
+        Assert.EndsWith("wort60", lines[^1]);
+        Assert.All(lines, l => Assert.True(l.Length <= 30));
+    }
+
+    [Fact]
+    public void Modellnamen_werden_ersetzt() =>
+        Assert.Equal("Ich bin Max und nicht Max.", ThinkingView.Clean("Ich bin Qwen3.5 und nicht Alibaba."));
+}
+
+public class ThinkCommandTests
+{
+    [Fact]
+    public async Task Schaltet_um_und_merkt_es_sich()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "max-tests-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var paths = new Max.Setup.MaxPaths(dir);
+            var thinking = Max.Commands.ThinkingSwitch.Load(paths);
+            Assert.True(thinking.Enabled);
+
+            var context = new Max.Commands.CommandContext(new TestConsole(), new Conversation(), Max.Commands.CommandRegistry.CreateDefault());
+            await new Max.Commands.ThinkCommand(thinking).ExecuteAsync(context, "aus");
+
+            Assert.False(thinking.Enabled);
+            Assert.False(Max.Commands.ThinkingSwitch.Load(paths).Enabled);
+            await new Max.Commands.ThinkCommand(thinking).ExecuteAsync(context, "");
+            Assert.True(Max.Commands.ThinkingSwitch.Load(paths).Enabled);
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
     }
 }

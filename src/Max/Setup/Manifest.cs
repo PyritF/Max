@@ -31,7 +31,8 @@ internal sealed record AppAsset(string File, string? Sha256 = null);
 /// </param>
 /// <param name="SizeBytes">Ungefähre Größe – für die Speicherplatz-Prüfung, bevor der Download startet.</param>
 /// <param name="ContextSize">Wie viele Tokens das Modell auf einmal sieht.</param>
-internal sealed record TierEntry(int Revision, string Url, string? Sha256, long SizeBytes, int ContextSize);
+/// <param name="ThinkingBudget">Höchstens so viele Tokens Nachdenken vor einer Antwort.</param>
+internal sealed record TierEntry(int Revision, string Url, string? Sha256, long SizeBytes, int ContextSize, int ThinkingBudget = 512);
 
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
@@ -40,6 +41,7 @@ internal sealed record TierEntry(int Revision, string Url, string? Sha256, long 
     WriteIndented = true)]
 [JsonSerializable(typeof(Manifest))]
 [JsonSerializable(typeof(InstallState))]
+[JsonSerializable(typeof(Settings))]
 internal sealed partial class SetupJson : JsonSerializerContext;
 
 /// <summary>Holt das Manifest – aus dem Netz, sonst aus der Exe.</summary>

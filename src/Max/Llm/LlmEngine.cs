@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using LLama;
 using LLama.Common;
@@ -21,9 +20,6 @@ internal sealed record EngineInfo(
     long ModelBytes,
     TimeSpan LoadTime);
 
-/// <summary>Messwerte der letzten Antwort – für /debug.</summary>
-internal sealed record GenerationStats(int PromptTokens, int ReusedTokens, int GeneratedTokens, TimeSpan TimeToFirstToken, double TokensPerSecond);
-
 /// <summary>
 /// Das lokale Sprachmodell (llama.cpp über LLamaSharp).
 /// Hält einen einzigen Kontext für die ganze Sitzung und merkt sich, welche Tokens darin schon
@@ -36,7 +32,8 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
     private readonly LLamaWeights _weights;
     private readonly LLamaContext _context;
     private readonly List<int> _cached = [];
-    private readonly SemaphoreSlim _busy = new(1, 1);
+    // Wo die Logits für das nächste Token stehen: letzte Position des letzten Batches.
+    private int _logitIndex;
 
     private LlmEngine(LLamaWeights weights, LLamaContext context, EngineInfo info)
     {
@@ -46,9 +43,8 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
     }
 
     public EngineInfo Info { get; }
-    public GenerationStats? LastRun { get; private set; }
     public int ContextSize => Info.ContextSize;
-    public int CachedTokens => _cached.Count;
+    public int CachedCount => _cached.Count;
 
     /// <summary>
     /// Lädt das Modell. Mit brauchbarer Grafikkarte über Vulkan, sonst auf der CPU.
@@ -117,100 +113,24 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
     public IReadOnlyList<int> Tokenize(string text) =>
         Array.ConvertAll(_context.NativeHandle.Tokenize(text, add_bos: false, special: true, _context.Encoding), t => (int)t);
 
-    public async IAsyncEnumerable<GeneratedPiece> GenerateAsync(
-        IReadOnlyList<int> prompt, SamplingSettings sampling, [EnumeratorCancellation] CancellationToken ct)
-    {
-        if (prompt.Count == 0)
-            yield break;
-        if (prompt.Count >= ContextSize)
-            throw new InvalidOperationException($"Prompt ({prompt.Count} Tokens) passt nicht in den Kontext ({ContextSize}).");
+    public bool IsEndOfGeneration(int token) => ((LLamaToken)token).IsEndOfGeneration(_context.NativeHandle.Vocab);
 
-        await _busy.WaitAsync(ct);
-        try
-        {
-            var clock = Stopwatch.StartNew();
-            var reused = await PrepareAsync(prompt, ct);
-            var timeToFirst = TimeSpan.Zero;
-            var generated = 0;
+    public ITokenDecoder CreateDecoder() => new Decoder(new StreamingTokenDecoder(_context));
 
-            using var sampler = new DefaultSamplingPipeline
-            {
-                Temperature = sampling.Temperature,
-                TopP = sampling.TopP,
-                TopK = sampling.TopK,
-                MinP = sampling.MinP,
-                RepeatPenalty = sampling.RepeatPenalty,
-            };
-            var decoder = new StreamingTokenDecoder(_context);
-            var vocab = _context.NativeHandle.Vocab;
-            var batch = new LLamaBatch();
-            var logitIndex = _lastLogitIndex;
-            var genClock = new Stopwatch();
-
-            try
-            {
-                while (generated < sampling.MaxTokens && _cached.Count < ContextSize)
-                {
-                    ct.ThrowIfCancellationRequested();
-
-                    var token = sampler.Sample(_context.NativeHandle, logitIndex);
-                    if (token.IsEndOfGeneration(vocab))
-                        break;
-
-                    decoder.Add(token);
-                    var text = decoder.Read();
-
-                    // Erst verarbeiten, dann ausgeben: So passt der Cache immer genau zu dem, was der Nutzer gesehen hat.
-                    batch.Clear();
-                    batch.Add(token, new LLamaPos { Value = _cached.Count }, Sequence, true);
-                    await DecodeAsync(batch, ct);
-                    _cached.Add((int)token);
-                    logitIndex = 0;
-
-                    if (generated++ == 0)
-                    {
-                        timeToFirst = clock.Elapsed;
-                        genClock.Start();
-                    }
-                    yield return new GeneratedPiece((int)token, text);
-                }
-            }
-            finally
-            {
-                var seconds = genClock.Elapsed.TotalSeconds;
-                LastRun = new GenerationStats(prompt.Count, reused, generated, timeToFirst, seconds > 0 ? (generated - 1) / seconds : 0);
-            }
-        }
-        finally
-        {
-            _busy.Release();
-        }
-    }
-
-    private int _lastLogitIndex;
-
-    public async Task PrefillAsync(IReadOnlyList<int> prompt, CancellationToken ct)
-    {
-        if (prompt.Count == 0 || prompt.Count >= ContextSize)
-            return;
-        await _busy.WaitAsync(ct);
-        try
-        {
-            await PrepareAsync(prompt, ct);
-        }
-        finally
-        {
-            _busy.Release();
-        }
-    }
+    public ITokenSampler CreateSampler(SamplingSettings settings, string? grammar = null, uint? seed = null) =>
+        new GrammarSampler(_context.NativeHandle, () => _logitIndex, settings, grammar, seed);
 
     /// <summary>
     /// Bringt den Kontext auf den Stand des Prompts. Liefert, wie viele Tokens wiederverwendet wurden.
     /// Weicht der Prompt vom Cache ab, wird der Kontext komplett neu gerechnet: Neuere Modelle
-    /// (z. B. mit rekurrenten Schichten) lassen sich nicht zuverlässig auf eine Zwischenposition zurücksetzen.
+    /// (z. B. mit rekurrenten Schichten) lassen sich nicht auf eine beliebige Zwischenposition zurücksetzen –
+    /// dafür gibt es <see cref="Checkpoint"/>.
     /// </summary>
-    private async Task<int> PrepareAsync(IReadOnlyList<int> prompt, CancellationToken ct)
+    public async Task<int> PrefillAsync(IReadOnlyList<int> prompt, CancellationToken ct)
     {
+        if (prompt.Count >= ContextSize)
+            throw new InvalidOperationException($"Prompt ({prompt.Count} Tokens) passt nicht in den Kontext ({ContextSize}).");
+
         var common = 0;
         while (common < _cached.Count && common < prompt.Count && _cached[common] == prompt[common])
             common++;
@@ -218,12 +138,22 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
         // Nur anhängen, wenn der ganze Cache passt und mindestens ein neues Token bleibt (für die Logits).
         if (common < _cached.Count || common == prompt.Count)
         {
-            _context.NativeHandle.MemoryClear(true);
-            _cached.Clear();
+            Clear();
             common = 0;
         }
 
-        var pending = prompt.Skip(common).Select(t => (LLamaToken)t).ToArray();
+        await AppendAsync(prompt.Skip(common).ToArray(), ct);
+        return common;
+    }
+
+    public async Task AppendAsync(IReadOnlyList<int> tokens, CancellationToken ct)
+    {
+        if (tokens.Count == 0)
+            return;
+        if (_cached.Count + tokens.Count > ContextSize)
+            throw new InvalidOperationException("Kontext voll.");
+
+        var pending = tokens.Select(t => (LLamaToken)t).ToArray();
         var batch = new LLamaBatch();
         try
         {
@@ -238,18 +168,55 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
                 for (var i = start; i < start + length; i++)
                     _cached.Add((int)pending[i]);
                 if (last)
-                    _lastLogitIndex = batch.TokenCount - 1;
+                    _logitIndex = batch.TokenCount - 1;
             }
         }
         catch
         {
-            // Halb verarbeiteter Prompt: lieber sauber von vorn beim nächsten Mal.
-            _context.NativeHandle.MemoryClear(true);
-            _cached.Clear();
+            // Halb verarbeitet: lieber sauber von vorn beim nächsten Mal.
+            Clear();
             throw;
         }
+    }
 
-        return common;
+    public ModelCheckpoint? Checkpoint()
+    {
+        try
+        {
+            return new EngineCheckpoint(_context.GetState(Sequence), _cached.ToArray(), _logitIndex);
+        }
+        catch (Exception e)
+        {
+            Log($"Zwischenstand konnte nicht gespeichert werden: {e.Message}");
+            return null;
+        }
+    }
+
+    public unsafe bool Restore(ModelCheckpoint checkpoint)
+    {
+        var saved = (EngineCheckpoint)checkpoint;
+        try
+        {
+            var read = _context.NativeHandle.SetState((byte*)saved.State.DangerousGetHandle(), saved.State.Size, Sequence);
+            if (read == 0)
+                throw new InvalidOperationException("llama.cpp hat den Zustand nicht angenommen.");
+            _cached.Clear();
+            _cached.AddRange(saved.Tokens);
+            _logitIndex = saved.LogitIndex;
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log($"Zwischenstand konnte nicht geladen werden, rechne neu: {e.Message}");
+            Clear();
+            return false;
+        }
+    }
+
+    private void Clear()
+    {
+        _context.NativeHandle.MemoryClear(true);
+        _cached.Clear();
     }
 
     private async Task DecodeAsync(LLamaBatch batch, CancellationToken ct)
@@ -260,11 +227,28 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
             throw new InvalidOperationException($"llama.cpp: decode fehlgeschlagen ({result}).");
     }
 
+    private sealed class EngineCheckpoint(LLamaContext.SequenceState state, int[] tokens, int logitIndex) : ModelCheckpoint
+    {
+        public LLamaContext.SequenceState State { get; } = state;
+        public int[] Tokens { get; } = tokens;
+        public int LogitIndex { get; } = logitIndex;
+        public override int TokenCount => Tokens.Length;
+        public override void Dispose() => State.Dispose();
+    }
+
+    private sealed class Decoder(StreamingTokenDecoder inner) : ITokenDecoder
+    {
+        public string Add(int token)
+        {
+            inner.Add((LLamaToken)token);
+            return inner.Read();
+        }
+    }
+
     public void Dispose()
     {
         _context.Dispose();
         _weights.Dispose();
-        _busy.Dispose();
     }
 
     /// <summary>Übersetzt den Ladefortschritt von llama.cpp (0–1) in Bytes für den Balken.</summary>

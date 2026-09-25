@@ -22,6 +22,7 @@ Beim ersten Start richtet Max sich ein und lädt dabei das passende Modell herun
 | `MAX_HOME` | anderer Datenordner, z. B. zum Testen der Einrichtung |
 | `MAX_TIER` | Stufe erzwingen: `S`, `M`, `L` oder `XL` (wie `--stufe`) |
 | `MAX_MANIFEST_URL` | Manifest von einer anderen Adresse laden |
+| `MAX_GRAMMAR` | `0` schaltet die feste Schreibweise (Grammatik) ab – zur Fehlersuche |
 
 ```powershell
 $env:MAX_HOME = "$env:TEMP\max-test"; $env:MAX_TIER = "S"; dotnet run --project src/Max

@@ -7,7 +7,7 @@ namespace Max.Ui;
 /// <summary>Welche Schritte beim Start laufen.</summary>
 internal static class StartupPlan
 {
-    public static IReadOnlyList<StartupStep> Normal(MaxPaths paths, Action<SystemSnapshot> onHardware, Action<LlmEngine, LlmBackend> onLoaded)
+    public static IReadOnlyList<StartupStep> Normal(MaxPaths paths, Func<bool> thinking, Action<SystemSnapshot> onHardware, Action<LlmEngine, LlmBackend> onLoaded)
     {
         SystemSnapshot? system = null;
         return
@@ -15,7 +15,7 @@ internal static class StartupPlan
             Hardware(s => { system = s; onHardware(s); }),
             // TODO (Schritt 19/20): echter Update-Check über das Manifest.
             new("Suche nach Updates", async (_, ct) => { await Task.Delay(700, ct); return "aktuell"; }),
-            Load(paths, () => system, onLoaded),
+            Load(paths, () => system, thinking, onLoaded),
         ];
     }
 
@@ -23,7 +23,7 @@ internal static class StartupPlan
     /// Der erste Start: Hardware prüfen, passende Stufe wählen, Modell laden und einrichten.
     /// Die Stufe bleibt unsichtbar – der Nutzer sieht nur "Download Max".
     /// </summary>
-    public static IReadOnlyList<StartupStep> Setup(MaxPaths paths, HttpClient http, Action<SystemSnapshot> onHardware, Action<LlmEngine, LlmBackend> onLoaded)
+    public static IReadOnlyList<StartupStep> Setup(MaxPaths paths, HttpClient http, Func<bool> thinking, Action<SystemSnapshot> onHardware, Action<LlmEngine, LlmBackend> onLoaded)
     {
         SystemSnapshot? system = null;
         var tier = Tier.S;
@@ -50,7 +50,7 @@ internal static class StartupPlan
                 InstallState.Commit(paths, tier, entry!, download!, DateTime.Now);
                 return Task.FromResult("fertig");
             }),
-            Load(paths, () => system, onLoaded),
+            Load(paths, () => system, thinking, onLoaded),
         ];
     }
 
@@ -58,7 +58,7 @@ internal static class StartupPlan
     /// Lädt das Modell (mit Balken) und wärmt es auf: System-Prompt vorrechnen, Grafikkarte einrichten.
     /// Danach kommt die erste Antwort ohne Wartezeit.
     /// </summary>
-    private static StartupStep Load(MaxPaths paths, Func<SystemSnapshot?> system, Action<LlmEngine, LlmBackend> onLoaded) =>
+    private static StartupStep Load(MaxPaths paths, Func<SystemSnapshot?> system, Func<bool> thinking, Action<LlmEngine, LlmBackend> onLoaded) =>
         new("Lade Max", async (progress, ct) =>
         {
             var state = InstallState.Load(paths) ?? throw new SetupException("Max ist nicht vollständig eingerichtet. Starte ihn einfach neu.");
@@ -67,7 +67,7 @@ internal static class StartupPlan
             try
             {
                 engine = await LlmEngine.LoadAsync(paths.Model, state.ContextSize, snapshot.Hardware, paths.EngineLog, progress, ct);
-                var backend = new LlmBackend(engine, SystemPrompt.Build(snapshot));
+                var backend = new LlmBackend(engine, SystemPrompt.Build(snapshot), BackendOptionsFor(state, thinking));
                 await backend.WarmUpAsync(ct);
                 onLoaded(engine, backend);
                 return "bereit";
@@ -84,6 +84,16 @@ internal static class StartupPlan
                 throw new SetupException($"Max ließ sich nicht laden. Näheres steht in {paths.EngineLog}.", e);
             }
         });
+
+    /// <summary>Denk-Budget der Stufe aus dem Manifest; <c>MAX_GRAMMAR=0</c> schaltet die Grammatik ab (Fehlersuche).</summary>
+    private static BackendOptions BackendOptionsFor(InstallState state, Func<bool> thinking)
+    {
+        var budget = TierSelector.TryParse(state.Tier, out var tier) ? ManifestSource.Embedded().For(tier)?.ThinkingBudget : null;
+        return new BackendOptions(
+            ThinkingBudget: budget ?? 512,
+            ThinkingEnabled: thinking,
+            UseGrammar: Environment.GetEnvironmentVariable("MAX_GRAMMAR") != "0");
+    }
 
     /// <summary>
     /// Vorschau des ersten Starts mit simuliertem Download (<c>max --demo-first-start</c>) –

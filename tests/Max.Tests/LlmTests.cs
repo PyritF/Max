@@ -28,44 +28,44 @@ public class ChatTemplateTests
     }
 }
 
-public class ThinkFilterTests
+public class ThinkSplitterTests
 {
-    private static string Run(params string[] chunks)
+    private static (string Thinking, string Answer) Run(bool startInThinking, params string[] chunks)
     {
-        var filter = new ThinkFilter();
-        var output = new StringBuilder();
+        var splitter = new ThinkSplitter(startInThinking);
+        var thinking = new StringBuilder();
+        var answer = new StringBuilder();
         foreach (var chunk in chunks)
-            output.Append(filter.Push(chunk));
-        return output.Append(filter.Flush()).ToString();
+            foreach (var (isThinking, text) in splitter.Push(chunk))
+                (isThinking ? thinking : answer).Append(text);
+        foreach (var (isThinking, text) in splitter.Flush())
+            (isThinking ? thinking : answer).Append(text);
+        return (thinking.ToString(), answer.ToString());
     }
 
     [Fact]
-    public void PlainText_PassesThrough() => Assert.Equal("Hallo Welt", Run("Hallo", " Welt"));
+    public void PlainText_IsAnswer() => Assert.Equal(("", "Hallo Welt"), Run(false, "Hallo", " Welt"));
 
     [Fact]
-    public void ThinkBlock_IsRemoved() => Assert.Equal("Antwort", Run("<think>grübel grübel</think>\n\nAntwort"));
+    public void ThinkBlock_IsSeparated() =>
+        Assert.Equal(("grübel grübel", "Antwort"), Run(false, "<think>grübel grübel</think>\n\nAntwort"));
 
     [Fact]
-    public void Tags_SplitAcrossChunks() => Assert.Equal("vorher Antwort", Run("vorher <th", "ink>geh", "eim</thi", "nk>Antwort"));
+    public void StartingInThinking_NeedsOnlyTheClosingTag() =>
+        Assert.Equal(("hm, mal sehen", "Klar."), Run(true, "hm, mal", " sehen</th", "ink>\n\n", "Klar."));
 
     [Fact]
-    public void UnclosedThinkBlock_ShowsNothing() => Assert.Equal("", Run("<think>denke", " und denke"));
+    public void Tags_SplitAcrossChunks() =>
+        Assert.Equal(("geheim", "vorher Antwort"), Run(false, "vorher <th", "ink>geh", "eim</thi", "nk>Antwort"));
 
     [Fact]
-    public void LookalikeTag_IsKept() => Assert.Equal("a <thin client", Run("a <thin", " client"));
+    public void UnclosedThinkBlock_StaysThinking() => Assert.Equal(("denke und denke", ""), Run(true, "denke", " und denke"));
 
     [Fact]
-    public void AngleBracketAtEnd_IsFlushed() => Assert.Equal("x < y <", Run("x < y <"));
+    public void LookalikeTag_IsKept() => Assert.Equal(("", "a <thin client"), Run(false, "a <thin", " client"));
 
     [Fact]
-    public void ReportsDroppedText()
-    {
-        var filter = new ThinkFilter();
-        filter.Push("ohne Denken");
-        Assert.False(filter.DroppedAnything);
-        filter.Push("<think>doch</think>");
-        Assert.True(filter.DroppedAnything);
-    }
+    public void LeadingBlankLines_OfTheAnswer_AreTrimmed() => Assert.Equal(("x", "Da."), Run(true, "x</think>", "\n", "\nDa."));
 }
 
 public class ContextWindowTests
@@ -242,74 +242,142 @@ public class GpuOffloadTests
 
 public class LlmBackendTests
 {
+    private static readonly ChatMlTemplate Template = new();
+
+    private static LlmBackend Backend(FakeModel model, bool thinking = false, int budget = 100) =>
+        new(model, "SYS", new BackendOptions(ThinkingBudget: budget, ThinkingEnabled: () => thinking));
+
     [Fact]
     public async Task Prompt_IsSystem_History_AssistantStart()
     {
-        var model = new FakeModel(["Hallo", " zurück."]);
-        var backend = new LlmBackend(model, "SYS");
-        var conversation = new Conversation();
-        conversation.AddUser("Hi");
+        var model = new FakeModel("Hallo", " zurück.");
+        var conversation = Single("Hi");
 
-        var reply = await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
+        var (_, reply) = await Collect(Backend(model).StreamReplyAsync(conversation, CancellationToken.None));
 
         Assert.Equal("Hallo zurück.", reply);
-        var template = new ChatMlTemplate();
-        var expected = template.Message(ChatRole.System, "SYS") + template.Message(ChatRole.User, "Hi") + template.AssistantStart;
-        Assert.Equal(expected, model.Decode(model.Prompts[0]));
+        var expected = Template.Message(ChatRole.System, "SYS") + Template.Message(ChatRole.User, "Hi") + Template.AssistantStart;
+        Assert.Equal(expected, model.Decode(model.PromptBeforeFirstSample));
     }
 
     [Fact]
     public async Task WarmUp_PrefillsSystemPrompt_WhichTheFirstPromptStartsWith()
     {
-        var model = new FakeModel(["Hi"]);
-        var backend = new LlmBackend(model, "SYS");
+        var model = new FakeModel("Hi");
+        var backend = Backend(model);
         await backend.WarmUpAsync(CancellationToken.None);
 
         Assert.NotNull(backend.WarmUpTime);
-        var prefilled = Assert.Single(model.Prefills);
         await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
-        Assert.Equal(prefilled, model.Prompts[0].Take(prefilled.Count));
+        Assert.Equal(model.Tokenize(Template.Message(ChatRole.System, "SYS")).Count, backend.LastRun!.ReusedTokens);
     }
 
-    [Fact]
-    public async Task NextPrompt_ContinuesExactlyWhereTheModelStopped()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NextPrompt_ContinuesExactlyWhereTheCacheStands(bool thinking)
     {
         // Das Modell erzeugt Tokens, die NICHT dem entsprechen, was Tokenize() aus dem Text machen würde –
-        // trotzdem muss der nächste Prompt mit genau diesen Tokens weitergehen (sonst ist der Cache wertlos).
-        var model = new FakeModel(["Ant", "wort"]);
-        var backend = new LlmBackend(model, "SYS");
+        // trotzdem muss der nächste Prompt mit genau dem Cache weitergehen (sonst ist der Cache wertlos).
+        var model = new FakeModel("überleg", "</think>", "\n\n", "Ant", "wort", null, "Zweite");
+        if (!thinking)
+            model = new FakeModel("Ant", "wort", null, "Zweite");
+        var backend = Backend(model, thinking);
         var conversation = new Conversation();
 
         conversation.AddUser("Eins");
-        conversation.AddAssistant(await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None)));
+        conversation.AddAssistant((await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None))).Answer);
+        await backend.CompleteAsync();
+        var cacheAfterFirst = model.Cache.ToList();
         conversation.AddUser("Zwei");
         await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
 
-        var first = model.Prompts[0];
-        var second = model.Prompts[1];
-        Assert.Equal(first, second.Take(first.Count));
-        Assert.Equal(model.GeneratedTokens[0], second.Skip(first.Count).Take(model.GeneratedTokens[0].Count));
+        Assert.Equal(cacheAfterFirst.Count, backend.LastRun!.ReusedTokens);
+        Assert.DoesNotContain("überleg", model.Decode(cacheAfterFirst));
+        Assert.Contains("Antwort", model.Decode(cacheAfterFirst));
     }
 
     [Fact]
-    public async Task ThinkText_IsHidden_AndLeadingBlankLinesTrimmed()
+    public async Task Thinking_IsStreamedSeparately_AndStartsWithOpenThinkBlock()
     {
-        var model = new FakeModel(["<think>", "hm", "</think>", "\n\n", "Klar."]);
-        var reply = await Collect(new LlmBackend(model, "SYS").StreamReplyAsync(Single("?"), CancellationToken.None));
+        var model = new FakeModel("hm", " gut", "</think>", "\n\n", "Klar.");
+        var backend = Backend(model, thinking: true);
+        var (thought, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
+
+        Assert.Equal("hm gut", thought);
         Assert.Equal("Klar.", reply);
+        Assert.EndsWith(Template.AssistantStartThinking, model.Decode(model.PromptBeforeFirstSample));
+        Assert.Equal(3, backend.LastRun!.ThinkingTokens);
+    }
+
+    [Fact]
+    public async Task ThinkingBudget_ForcesTheEnd_ThenTheAnswerFollows()
+    {
+        var model = new FakeModel("a", "b", "c", "d", "Antwort");
+        var backend = Backend(model, thinking: true, budget: 2);
+
+        var (thought, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
+
+        Assert.StartsWith("ab", thought);
+        Assert.Contains("Genug nachgedacht", thought);
+        Assert.Equal("cdAntwort", reply);
+        Assert.Equal(2, backend.LastRun!.ThinkingTokens);
+    }
+
+    [Fact]
+    public async Task Answer_UsesGrammar_Thinking_DoesNot()
+    {
+        var model = new FakeModel("x", "</think>", "Ja.");
+        await Collect(Backend(model, thinking: true).StreamReplyAsync(Single("?"), CancellationToken.None));
+        Assert.Equal([false, true], model.SamplerGrammars);
+    }
+
+    [Fact]
+    public async Task BrokenElement_IsGeneratedAgain_Invisibly()
+    {
+        var model = new FakeModel("Hier:\n", "```balken\n", "kaputt\n", "```\n", "Schlaf: 8\n", "```\n", "Ende.");
+        var backend = Backend(model);
+
+        var (_, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
+
+        Assert.Equal("Hier:\n```balken\nSchlaf: 8\n```\nEnde.", reply);
+        Assert.Equal(1, backend.LastRun!.Repairs);
+        Assert.DoesNotContain("kaputt", model.Decode(model.Cache));
+    }
+
+    [Fact]
+    public async Task WhenRestoreFails_EverythingIsRecomputed_AndTheElementDropped()
+    {
+        var model = new FakeModel("A\n", "```balken\n", "x\n", "```\n", "Ende.") { FailRestore = true };
+        var (_, reply) = await Collect(Backend(model).StreamReplyAsync(Single("?"), CancellationToken.None));
+
+        Assert.Equal("A\nEnde.", reply);
+        Assert.EndsWith("Ende.", model.Decode(model.Cache));
+    }
+
+    [Fact]
+    public async Task ElementThatStaysBroken_IsDropped()
+    {
+        var model = new FakeModel("A\n", "```balken\n", "x\n", "```\n", "y\n", "```\n", "z\n", "```\n", "Ende.");
+        var backend = Backend(model);
+
+        var (_, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
+
+        Assert.Equal("A\nEnde.", reply);
+        Assert.Equal(LlmBackend.MaxRepairs, backend.LastRun!.Repairs);
     }
 
     [Fact]
     public async Task Cancellation_IsPassedThrough()
     {
         using var cts = new CancellationTokenSource();
-        var model = new FakeModel(["a", "b", "c"], onPiece: i => { if (i == 1) cts.Cancel(); });
+        var model = new FakeModel("a", "b", "c") { OnSample = i => { if (i == 2) cts.Cancel(); } };
         var received = new List<string>();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
         {
-            await foreach (var chunk in new LlmBackend(model, "SYS").StreamReplyAsync(Single("?"), cts.Token))
-                received.Add(chunk);
+            await foreach (var chunk in Backend(model).StreamReplyAsync(Single("?"), cts.Token))
+                received.Add(chunk.Text);
         });
         Assert.Equal(["a", "b"], received);
     }
@@ -329,54 +397,200 @@ public class LlmBackendTests
         return conversation;
     }
 
-    private static async Task<string> Collect(IAsyncEnumerable<string> chunks)
+    private static async Task<(string Thinking, string Answer)> Collect(IAsyncEnumerable<ReplyChunk> chunks)
     {
-        var text = new StringBuilder();
+        var thinking = new StringBuilder();
+        var answer = new StringBuilder();
         await foreach (var chunk in chunks)
-            text.Append(chunk);
-        return text.ToString();
+            (chunk.IsThinking ? thinking : answer).Append(chunk.Text);
+        return (thinking.ToString(), answer.ToString());
+    }
+}
+
+/// <summary>
+/// Attrappe: ein Token pro Zeichen beim Zerlegen. Beim Erzeugen dagegen ein Token pro Stück aus dem Drehbuch
+/// (IDs ab 100.000; null = Ende der Antwort) – so fällt auf, wenn das Backend den Text neu zerlegt statt die echten Tokens zu nehmen.
+/// Cache, Zwischenstände und Wiederverwendung verhalten sich wie bei der echten Engine.
+/// </summary>
+internal sealed class FakeModel(params string?[] script) : ILanguageModel
+{
+    private const int End = 99_999;
+    private readonly Queue<string?> _script = new(script);
+    private readonly Dictionary<int, string> _generatedText = [];
+    private int _next = 100_000;
+    private int _samples;
+
+    public List<int> Cache { get; } = [];
+    public IReadOnlyList<int> PromptBeforeFirstSample { get; private set; } = [];
+    public List<bool> SamplerGrammars { get; } = [];
+    public Action<int>? OnSample { get; init; }
+    public bool FailRestore { get; set; }
+
+    public int ContextSize => 100_000;
+    public int CachedCount => Cache.Count;
+
+    public IReadOnlyList<int> Tokenize(string text) => text.Select(c => (int)c).ToArray();
+
+    public string Decode(IEnumerable<int> tokens) =>
+        string.Concat(tokens.Select(t => _generatedText.TryGetValue(t, out var s) ? s : ((char)t).ToString()));
+
+    public Task<int> PrefillAsync(IReadOnlyList<int> prompt, CancellationToken ct)
+    {
+        var common = 0;
+        while (common < Cache.Count && common < prompt.Count && Cache[common] == prompt[common])
+            common++;
+        if (common < Cache.Count || common == prompt.Count)
+        {
+            Cache.Clear();
+            common = 0;
+        }
+        Cache.AddRange(prompt.Skip(common));
+        return Task.FromResult(common);
     }
 
-    /// <summary>
-    /// Attrappe: ein Token pro Zeichen beim Zerlegen. Beim Erzeugen dagegen ein Token pro Stück
-    /// (IDs ab 100.000) – so fällt auf, wenn der Backend den Text neu zerlegt statt die echten Tokens zu nehmen.
-    /// </summary>
-    private sealed class FakeModel(string[] pieces, Action<int>? onPiece = null) : ILanguageModel
+    public async Task AppendAsync(IReadOnlyList<int> tokens, CancellationToken ct)
     {
-        private readonly Dictionary<int, string> _generatedText = [];
-        private int _next = 100_000;
+        await Task.Yield();
+        ct.ThrowIfCancellationRequested();
+        Cache.AddRange(tokens);
+    }
 
-        public List<IReadOnlyList<int>> Prompts { get; } = [];
-        public List<IReadOnlyList<int>> Prefills { get; } = [];
+    public ITokenSampler CreateSampler(SamplingSettings settings, string? grammar = null, uint? seed = null)
+    {
+        SamplerGrammars.Add(grammar is not null);
+        return new Sampler(this, grammar is not null);
+    }
 
-        public Task PrefillAsync(IReadOnlyList<int> prompt, CancellationToken ct)
-        {
-            Prefills.Add(prompt.ToArray());
-            return Task.CompletedTask;
-        }
-        public List<List<int>> GeneratedTokens { get; } = [];
-        public int ContextSize => 100_000;
+    public ITokenDecoder CreateDecoder() => new Decoder(this);
 
-        public IReadOnlyList<int> Tokenize(string text) => text.Select(c => (int)c).ToArray();
+    public bool IsEndOfGeneration(int token) => token == End;
 
-        public string Decode(IEnumerable<int> tokens) =>
-            string.Concat(tokens.Select(t => _generatedText.TryGetValue(t, out var s) ? s : ((char)t).ToString()));
+    public ModelCheckpoint? Checkpoint() => new Snapshot(Cache.ToArray());
 
-        public async IAsyncEnumerable<GeneratedPiece> GenerateAsync(IReadOnlyList<int> prompt, SamplingSettings sampling, [EnumeratorCancellation] CancellationToken ct)
-        {
-            Prompts.Add(prompt.ToArray());
-            var generated = new List<int>();
-            GeneratedTokens.Add(generated);
-            for (var i = 0; i < pieces.Length; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-                await Task.Yield();
-                var token = _next++;
-                _generatedText[token] = pieces[i];
-                generated.Add(token);
-                yield return new GeneratedPiece(token, pieces[i]);
-                onPiece?.Invoke(i);
-            }
-        }
+    public bool Restore(ModelCheckpoint checkpoint)
+    {
+        Cache.Clear();
+        if (FailRestore)
+            return false;
+        Cache.AddRange(((Snapshot)checkpoint).Tokens);
+        return true;
+    }
+
+    private int NextToken()
+    {
+        if (_samples == 0)
+            PromptBeforeFirstSample = Cache.ToArray();
+        OnSample?.Invoke(_samples);
+        _samples++;
+        if (!_script.TryDequeue(out var piece) || piece is null)
+            return End;
+        var token = _next++;
+        _generatedText[token] = piece;
+        return token;
+    }
+
+    private sealed class Sampler(FakeModel model, bool grammar) : ITokenSampler
+    {
+        public bool HasGrammar => grammar;
+        public int Sample() => model.NextToken();
+        public void Accept(int token) { }
+        public void Dispose() { }
+    }
+
+    private sealed class Decoder(FakeModel model) : ITokenDecoder
+    {
+        public string Add(int token) => model.Decode([token]);
+    }
+
+    private sealed class Snapshot(int[] tokens) : ModelCheckpoint
+    {
+        public int[] Tokens { get; } = tokens;
+        public override int TokenCount => Tokens.Length;
+    }
+}
+
+public class ElementGateTests
+{
+    [Fact]
+    public void NormalText_FlowsThroughImmediately()
+    {
+        var gate = new ElementGate();
+        Assert.Equal("Hallo ", gate.Push("Hallo "));
+        Assert.Equal("Welt\n", gate.Push("Welt\n"));
+    }
+
+    [Fact]
+    public void CodeBlock_IsReleasedAfterItsFirstLine()
+    {
+        var gate = new ElementGate();
+        Assert.Equal("", gate.Push("```py"));
+        Assert.Equal("```python\nx = 1\n", gate.Push("thon\nx = 1\n"));
+    }
+
+    [Fact]
+    public void Element_IsHeldUntilClosed_ThenAccepted()
+    {
+        var gate = new ElementGate();
+        Assert.Equal("", gate.Push("```balken\nA: 1\n"));
+        Assert.True(gate.InElement);
+        Assert.Equal("", gate.Push("```\nDanach"));
+        Assert.Equal(("balken", "A: 1\n"), gate.Closed);
+        Assert.Equal("```balken\nA: 1\n```\nDanach", gate.Accept());
+    }
+
+    [Fact]
+    public void Dropped_Element_Disappears_TextAfterItStays()
+    {
+        var gate = new ElementGate();
+        gate.Push("```balken\nkaputt\n```\nweiter");
+        Assert.Equal("weiter", gate.Drop());
+    }
+
+    [Fact]
+    public void Knows_WhenAHeaderIsAboutToOpenAnElement()
+    {
+        var gate = new ElementGate();
+        gate.Push("```bal");
+        Assert.True(gate.WouldOpenElement("ken\nA"));
+        Assert.False(new ElementGate().WouldOpenElement("```python\n"));
+    }
+
+    [Fact]
+    public void UnclosedElement_IsReportedAtTheEnd()
+    {
+        var gate = new ElementGate();
+        gate.Push("```frage\nFrage: Ja?\n- ja");
+        gate.Flush();
+        Assert.Equal("frage", gate.Closed?.Name);
+    }
+}
+
+public class AnswerGrammarTests
+{
+    [Fact]
+    public void Grammar_Knows_AllColors_Fonts_AndElements()
+    {
+        var gbnf = AnswerGrammar.Build();
+        foreach (var color in ColorTags.Names)
+            Assert.Contains($"\"{color}\"", gbnf);
+        foreach (var font in Max.Ui.Widgets.TitleWidget.BuiltInFonts)
+            Assert.Contains($"\"{font}\"", gbnf);
+        foreach (var widget in Max.Ui.Widgets.WidgetRegistry.Names)
+            Assert.Contains($"\"{widget}\"", gbnf);
+        Assert.StartsWith("root ::= ", gbnf);
+    }
+
+    [Fact]
+    public void CodeLanguages_NeverCollideWithElements() =>
+        Assert.DoesNotContain(AnswerGrammar.CodeLanguages, l => Max.Ui.Widgets.WidgetValidator.IsElement(l));
+
+    [Fact]
+    public void EveryRule_IsDefined()
+    {
+        var gbnf = AnswerGrammar.Build();
+        var defined = gbnf.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => l[..l.IndexOf(" ::=", StringComparison.Ordinal)]).ToHashSet();
+        var withoutStrings = System.Text.RegularExpressions.Regex.Replace(gbnf, "\"(\\\\.|[^\"\\\\])*\"|\\[(\\\\.|[^\\]\\\\])*\\]", " ");
+        var used = System.Text.RegularExpressions.Regex.Matches(withoutStrings, @"(?<![\w-])[a-z][a-z-]*(?![\w-]*\s*::=)").Select(m => m.Value);
+        Assert.All(used, name => Assert.Contains(name, defined));
     }
 }

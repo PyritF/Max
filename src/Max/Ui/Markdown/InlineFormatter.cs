@@ -102,15 +102,18 @@ internal sealed class InlineFormatter(Action<string, Style> output)
                 PushChar(c);
                 return;
             }
-            else if (_pending[0] == '{')
+            else if (_pending[0] is '{' or '[')
             {
+                // {rot}…{/rot} – und aus Toleranz auch [rot]…[/rot], das kleine Modelle gern schreiben.
+                var open = _pending[0];
+                var close = open == '{' ? '}' : ']';
                 _pending.Append(c);
-                if (c == '}')
+                if (c == close)
                 {
                     var tag = _pending.ToString(1, _pending.Length - 2);
                     _pending.Clear();
                     if (!TryApplyTag(tag))
-                        EmitLiteral("{" + tag + "}");
+                        EmitLiteral(open + tag + close);
                 }
                 else if (!(char.IsLetter(c) || c is '/' or ':' or '-' or ' ' or '=') || _pending.Length > MaxTagLength)
                 {
@@ -132,6 +135,7 @@ internal sealed class InlineFormatter(Action<string, Style> output)
                 _code = true;
                 break;
             case '{':
+            case '[':
             case '\\':
                 _pending.Append(c);
                 break;

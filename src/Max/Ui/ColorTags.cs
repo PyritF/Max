@@ -31,5 +31,8 @@ internal static class ColorTags
         ["akzent"] = Theme.Accent,
     };
 
+    /// <summary>Alle erlaubten Namen (für die Grammatik, die das Modell auf gültige Tags festlegt).</summary>
+    public static IEnumerable<string> Names => Colors.Keys;
+
     public static bool TryGet(string name, out Color color) => Colors.TryGetValue(name, out color);
 }

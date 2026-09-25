@@ -24,6 +24,14 @@ public class InlineFormatterTests
         string.Concat(parts.Where(p => predicate(p.Style)).Select(p => p.Text));
 
     [Fact]
+    public void SquareBracketColorTags_AreUnderstoodToo_OtherBracketsStay()
+    {
+        var parts = Run("ein [rot]roter[/rot] Text, [Link](x) und arr[0]");
+        Assert.Equal("ein roter Text, [Link](x) und arr[0]", Plain(parts));
+        Assert.Equal("roter", Styled(parts, s => s.Foreground != Style.Plain.Foreground));
+    }
+
+    [Fact]
     public void Bold_Italic_Code()
     {
         var parts = Run("ein **fettes** und *schräges* mit `code`");

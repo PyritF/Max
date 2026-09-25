@@ -1,3 +1,4 @@
+using Max.Chat;
 using Max.Ui;
 using Max.Ui.Markdown;
 using Spectre.Console.Testing;
@@ -139,12 +140,12 @@ public class QuestionRenderingTests
         Assert.NotNull(renderer.Question);
     }
 
-    private static async IAsyncEnumerable<string> Stuecke(string text)
+    private static async IAsyncEnumerable<ReplyChunk> Stuecke(string text)
     {
         foreach (var c in text.Chunk(7))
         {
             await Task.Yield();
-            yield return new string(c);
+            yield return new ReplyChunk(new string(c));
         }
     }
 }

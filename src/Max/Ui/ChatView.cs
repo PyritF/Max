@@ -1,4 +1,5 @@
 using System.Text;
+using Max.Chat;
 using Max.Ui.Markdown;
 using Spectre.Console;
 
@@ -37,14 +38,16 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
     /// <summary>
     /// Gibt Max' Antwort aus, sobald die Stücke eintreffen – als formatiertes Markdown mit
     /// Farb-Tags wie <c>{rot}…{/rot}</c>. Bis zum ersten Stück dreht sich ein Spinner.
+    /// Denkt Max vorher nach, läuft das grau mit (<see cref="ThinkingView"/>) und verschwindet mit der Antwort.
     /// Bei Abbruch (Strg+C) wird "(abgebrochen)" angehängt.
     /// </summary>
-    /// <returns>Der bis dahin empfangene Rohtext – für den Gesprächsverlauf.</returns>
-    public async Task<string> StreamReplyAsync(IAsyncEnumerable<string> chunks, CancellationToken ct)
+    /// <returns>Der bis dahin empfangene Antwort-Text (ohne Nachdenken) – für den Gesprächsverlauf.</returns>
+    public async Task<string> StreamReplyAsync(IAsyncEnumerable<ReplyChunk> chunks, CancellationToken ct)
     {
         var text = new StringBuilder();
         var writer = new WrapWriter(console, Indent.Length);
         var markdown = new MarkdownRenderer(console, writer, listQuestionOptions: !animate);
+        var thinking = new ThinkingView(console);
         LastQuestion = null;
 
         console.Markup($" [{Theme.Tag(Theme.Accent)}]{Theme.Symbol}[/] ");
@@ -64,21 +67,48 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
             await spinner;
         }
 
+        using var tickerStop = new CancellationTokenSource();
+        Task? ticker = null;
+
+        async Task StopThinkingAsync()
+        {
+            if (ticker is not null)
+            {
+                await tickerStop.CancelAsync();
+                await ticker;
+                ticker = null;
+            }
+            thinking.Erase();
+        }
+
         try
         {
             await foreach (var chunk in chunks.WithCancellation(ct))
             {
                 await StopSpinnerAsync();
-                text.Append(chunk);
-                markdown.Push(chunk);
+                if (chunk.IsThinking)
+                {
+                    // Ohne echtes Terminal wird das Nachdenken nicht gezeigt.
+                    if (animate)
+                    {
+                        thinking.Add(chunk.Text);
+                        ticker ??= TickAsync(thinking, tickerStop.Token);
+                    }
+                    continue;
+                }
+                await StopThinkingAsync();
+                text.Append(chunk.Text);
+                markdown.Push(chunk.Text);
             }
             await StopSpinnerAsync();
+            await StopThinkingAsync();
             markdown.Finish();
             LastQuestion = markdown.Question;
         }
         catch (OperationCanceledException)
         {
             await StopSpinnerAsync();
+            await StopThinkingAsync();
             markdown.Finish();
             var gap = text.Length > 0 && !char.IsWhiteSpace(text[^1]) ? " " : "";
             writer.Write(gap, Style.Plain);
@@ -93,6 +123,22 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
 
         writer.CloseReply();
         return text.ToString();
+    }
+
+    /// <summary>Lässt die Sekunden beim Nachdenken weiterlaufen, auch wenn gerade kein Text kommt.</summary>
+    private static async Task TickAsync(ThinkingView view, CancellationToken stop)
+    {
+        try
+        {
+            while (true)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(500), stop);
+                view.Tick();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     /// <summary>Dreht den Spinner an Ort und Stelle: Zeichen schreiben, per Backspace zurück.</summary>
