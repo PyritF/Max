@@ -9,7 +9,7 @@ internal static class DebugReport
 {
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
 
-    public static IReadOnlyList<(string Label, string Value)> Build(LlmEngine? engine, MaxPaths paths, SystemSnapshot system)
+    public static IReadOnlyList<(string Label, string Value)> Build(LlmEngine? engine, LlmBackend? backend, MaxPaths paths, SystemSnapshot system)
     {
         var state = InstallState.Load(paths);
         var rows = new List<(string, string)>
@@ -26,6 +26,8 @@ internal static class DebugReport
             rows.Add(("Backend", info.GpuLayers > 0 ? $"{info.Backend} · {Math.Min(info.GpuLayers, info.LayerCount)}/{info.LayerCount} Schichten auf der GPU" : "CPU"));
             rows.Add(("Kontext", $"{engine.CachedTokens:N0} / {info.ContextSize:N0} Tokens".Replace(',', '.')));
             rows.Add(("Ladezeit", Seconds(info.LoadTime)));
+            if (backend?.WarmUpTime is { } warmUp)
+                rows.Add(("Aufwärmen", Seconds(warmUp)));
 
             if (engine.LastRun is { } run)
             {

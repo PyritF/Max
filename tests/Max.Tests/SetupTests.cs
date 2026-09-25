@@ -454,3 +454,33 @@ internal sealed class FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
         Task.FromResult(respond(request));
 }
+
+public class UserIdentityTests
+{
+    [Fact]
+    public void FirstName_IsFirstWordOfFullName() =>
+        Assert.Equal("Alex", UserIdentity.Create("alex", "Alex Beispiel").FirstName);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void EmptyFullName_FallsBackToUserName(string? full)
+    {
+        var identity = UserIdentity.Create("alex", full);
+        Assert.Equal("alex", identity.FullName);
+        Assert.Equal("alex", identity.FirstName);
+    }
+
+    [Fact]
+    public void Passwd_GecosField()
+    {
+        string[] lines =
+        [
+            "root:x:0:0:root:/root:/bin/bash",
+            "alex:x:1000:1000:Alex Beispiel,,,:/home/alex:/bin/bash",
+        ];
+        Assert.Equal("Alex Beispiel", UserIdentity.FromPasswd(lines, "alex"));
+        Assert.Null(UserIdentity.FromPasswd(lines, "niemand"));
+    }
+}

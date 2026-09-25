@@ -6,6 +6,7 @@ using LLama.Common;
 using LLama.Native;
 using LLama.Sampling;
 using Max.Setup;
+using Max.Ui;
 
 namespace Max.Llm;
 
@@ -53,7 +54,9 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
     /// Lädt das Modell. Mit brauchbarer Grafikkarte über Vulkan, sonst auf der CPU.
     /// Scheitert es auf der Grafikkarte (z. B. zu wenig Speicher), gibt es einen zweiten Versuch auf der CPU.
     /// </summary>
-    public static async Task<LlmEngine> LoadAsync(string modelPath, int contextSize, HardwareInfo hardware, string logFile, CancellationToken ct)
+    /// <param name="progress">Bekommt den Ladefortschritt in Bytes – für den Balken beim Start.</param>
+    public static async Task<LlmEngine> LoadAsync(
+        string modelPath, int contextSize, HardwareInfo hardware, string logFile, StepProgress? progress, CancellationToken ct)
     {
         var clock = Stopwatch.StartNew();
         var useGpu = hardware.Gpu is not null;
@@ -72,17 +75,19 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
             BatchSize = 512,
         };
 
+        var loadProgress = new LoadProgress(progress, modelBytes);
         LLamaWeights weights;
         try
         {
-            weights = await LLamaWeights.LoadFromFileAsync(parameters, ct);
+            weights = await LLamaWeights.LoadFromFileAsync(parameters, ct, loadProgress);
         }
         catch (Exception e) when (layers > 0 && e is not OperationCanceledException)
         {
             NativeSetup.Log($"GPU-Laden gescheitert, versuche CPU: {e.Message}");
             parameters.GpuLayerCount = layers = 0;
-            weights = await LLamaWeights.LoadFromFileAsync(parameters, ct);
+            weights = await LLamaWeights.LoadFromFileAsync(parameters, ct, loadProgress);
         }
+        progress?.Report(modelBytes, modelBytes, 0);
 
         try
         {
@@ -184,6 +189,21 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
 
     private int _lastLogitIndex;
 
+    public async Task PrefillAsync(IReadOnlyList<int> prompt, CancellationToken ct)
+    {
+        if (prompt.Count == 0 || prompt.Count >= ContextSize)
+            return;
+        await _busy.WaitAsync(ct);
+        try
+        {
+            await PrepareAsync(prompt, ct);
+        }
+        finally
+        {
+            _busy.Release();
+        }
+    }
+
     /// <summary>
     /// Bringt den Kontext auf den Stand des Prompts. Liefert, wie viele Tokens wiederverwendet wurden.
     /// Weicht der Prompt vom Cache ab, wird der Kontext komplett neu gerechnet: Neuere Modelle
@@ -245,6 +265,20 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
         _context.Dispose();
         _weights.Dispose();
         _busy.Dispose();
+    }
+
+    /// <summary>Übersetzt den Ladefortschritt von llama.cpp (0–1) in Bytes für den Balken.</summary>
+    private sealed class LoadProgress(StepProgress? target, long totalBytes) : IProgress<float>
+    {
+        private readonly Setup.SpeedMeter _speed = new();
+
+        public void Report(float value)
+        {
+            if (target is null)
+                return;
+            var done = (long)(Math.Clamp(value, 0, 1) * totalBytes);
+            target.Report(done, totalBytes, _speed.Add(done));
+        }
     }
 
     /// <summary>Einmalige Einrichtung der nativen Bibliothek: Backend wählen, Log in eine Datei umleiten.</summary>

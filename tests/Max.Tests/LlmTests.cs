@@ -129,7 +129,7 @@ public class SystemPromptTests
     [Fact]
     public void AllPlaceholders_AreFilled()
     {
-        var system = new SystemSnapshot(new DateTime(2026, 9, 25, 21, 14, 0), "alex", "Windows 11", 16,
+        var system = new SystemSnapshot(new DateTime(2026, 9, 25, 21, 14, 0), UserIdentity.Create("alex", "Alex Beispiel"), "Windows 11", 16,
             new HardwareInfo(32L << 30, null), @"C:\Users\alex");
         var prompt = SystemPrompt.Build(system);
 
@@ -138,7 +138,8 @@ public class SystemPromptTests
         Assert.Contains("Freitag, 25. September 2026", prompt);
         Assert.Contains("21:14", prompt);
         Assert.Contains("Windows 11", prompt);
-        Assert.Contains("alex", prompt);
+        Assert.Contains("Nutzer: Alex Beispiel (Vorname: Alex)", prompt);
+        Assert.Contains("Du duzt den Nutzer immer", prompt);
         Assert.DoesNotContain("\r", prompt);
     }
 }
@@ -258,6 +259,19 @@ public class LlmBackendTests
     }
 
     [Fact]
+    public async Task WarmUp_PrefillsSystemPrompt_WhichTheFirstPromptStartsWith()
+    {
+        var model = new FakeModel(["Hi"]);
+        var backend = new LlmBackend(model, "SYS");
+        await backend.WarmUpAsync(CancellationToken.None);
+
+        Assert.NotNull(backend.WarmUpTime);
+        var prefilled = Assert.Single(model.Prefills);
+        await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
+        Assert.Equal(prefilled, model.Prompts[0].Take(prefilled.Count));
+    }
+
+    [Fact]
     public async Task NextPrompt_ContinuesExactlyWhereTheModelStopped()
     {
         // Das Modell erzeugt Tokens, die NICHT dem entsprechen, was Tokenize() aus dem Text machen würde –
@@ -333,6 +347,13 @@ public class LlmBackendTests
         private int _next = 100_000;
 
         public List<IReadOnlyList<int>> Prompts { get; } = [];
+        public List<IReadOnlyList<int>> Prefills { get; } = [];
+
+        public Task PrefillAsync(IReadOnlyList<int> prompt, CancellationToken ct)
+        {
+            Prefills.Add(prompt.ToArray());
+            return Task.CompletedTask;
+        }
         public List<List<int>> GeneratedTokens { get; } = [];
         public int ContextSize => 100_000;
 

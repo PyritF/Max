@@ -6,7 +6,7 @@ namespace Max.Ui;
 /// <summary>Momentaufnahme des Systems für den Startbildschirm.</summary>
 internal sealed record SystemSnapshot(
     DateTime Now,
-    string UserName,
+    UserIdentity User,
     string OsName,
     int CpuCores,
     HardwareInfo Hardware,
@@ -14,7 +14,7 @@ internal sealed record SystemSnapshot(
 {
     public static SystemSnapshot Capture() => new(
         Now: DateTime.Now,
-        UserName: Environment.UserName,
+        User: UserIdentity.Detect(),
         OsName: GetOsName(),
         CpuCores: Environment.ProcessorCount,
         Hardware: HardwareInfo.Detect(),

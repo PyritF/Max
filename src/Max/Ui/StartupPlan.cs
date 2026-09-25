@@ -1,4 +1,5 @@
 using Max.Llm;
+using Max.Persona;
 using Max.Setup;
 
 namespace Max.Ui;
@@ -6,7 +7,7 @@ namespace Max.Ui;
 /// <summary>Welche Schritte beim Start laufen.</summary>
 internal static class StartupPlan
 {
-    public static IReadOnlyList<StartupStep> Normal(MaxPaths paths, Action<SystemSnapshot> onHardware, Action<LlmEngine> onEngine)
+    public static IReadOnlyList<StartupStep> Normal(MaxPaths paths, Action<SystemSnapshot> onHardware, Action<LlmEngine, LlmBackend> onLoaded)
     {
         SystemSnapshot? system = null;
         return
@@ -14,7 +15,7 @@ internal static class StartupPlan
             Hardware(s => { system = s; onHardware(s); }),
             // TODO (Schritt 19/20): echter Update-Check über das Manifest.
             new("Suche nach Updates", async (_, ct) => { await Task.Delay(700, ct); return "aktuell"; }),
-            Load(paths, () => system, onEngine),
+            Load(paths, () => system, onLoaded),
         ];
     }
 
@@ -22,7 +23,7 @@ internal static class StartupPlan
     /// Der erste Start: Hardware prüfen, passende Stufe wählen, Modell laden und einrichten.
     /// Die Stufe bleibt unsichtbar – der Nutzer sieht nur "Download Max".
     /// </summary>
-    public static IReadOnlyList<StartupStep> Setup(MaxPaths paths, HttpClient http, Action<SystemSnapshot> onHardware, Action<LlmEngine> onEngine)
+    public static IReadOnlyList<StartupStep> Setup(MaxPaths paths, HttpClient http, Action<SystemSnapshot> onHardware, Action<LlmEngine, LlmBackend> onLoaded)
     {
         SystemSnapshot? system = null;
         var tier = Tier.S;
@@ -49,23 +50,36 @@ internal static class StartupPlan
                 InstallState.Commit(paths, tier, entry!, download!, DateTime.Now);
                 return Task.FromResult("fertig");
             }),
-            Load(paths, () => system, onEngine),
+            Load(paths, () => system, onLoaded),
         ];
     }
 
-    /// <summary>Lädt das Modell. Dauert je nach Größe und Platte ein paar Sekunden.</summary>
-    private static StartupStep Load(MaxPaths paths, Func<SystemSnapshot?> system, Action<LlmEngine> onEngine) =>
-        new("Lade Max", async (_, ct) =>
+    /// <summary>
+    /// Lädt das Modell (mit Balken) und wärmt es auf: System-Prompt vorrechnen, Grafikkarte einrichten.
+    /// Danach kommt die erste Antwort ohne Wartezeit.
+    /// </summary>
+    private static StartupStep Load(MaxPaths paths, Func<SystemSnapshot?> system, Action<LlmEngine, LlmBackend> onLoaded) =>
+        new("Lade Max", async (progress, ct) =>
         {
             var state = InstallState.Load(paths) ?? throw new SetupException("Max ist nicht vollständig eingerichtet. Starte ihn einfach neu.");
-            var hardware = system()?.Hardware ?? HardwareInfo.Detect();
+            var snapshot = system() ?? SystemSnapshot.Capture();
+            LlmEngine? engine = null;
             try
             {
-                onEngine(await LlmEngine.LoadAsync(paths.Model, state.ContextSize, hardware, paths.EngineLog, ct));
+                engine = await LlmEngine.LoadAsync(paths.Model, state.ContextSize, snapshot.Hardware, paths.EngineLog, progress, ct);
+                var backend = new LlmBackend(engine, SystemPrompt.Build(snapshot));
+                await backend.WarmUpAsync(ct);
+                onLoaded(engine, backend);
                 return "bereit";
             }
-            catch (Exception e) when (e is not OperationCanceledException)
+            catch (OperationCanceledException)
             {
+                engine?.Dispose();
+                throw;
+            }
+            catch (Exception e)
+            {
+                engine?.Dispose();
                 LlmEngine.Log($"Laden fehlgeschlagen: {e}");
                 throw new SetupException($"Max ließ sich nicht laden. Näheres steht in {paths.EngineLog}.", e);
             }

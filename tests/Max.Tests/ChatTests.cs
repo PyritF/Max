@@ -1,3 +1,4 @@
+using Spectre.Console;
 using Max.Chat;
 using Max.Ui;
 using Spectre.Console.Testing;
@@ -114,6 +115,84 @@ public class ChatViewTests
         Assert.StartsWith("   ", zeilen[1]);
     }
 
+    [Fact]
+    public async Task Woerter_aus_mehreren_Stuecken_werden_nie_zerrissen()
+    {
+        var console = new TestConsole().Width(24);
+        var view = new ChatView(console, animate: false);
+
+        // "Präzision" kommt in drei Stücken und passt nicht mehr in die erste Zeile.
+        await view.StreamReplyAsync(Stuecke("Das ist eine ", "Präz", "isi", "on beim Umbruch."), CancellationToken.None);
+
+        var zeilen = console.Lines.Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
+        Assert.Contains(zeilen, l => l.Contains("Präzision"));
+        Assert.All(console.Lines, l => Assert.True(l.TrimEnd().Length < 24, $"Zeile zu lang: '{l}'"));
+    }
+
+    [Fact]
+    public async Task Ueberlange_Woerter_werden_hart_geteilt()
+    {
+        var console = new TestConsole().Width(20);
+        var view = new ChatView(console, animate: false);
+
+        await view.StreamReplyAsync(Stuecke("https://example.com/ein/sehr/langer/pfad"), CancellationToken.None);
+
+        Assert.All(console.Lines, l => Assert.True(l.TrimEnd().Length < 20, $"Zeile zu lang: '{l}'"));
+        Assert.Equal("https://example.com/ein/sehr/langer/pfad", string.Concat(console.Lines.Select(l => l.Replace("◆", "").Trim())));
+    }
+
+    [Fact]
+    public async Task Emojis_zaehlen_zwei_Spalten()
+    {
+        var console = new TestConsole().Width(12);
+        var view = new ChatView(console, animate: false);
+
+        // " ◆ " (3) + "👍👍👍👍" (8) = 11 → passt nicht mehr hinter die 11. Spalte.
+        await view.StreamReplyAsync(Stuecke("👍👍👍👍 ok"), CancellationToken.None);
+
+        var zeilen = console.Lines.Where(l => l.Trim().Length > 0).ToList();
+        Assert.Equal(2, zeilen.Count);
+        Assert.Equal("ok", zeilen[1].Trim());
+    }
+
+    [Fact]
+    public async Task Farb_Tags_werden_angewendet_und_bleiben_im_Verlauf()
+    {
+        var console = new TestConsole().Colors(ColorSystem.TrueColor).EmitAnsiSequences();
+        var view = new ChatView(console, animate: false);
+
+        var text = await view.StreamReplyAsync(Stuecke("Das ist {r", "ot}wichtig{/rot}."), CancellationToken.None);
+
+        Assert.Equal("Das ist {rot}wichtig{/rot}.", text);
+        Assert.DoesNotContain("{rot}", console.Output);
+        Assert.Contains("\u001b[38;2;240;80;80mwichtig", console.Output);
+    }
+
+    [Fact]
+    public async Task Bei_Abbruch_wird_das_angefangene_Wort_noch_ausgegeben()
+    {
+        var console = new TestConsole();
+        var view = new ChatView(console, animate: false);
+        using var cts = new CancellationTokenSource();
+
+        await view.StreamReplyAsync(StueckeMitAbbruch(cts, "Halbes Wo"), cts.Token);
+
+        Assert.Contains("Halbes Wo (abgebrochen)", console.Output);
+    }
+
+    [Fact]
+    public async Task Cursor_ist_waehrend_der_Antwort_versteckt_und_danach_wieder_da()
+    {
+        var console = new TestConsole().EmitAnsiSequences();
+        var view = new ChatView(console, animate: true);
+
+        await view.StreamReplyAsync(Stuecke("Hallo"), CancellationToken.None);
+
+        var hide = console.Output.IndexOf("\u001b[?25l", StringComparison.Ordinal);
+        var show = console.Output.LastIndexOf("\u001b[?25h", StringComparison.Ordinal);
+        Assert.True(hide >= 0 && show > hide, "Cursor soll erst versteckt und am Ende wieder gezeigt werden.");
+    }
+
     private static async IAsyncEnumerable<string> Stuecke(params string[] teile)
     {
         foreach (var teil in teile)
@@ -123,9 +202,9 @@ public class ChatViewTests
         }
     }
 
-    private static async IAsyncEnumerable<string> StueckeMitAbbruch(CancellationTokenSource cts)
+    private static async IAsyncEnumerable<string> StueckeMitAbbruch(CancellationTokenSource cts, string erster = "Erster Teil ")
     {
-        yield return "Erster Teil ";
+        yield return erster;
         await cts.CancelAsync();
         cts.Token.ThrowIfCancellationRequested();
         yield return "kommt nie an";

@@ -2,7 +2,6 @@ using Max;
 using Max.Chat;
 using Max.Commands;
 using Max.Llm;
-using Max.Persona;
 using Max.Setup;
 using Max.Ui;
 using Spectre.Console;
@@ -23,8 +22,9 @@ http.DefaultRequestHeaders.UserAgent.ParseAdd($"Max/{typeof(Program).Assembly.Ge
 
 SystemSnapshot? system = null;
 LlmEngine? engine = null;
+LlmBackend? llm = null;
 void OnHardware(SystemSnapshot s) => system = s;
-void OnEngine(LlmEngine e) => engine = e;
+void OnLoaded(LlmEngine e, LlmBackend b) => (engine, llm) = (e, b);
 
 // 1. Startsequenz – beim ersten Start die Einrichtung mit Download, dann das Modell laden.
 //    Strg+C bricht hier sauber ab; ein angefangener Download bleibt liegen und geht beim nächsten Mal weiter.
@@ -38,9 +38,9 @@ using (var startup = new CancellationTokenSource())
         if (demo)
             await StartupScreen.RunAsync("Einrichtung", setupSubtitle, StartupPlan.FirstStartDemo(OnHardware), startup.Token);
         else if (!InstallState.IsInstalled(paths))
-            await StartupScreen.RunAsync("Einrichtung", setupSubtitle, StartupPlan.Setup(paths, http, OnHardware, OnEngine), startup.Token);
+            await StartupScreen.RunAsync("Einrichtung", setupSubtitle, StartupPlan.Setup(paths, http, OnHardware, OnLoaded), startup.Token);
         else
-            await StartupScreen.RunAsync("Max startet", null, StartupPlan.Normal(paths, OnHardware, OnEngine), startup.Token);
+            await StartupScreen.RunAsync("Max startet", null, StartupPlan.Normal(paths, OnHardware, OnLoaded), startup.Token);
     }
     catch (Exception e) when (e is SetupException or OperationCanceledException)
     {
@@ -58,8 +58,8 @@ system ??= SystemSnapshot.Capture();
 using var loadedEngine = engine;
 
 // Nur für den GitHub-Workflow: feste Fragen statt Chat.
-if (args.Contains("--selftest") && engine is not null)
-    return await SelfTest.RunAsync(engine, system, Console.Out);
+if (args.Contains("--selftest") && engine is not null && llm is not null)
+    return await SelfTest.RunAsync(engine, llm, Console.Out);
 
 // 2. Übersicht
 if (!Console.IsOutputRedirected)
@@ -68,7 +68,7 @@ if (!Console.IsOutputRedirected)
 await HomeScreen.ShowAsync(system);
 
 // 3. Chat – in der Demo ohne Modell mit Platzhalter-Antworten.
-IChatBackend backend = engine is null ? new PlaceholderBackend() : new LlmBackend(engine, SystemPrompt.Build(system));
-var commands = CommandRegistry.CreateDefault(new DebugCommand(() => DebugReport.Build(engine, paths, system)));
+IChatBackend backend = llm ?? (IChatBackend)new PlaceholderBackend();
+var commands = CommandRegistry.CreateDefault(new DebugCommand(() => DebugReport.Build(engine, llm, paths, system)));
 await new ChatLoop(AnsiConsole.Console, backend, () => DateTime.Now, commands).RunAsync();
 return 0;

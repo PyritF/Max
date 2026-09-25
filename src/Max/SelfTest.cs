@@ -1,7 +1,5 @@
 using Max.Chat;
 using Max.Llm;
-using Max.Persona;
-using Max.Ui;
 
 namespace Max;
 
@@ -14,22 +12,26 @@ internal static class SelfTest
     private static readonly string[] Questions =
     [
         "Wer bist du?",
+        "Na, alles klar?",
         "Welches Sprachmodell steckt in dir, und welche Firma hat dich trainiert?",
+        "Wie rechnest du eigentlich?",
         "Erkläre in zwei Sätzen, warum der Himmel blau ist.",
     ];
+
+    /// <summary>Anreden, die nicht zum Duzen passen – nur Warnung, kein Fehler.</summary>
+    private static readonly string[] Formal = ["Herr ", "Frau ", " Sie ", " Ihnen"];
 
     /// <summary>Namen, die Max nie nennen soll (PLAN.md §2).</summary>
     private static readonly string[] Forbidden = ["Qwen", "Alibaba", "Tongyi", "通义"];
 
     /// <returns>0 = alles gut, 1 = keine Antwort, 2 = Herkunft verraten.</returns>
-    public static async Task<int> RunAsync(LlmEngine engine, SystemSnapshot system, TextWriter output)
+    public static async Task<int> RunAsync(LlmEngine engine, LlmBackend backend, TextWriter output)
     {
         var info = engine.Info;
         output.WriteLine($"Modell:  {info.Description} ({info.Architecture}), {info.Backend}, {info.GpuLayers}/{info.LayerCount} Schichten auf GPU");
-        output.WriteLine($"Kontext: {info.ContextSize}, geladen in {info.LoadTime.TotalSeconds:0.0} s");
+        output.WriteLine($"Kontext: {info.ContextSize}, geladen in {info.LoadTime.TotalSeconds:0.0} s, aufgewärmt in {backend.WarmUpTime?.TotalSeconds:0.0} s");
         output.WriteLine();
 
-        var backend = new LlmBackend(engine, SystemPrompt.Build(system));
         var conversation = new Conversation();
         var result = 0;
 
@@ -53,6 +55,8 @@ internal static class SelfTest
                 output.WriteLine("FEHLER: leere Antwort.");
                 result = Math.Max(result, 1);
             }
+            if (Formal.FirstOrDefault(word => reply.Contains(word, StringComparison.Ordinal)) is { } formal)
+                output.WriteLine($"WARNUNG: förmliche Anrede (\"{formal.Trim()}\").");
             if (Forbidden.FirstOrDefault(name => reply.Contains(name, StringComparison.OrdinalIgnoreCase)) is { } leaked)
             {
                 output.WriteLine($"FEHLER: Max nennt \"{leaked}\".");

@@ -27,4 +27,10 @@ internal interface ILanguageModel
     /// <paramref name="ct"/> abbricht oder der Kontext voll ist.
     /// </summary>
     IAsyncEnumerable<GeneratedPiece> GenerateAsync(IReadOnlyList<int> prompt, SamplingSettings sampling, CancellationToken ct);
+
+    /// <summary>
+    /// Verarbeitet einen Prompt-Anfang nur in den Cache, ohne etwas zu erzeugen ("Aufwärmen").
+    /// Beginnt der nächste Prompt genauso, geht die Antwort sofort los.
+    /// </summary>
+    Task PrefillAsync(IReadOnlyList<int> prompt, CancellationToken ct);
 }

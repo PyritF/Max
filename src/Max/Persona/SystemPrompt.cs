@@ -18,7 +18,8 @@ internal static class SystemPrompt
         .Replace("{{datum}}", system.Now.ToString("dddd, d. MMMM yyyy", German))
         .Replace("{{uhrzeit}}", system.Now.ToString("HH:mm", German))
         .Replace("{{os}}", system.OsName)
-        .Replace("{{benutzername}}", system.UserName)
+        .Replace("{{name}}", system.User.FullName)
+        .Replace("{{vorname}}", system.User.FirstName)
         .ReplaceLineEndings("\n")
         .Trim();
 

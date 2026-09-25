@@ -25,6 +25,22 @@ internal sealed class LlmBackend(ILanguageModel model, string systemPrompt, ICha
     private IReadOnlyList<int>? _assistantStart;
     private IReadOnlyList<int>? _assistantEnd;
 
+    /// <summary>Wie lange das Aufwärmen gedauert hat – für /debug.</summary>
+    public TimeSpan? WarmUpTime { get; private set; }
+
+    /// <summary>
+    /// Rechnet den System-Prompt schon beim Start in den Cache. Dabei richtet sich auch die
+    /// Grafikkarte ein (Vulkan übersetzt beim ersten Rechnen seine Shader) – die Wartezeit
+    /// fällt so in den Ladebildschirm statt in die erste Antwort.
+    /// </summary>
+    public async Task WarmUpAsync(CancellationToken ct)
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        _systemTokens ??= model.Tokenize(_template.Message(ChatRole.System, systemPrompt));
+        await model.PrefillAsync(_systemTokens, ct);
+        WarmUpTime = clock.Elapsed;
+    }
+
     public async IAsyncEnumerable<string> StreamReplyAsync(Conversation conversation, [EnumeratorCancellation] CancellationToken ct)
     {
         var prompt = BuildPrompt(conversation.Messages);

@@ -59,7 +59,7 @@ internal static class HomeScreen
 
     public static async Task ShowAsync(SystemSnapshot system, CancellationToken ct = default)
     {
-        var greeting = GetGreeting(system.Now, system.UserName);
+        var greeting = GetGreeting(system.Now, system.User.FirstName);
         var tips = TipPool.OrderBy(_ => Random.Shared.Next()).Take(2).ToArray();
         var version = typeof(HomeScreen).Assembly.GetName().Version?.ToString(3) ?? "?";
 
@@ -91,7 +91,7 @@ internal static class HomeScreen
     }
 
     /// <summary>
-    /// Begrüßung nach Tageszeit, z. B. "Guten Abend, alex.".
+    /// Begrüßung nach Tageszeit, z. B. "Guten Abend, Alex.".
     /// Später Fallback für die KI-Begrüßung (PLAN.md, 9a).
     /// </summary>
     public static string GetGreeting(DateTime now, string name) => now.Hour switch
