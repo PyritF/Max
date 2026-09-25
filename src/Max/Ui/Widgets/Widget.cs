@@ -53,6 +53,7 @@ internal sealed class WidgetBody(string text)
     private static readonly HashSet<string> SettingKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         "Titel", "Title", "Farbe", "Color", "Schrift", "Font", "Verlauf", "Text", "Monat", "Markiert", "Einheit",
+        "Summe", "Gesamt", "Total",
     };
 
     public string Text { get; } = text.ReplaceLineEndings("\n").Trim('\n');

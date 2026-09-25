@@ -54,6 +54,23 @@ public class WidgetTests
     }
 
     [Fact]
+    public void WidgetName_OnTheLineAfterTheFence_IsUnderstood()
+    {
+        var output = Render("```\nbalken\n-----\nSchlaf: 7 Std.\nArbeit: 8 Std.\n-----\nSumme: 15 Std.\n```");
+        Assert.Contains("█", output);
+        Assert.DoesNotContain("balken", output);
+        Assert.DoesNotContain("Summe", output);
+    }
+
+    [Fact]
+    public void BareFence_WithCode_StaysACodeBlock()
+    {
+        var output = Render("```\nvar x = 1;\n```");
+        Assert.Contains("┌", output);
+        Assert.Contains("var x = 1;", output);
+    }
+
+    [Fact]
     public void BrokenTitle_ShowsNothing()
     {
         Assert.Equal("◆", Render("```titel\nSchrift: slant\n```").Trim());

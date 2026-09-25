@@ -33,6 +33,8 @@ internal sealed partial class MarkdownRenderer
     private CodeHighlighter? _highlighter;
     // Offener Widget-Block (```balken …): Name und gesammelter Inhalt.
     private string? _widget;
+    // Ein ``` ohne Sprache: Steht in der nächsten Zeile ein Element-Name ("balken"), ist es ein Element.
+    private bool _bareFence;
     private readonly StringBuilder _widgetBody = new();
 
     private readonly bool _listQuestionOptions;
@@ -85,7 +87,7 @@ internal sealed partial class MarkdownRenderer
             }
 
             _line.Append(c);
-            if (_mode == Mode.LineStart && !_inCode && _widget is null)
+            if (_mode == Mode.LineStart && !_inCode && _widget is null && !_bareFence)
                 TryDecideLineStart();
         }
 
@@ -101,6 +103,11 @@ internal sealed partial class MarkdownRenderer
             CompleteLine(_line.ToString());
         _line.Clear();
 
+        if (_bareFence)
+        {
+            _bareFence = false;
+            OpenCodeBlock("");
+        }
         if (_widget is not null)
             CloseWidget();
         if (_inCode)
@@ -228,6 +235,19 @@ internal sealed partial class MarkdownRenderer
             return;
         }
 
+        if (_bareFence)
+        {
+            _bareFence = false;
+            var name = trimmed.ToLowerInvariant();
+            if (WidgetRegistry.IsWidget(name) || ChoiceQuestion.BlockNames.Contains(name))
+            {
+                _widget = name;
+                _widgetBody.Clear();
+                return;
+            }
+            OpenCodeBlock("");
+        }
+
         if (_inCode)
         {
             if (trimmed.StartsWith("```", StringComparison.Ordinal))
@@ -250,6 +270,8 @@ internal sealed partial class MarkdownRenderer
                 _widget = language;                     // Diagramm, Baum, Kasten … – wird am Blockende gezeichnet
                 _widgetBody.Clear();
             }
+            else if (language.Length == 0)
+                _bareFence = true;                      // erst die nächste Zeile entscheidet
             else
                 OpenCodeBlock(language);
             return;
