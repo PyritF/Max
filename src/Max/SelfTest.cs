@@ -47,6 +47,7 @@ internal static class SelfTest
         var conversation = new Conversation();
         var result = 0;
         var colorful = false;
+        int withQuestion = 0, withBox = 0;
 
         foreach (var question in Questions)
         {
@@ -63,6 +64,8 @@ internal static class SelfTest
                 output.WriteLine($"  ({run.TokensPerSecond:0.0} Tokens/s, erstes Token nach {run.TimeToFirstToken.TotalSeconds:0.00} s, Prompt {run.PromptTokens}, davon {run.ReusedTokens} aus dem Cache)");
             output.WriteLine();
 
+            if (reply.Contains("```frage", StringComparison.OrdinalIgnoreCase)) withQuestion++;
+            if (reply.Contains("```kasten", StringComparison.OrdinalIgnoreCase)) withBox++;
             colorful |= question.StartsWith(ColorfulFrom, StringComparison.Ordinal);
             if (colorful && !reply.Contains("{verlauf", StringComparison.OrdinalIgnoreCase))
                 output.WriteLine("WARNUNG: keine Farbverläufe, obwohl bunt gewünscht.");
@@ -83,6 +86,9 @@ internal static class SelfTest
             }
         }
 
+        output.WriteLine($"Auswahlmenü in {withQuestion}, Kasten in {withBox} von {Questions.Length} Antworten.");
+        if (withQuestion > Questions.Length / 2 || withBox > Questions.Length / 2)
+            output.WriteLine("WARNUNG: Elemente zu gleichförmig eingesetzt.");
         return result;
     }
 }
