@@ -370,7 +370,7 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 | 13 | `ChatView` – Streaming-Ausgabe, Denk-Spinner, Strg+C bricht ab ✅ |
 | 14 | `MarkdownRenderer` – eigener, streamender Renderer (Überschriften, Listen, Code-Blöcke, Tabellen, Zitate, Farb-Tags) ✅ |
 | 15 | `/debug`, `/clear`, Tokens pro Sekunde messen ✅ (Denk-Text-Schalter für `/debug` fehlt noch) |
-| 16 | Bessere Eingabezeile (Verlauf, Mehrzeilen, Autovervollständigung) |
+| 16 | Eigene Eingabezeile: Einfügen ohne Abschicken, Shift/Alt+Enter und `\`+Enter für neue Zeilen, ↑/↓-Verlauf (gespeichert), Tab für Befehle ✅ |
 | 17 | Publish: Single-File-Exe für `win-x64`, danach `linux-x64` |
 | 18 | GitHub Action: Build bei Tag, Release + Manifest |
 | 19 | `GitHubClient` – Manifest und Release-Dateien laden |

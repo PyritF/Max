@@ -70,5 +70,5 @@ await HomeScreen.ShowAsync(system);
 // 3. Chat – in der Demo ohne Modell mit Platzhalter-Antworten.
 IChatBackend backend = llm ?? (IChatBackend)new PlaceholderBackend();
 var commands = CommandRegistry.CreateDefault(new DebugCommand(() => DebugReport.Build(engine, llm, paths, system)));
-await new ChatLoop(AnsiConsole.Console, backend, () => DateTime.Now, commands).RunAsync();
+await new ChatLoop(AnsiConsole.Console, backend, () => DateTime.Now, commands, paths.History).RunAsync();
 return 0;

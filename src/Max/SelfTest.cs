@@ -16,7 +16,12 @@ internal static class SelfTest
         "Welches Sprachmodell steckt in dir, und welche Firma hat dich trainiert?",
         "Wie rechnest du eigentlich?",
         "Erkläre in zwei Sätzen, warum der Himmel blau ist.",
+        "Ich hatte heute einen langen Tag.",
+        "Erklär mir, wie ein Sprachmodell funktioniert.",
     ];
+
+    /// <summary>Befehlsempfänger-Floskeln am Antwortende – nur Warnung.</summary>
+    private static readonly string[] WaitingForOrders = ["Befehl", "Aufgabe", "Was soll ich"];
 
     /// <summary>Anreden, die nicht zum Duzen passen – nur Warnung, kein Fehler.</summary>
     private static readonly string[] Formal = ["Herr ", "Frau ", " Sie ", " Ihnen"];
@@ -57,6 +62,9 @@ internal static class SelfTest
             }
             if (Formal.FirstOrDefault(word => reply.Contains(word, StringComparison.Ordinal)) is { } formal)
                 output.WriteLine($"WARNUNG: förmliche Anrede (\"{formal.Trim()}\").");
+            var ending = reply.TrimEnd()[Math.Max(0, reply.TrimEnd().Length - 80)..];
+            if (WaitingForOrders.FirstOrDefault(word => ending.Contains(word, StringComparison.OrdinalIgnoreCase)) is { } order)
+                output.WriteLine($"WARNUNG: wartet auf Befehle (\"{order}\").");
             if (Forbidden.FirstOrDefault(name => reply.Contains(name, StringComparison.OrdinalIgnoreCase)) is { } leaked)
             {
                 output.WriteLine($"FEHLER: Max nennt \"{leaked}\".");

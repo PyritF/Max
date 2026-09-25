@@ -23,7 +23,8 @@ internal sealed class ChatLoop
     // Gesetzt, solange Max antwortet – Strg+C bricht dann nur die Antwort ab.
     private CancellationTokenSource? _reply;
 
-    public ChatLoop(IAnsiConsole console, IChatBackend backend, Func<DateTime> clock, CommandRegistry? commands = null)
+    /// <param name="historyFile">Wo frühere Eingaben gespeichert werden (↑/↓); null = nur für diese Sitzung.</param>
+    public ChatLoop(IAnsiConsole console, IChatBackend backend, Func<DateTime> clock, CommandRegistry? commands = null, string? historyFile = null)
     {
         _commands = commands ?? CommandRegistry.CreateDefault();
         var interactive = !Console.IsInputRedirected && !Console.IsOutputRedirected;
@@ -31,7 +32,8 @@ internal sealed class ChatLoop
         _backend = backend;
         _clock = clock;
         _view = new ChatView(console, animate: interactive);
-        _input = new InputBox(console, clock, fancy: interactive);
+        var editor = new LineEditor(new InputHistory(historyFile), () => _commands.Visible.Select(c => c.Name));
+        _input = new InputBox(console, clock, fancy: interactive, editor);
     }
 
     public async Task RunAsync()

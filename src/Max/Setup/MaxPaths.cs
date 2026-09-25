@@ -19,6 +19,9 @@ internal sealed class MaxPaths(string root)
 
     public string UpdateDir => Path.Combine(Root, "update");
 
+    /// <summary>Frühere Eingaben für ↑/↓.</summary>
+    public string History => Path.Combine(Root, "history.txt");
+
     /// <summary>Protokoll von llama.cpp – im Terminal hätte es nichts verloren.</summary>
     public string EngineLog => Path.Combine(Root, "logs", "llama.log");
 
