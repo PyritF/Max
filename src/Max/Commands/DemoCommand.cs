@@ -101,6 +101,13 @@ internal sealed class DemoCommand : ICommand
         Schrift: slant
         Verlauf: rot-gelb
         ```
+
+        ```frage
+        Frage: Welches Element gefällt dir am besten?
+        - Die Diagramme
+        - Der große Schriftzug
+        - Die Kästen
+        ```
         """;
 
     public Task<CommandResult> ExecuteAsync(CommandContext context, string args)
@@ -111,10 +118,12 @@ internal sealed class DemoCommand : ICommand
 
         context.Console.Markup($" [{Theme.Tag(Theme.Accent)}]{Theme.Symbol}[/] ");
         var writer = new WrapWriter(context.Console, 3);
-        var renderer = new MarkdownRenderer(context.Console, writer);
+        var renderer = new MarkdownRenderer(context.Console, writer, listQuestionOptions: context.OfferQuestion is null);
         renderer.Push(text);
         renderer.Finish();
         writer.CloseReply();
+        if (renderer.Question is { } question)
+            context.OfferQuestion?.Invoke(question);
         return Task.FromResult(CommandResult.Continue);
     }
 }

@@ -10,6 +10,16 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
     private const string Indent = "   ";
     private static readonly TimeSpan SpinnerInterval = TimeSpan.FromMilliseconds(80);
 
+    /// <summary>
+    /// Die Rückfrage (<c>```frage</c>) aus der letzten Antwort, falls es eine gab.
+    /// Mit Animation zeigt der Aufrufer dafür ein Auswahlmenü, sonst stehen die Antworten als Liste im Text.
+    /// </summary>
+    public ChoiceQuestion? LastQuestion { get; private set; }
+
+    public void ClearQuestion() => LastQuestion = null;
+
+    public void SetQuestion(ChoiceQuestion question) => LastQuestion = question;
+
     /// <summary>Die eigene Nachricht als graue Verlaufszeile.</summary>
     public void WriteUserMessage(string text)
     {
@@ -34,7 +44,8 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
     {
         var text = new StringBuilder();
         var writer = new WrapWriter(console, Indent.Length);
-        var markdown = new MarkdownRenderer(console, writer);
+        var markdown = new MarkdownRenderer(console, writer, listQuestionOptions: !animate);
+        LastQuestion = null;
 
         console.Markup($" [{Theme.Tag(Theme.Accent)}]{Theme.Symbol}[/] ");
 
@@ -63,6 +74,7 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
             }
             await StopSpinnerAsync();
             markdown.Finish();
+            LastQuestion = markdown.Question;
         }
         catch (OperationCanceledException)
         {

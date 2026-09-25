@@ -35,12 +35,21 @@ internal sealed partial class MarkdownRenderer
     private string? _widget;
     private readonly StringBuilder _widgetBody = new();
 
-    public MarkdownRenderer(IAnsiConsole console, WrapWriter writer)
+    private readonly bool _listQuestionOptions;
+
+    /// <param name="listQuestionOptions">
+    /// Antworten einer Rückfrage (<c>```frage</c>) als nummerierte Liste zeigen – für den Fall ohne Auswahlmenü.
+    /// </param>
+    public MarkdownRenderer(IAnsiConsole console, WrapWriter writer, bool listQuestionOptions = true)
     {
         _console = console;
         _writer = writer;
+        _listQuestionOptions = listQuestionOptions;
         _inline = new InlineFormatter(writer.Write);
     }
+
+    /// <summary>Die Rückfrage aus einem <c>```frage</c>-Block, falls die Antwort eine enthielt (die letzte zählt).</summary>
+    public ChoiceQuestion? Question { get; private set; }
 
     public void Push(string chunk)
     {
@@ -236,7 +245,7 @@ internal sealed partial class MarkdownRenderer
                 _inMarkdownFence = false;               // Ende eines ```markdown-Blocks – einfach weglassen
             else if (language is "markdown" or "md")
                 _inMarkdownFence = true;                // Markdown im Code-Block: selbst formatieren statt roh zeigen
-            else if (WidgetRegistry.IsWidget(language))
+            else if (WidgetRegistry.IsWidget(language) || ChoiceQuestion.BlockNames.Contains(language))
             {
                 _widget = language;                     // Diagramm, Baum, Kasten … – wird am Blockende gezeichnet
                 _widgetBody.Clear();
@@ -352,6 +361,12 @@ internal sealed partial class MarkdownRenderer
         _widget = null;
         _widgetBody.Clear();
 
+        if (ChoiceQuestion.BlockNames.Contains(name))
+        {
+            WriteQuestion(ChoiceQuestion.TryParse(body));
+            return;
+        }
+
         if (WidgetRegistry.TryRender(name, body, _writer.LineWidth) is { } widget)
         {
             WriteExternal(widget);
@@ -363,6 +378,25 @@ internal sealed partial class MarkdownRenderer
         foreach (var line in body.TrimEnd('\n').Split('\n'))
             WriteCodeLine(line);
         CloseCodeBlock();
+    }
+
+    /// <summary>Die Frage fett in den Text; die Antworten kommen ins Auswahlmenü (oder hier als Liste).</summary>
+    private void WriteQuestion(ChoiceQuestion? question)
+    {
+        if (question is null)
+            return;
+        Question = question.Options.Count > 0 ? question : null;
+
+        if (question.Question.Length > 0)
+        {
+            _writer.BlankLine();
+            CompleteLine($"**{question.Question}**");
+        }
+        if (_listQuestionOptions || question.Options.Count == 0)
+        {
+            for (var i = 0; i < question.Options.Count; i++)
+                CompleteLine($"{i + 1}. {question.Options[i]}");
+        }
     }
 
     /// <summary>Etwas, das Spectre selbst zeichnet (Tabelle, Widget, Linie), eingerückt unter Max' Text.</summary>

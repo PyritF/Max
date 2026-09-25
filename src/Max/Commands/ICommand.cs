@@ -1,4 +1,5 @@
 using Max.Chat;
+using Max.Ui;
 using Spectre.Console;
 
 namespace Max.Commands;
@@ -11,7 +12,8 @@ internal enum CommandResult
 }
 
 /// <summary>Worauf ein Befehl zugreifen darf.</summary>
-internal sealed record CommandContext(IAnsiConsole Console, Conversation Conversation, CommandRegistry Registry);
+/// <param name="OfferQuestion">Zeigt nach dem Befehl ein Auswahlmenü (null, wenn es keins gibt, z. B. ohne echtes Terminal).</param>
+internal sealed record CommandContext(IAnsiConsole Console, Conversation Conversation, CommandRegistry Registry, Action<ChoiceQuestion>? OfferQuestion = null);
 
 /// <summary>Ein Befehl, der mit "/" beginnt, z. B. /help.</summary>
 internal interface ICommand

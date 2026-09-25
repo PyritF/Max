@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace Max.Ui;
@@ -19,6 +20,16 @@ internal static class CellWidth
                 return 2; // Emoji-Darstellung erzwungen oder breites Zeichen
         }
         return 1;
+    }
+
+    /// <summary>Breite eines ganzen Texts.</summary>
+    public static int OfText(string text)
+    {
+        var width = 0;
+        var elements = StringInfo.GetTextElementEnumerator(text);
+        while (elements.MoveNext())
+            width += Of(elements.GetTextElement());
+        return width;
     }
 
     private static bool IsWide(int c) =>

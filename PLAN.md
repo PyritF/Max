@@ -294,6 +294,7 @@ Zusätzlich kann das Manifest ein `disabled: true` („Not-Aus“) und eine `mes
   | `spalten` | Abschnitte nebeneinander |
   | `kalender` | Monat mit markierten Tagen |
   | `titel` | großer FIGlet-Schriftzug mit Farbverlauf |
+  | `frage` | Rückfrage: Die Frage steht im Text, danach öffnet sich statt der Eingabe ein Auswahlmenü mit den Antworten und einer Zeile für eine eigene Antwort (↑↓, Ziffern, Enter, Esc = normale Eingabe). Ohne echtes Terminal stehen die Antworten als Liste im Text |
 
   Im Fließtext: `{verlauf}…{/verlauf}` für einen Farbverlauf, `--- Titel ---` für eine Linie mit Überschrift, Emoji-Kürzel wie `:rocket:`.
   - Eingebaute Schriften: small, slant, big, banner, block, shadow, smslant, mini, script, standard (FIGlet, BSD-Lizenz). Eigene `.flf`-Dateien gehören in `fonts/` im Datenordner.
@@ -388,6 +389,7 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 | 13 | `ChatView` – Streaming-Ausgabe, Denk-Spinner, Strg+C bricht ab ✅ |
 | 14 | `MarkdownRenderer` – eigener, streamender Renderer (Überschriften, Listen, Code-Blöcke, Tabellen, Zitate, Farb-Tags) ✅ |
 | 14a | Syntax-Hervorhebung, Widgets (Diagramme, Baum, Kasten, Spalten, Kalender, Titel), Farbverlauf, `/demo` ✅ |
+| 14b | Rückfragen mit Auswahlmenü (`frage`) ✅ |
 | 15 | `/debug`, `/clear`, Tokens pro Sekunde messen ✅ (Denk-Text-Schalter für `/debug` fehlt noch) |
 | 16 | Eigene Eingabezeile: Einfügen ohne Abschicken, Shift/Alt+Enter und `\`+Enter für neue Zeilen, ↑/↓-Verlauf (gespeichert), Tab für Befehle ✅ |
 | 17 | Publish: Single-File-Exe für `win-x64`, danach `linux-x64` |

@@ -19,9 +19,13 @@ internal sealed class ChatLoop
     private readonly CtrlCPolicy _ctrlC = new();
     private readonly ChatView _view;
     private readonly InputBox _input;
+    private readonly ChoiceMenu? _menu;
 
     // Gesetzt, solange Max antwortet – Strg+C bricht dann nur die Antwort ab.
     private CancellationTokenSource? _reply;
+
+    // Gesetzt, solange das Auswahlmenü offen ist – Strg+C wird dann ignoriert (Esc schließt es).
+    private volatile bool _menuOpen;
 
     /// <param name="historyFile">Wo frühere Eingaben gespeichert werden (↑/↓); null = nur für diese Sitzung.</param>
     public ChatLoop(IAnsiConsole console, IChatBackend backend, Func<DateTime> clock, CommandRegistry? commands = null, string? historyFile = null)
@@ -34,6 +38,7 @@ internal sealed class ChatLoop
         _view = new ChatView(console, animate: interactive);
         var editor = new LineEditor(new InputHistory(historyFile), () => _commands.Visible.Select(c => c.Name));
         _input = new InputBox(console, clock, fancy: interactive, editor);
+        _menu = interactive ? new ChoiceMenu(console, clock) : null;
     }
 
     public async Task RunAsync()
@@ -43,7 +48,16 @@ internal sealed class ChatLoop
         {
             while (true)
             {
-                var line = _input.ReadLine();
+                // Hatte Max eine Rückfrage mit Antworten, erst das Auswahlmenü – Esc führt zur normalen Eingabe.
+                var line = AskPendingQuestion();
+                if (line is not null)
+                {
+                    _view.WriteUserMessage(line);
+                    await ReplyAsync(line);
+                    continue;
+                }
+
+                line = _input.ReadLine();
 
                 if (line is null)
                 {
@@ -82,6 +96,22 @@ internal sealed class ChatLoop
         }
     }
 
+    private string? AskPendingQuestion()
+    {
+        if (_menu is null || _view.LastQuestion is not { } question)
+            return null;
+        _menuOpen = true;
+        try
+        {
+            return _menu.Ask(question);
+        }
+        finally
+        {
+            _menuOpen = false;
+            _view.ClearQuestion();
+        }
+    }
+
     private async Task<CommandResult> RunCommandAsync(string line)
     {
         var (name, args) = CommandRegistry.Parse(line);
@@ -95,7 +125,7 @@ internal sealed class ChatLoop
             return CommandResult.Continue;
         }
 
-        return await command.ExecuteAsync(new CommandContext(_console, _conversation, _commands), args);
+        return await command.ExecuteAsync(new CommandContext(_console, _conversation, _commands, _menu is null ? null : _view.SetQuestion), args);
     }
 
     private async Task ReplyAsync(string line)
@@ -126,6 +156,9 @@ internal sealed class ChatLoop
             reply.Cancel();
             return;
         }
+
+        if (_menuOpen)
+            return;
 
         if (_ctrlC.Press(_clock()) == CtrlCPolicy.Action.Exit)
         {
