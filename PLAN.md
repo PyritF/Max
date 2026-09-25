@@ -468,6 +468,42 @@ public interface ITool
 
 ---
 
+## 9a. Eigener Max-Adapter (Fine-Tuning, nach Phase 2)
+
+Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem Modell mit einem **LoRA-Adapter** antrainiert. Ein LoRA-Adapter ist ein kleiner Zusatz mit wenigen Millionen Werten auf dem fertigen Modell; das Modell selbst wird nicht neu trainiert.
+
+**Warum erst nach Phase 2:** Dann steht fest, wie Tool-Aufrufe aussehen. Persönlichkeit und Tool-Format werden in einem Rutsch trainiert.
+
+**Was es bringt:**
+- Die Persönlichkeit ist fest eingebaut: Ton, Duzen, kein Verraten des Modells, gute Formatierung mit Markdown und Farb-Tags.
+- Der System-Prompt wird deutlich kürzer. Das Aufwärmen beim Start geht dadurch schneller, und im Kontext bleibt mehr Platz.
+- Tool-Aufrufe klappen zuverlässiger, vor allem bei den kleinen Stufen S und M.
+
+**Was es nicht bringt:** neues Wissen oder mehr Grundintelligenz. Wissen kommt weiter über Gedächtnis (8a) und Tools (Phase 2).
+
+**Ablauf:**
+1. **Datensatz:** 1.000–3.000 Beispiel-Gespräche im Max-Stil, darunter Smalltalk, Erklärungen, Code, Tabellen, Fragen nach der Identität, ernste Themen und Tool-Aufrufe.
+   - Die Beispiele lassen sich zum Teil mit einem großen Modell erzeugen. Danach werden sie von Hand geprüft und aussortiert.
+   - Der Datensatz liegt im Repo unter `training/` als JSONL.
+2. **Training:** QLoRA mit **Unsloth** auf den Originalgewichten von Hugging Face, also nicht auf der GGUF-Datei.
+   - Für 4B reicht die RTX 3080 Ti (12 GB) locker.
+   - Für 9B wird es knapp; alternativ eine gemietete Cloud-GPU oder Google Colab.
+   - Pro Stufe gibt es einen eigenen Adapter, weil ein Adapter nur zu seinem Grundmodell passt.
+3. **Umwandeln:** Den Adapter mit llama.cpp nach GGUF konvertieren (`convert_lora_to_gguf.py`), etwa 20–100 MB pro Stufe.
+4. **Einbinden:** Das Manifest bekommt pro Stufe ein Feld `adapter` (URL, SHA-256, Revision).
+   - Max lädt den Adapter wie das Modell und hängt ihn beim Laden an; LLamaSharp kann LoRA-Adapter laden.
+   - Neue Adapter-Versionen kommen über die stillen Updates (Abschnitt 5a).
+5. **Prüfen:** Der Selbsttest-Workflow vergleicht die Antworten mit und ohne Adapter: Ton, Anrede, verratene Herkunft, Format der Tool-Aufrufe.
+
+| # | Schritt |
+|---|---|
+| 25 | Datensatz-Format festlegen, erste 200 Beispiele, Skript zum Erzeugen und Prüfen |
+| 26 | Training mit Unsloth für Stufe M (4B), Vergleich im Selbsttest |
+| 27 | Adapter im Manifest, Laden in `LlmEngine`, kürzerer System-Prompt |
+| 28 | Adapter für die übrigen Stufen, stilles Update der Adapter |
+
+---
+
 ## 10. Offene Punkte
 
 - [ ] Ist Vulkan auf NVIDIA spürbar langsamer als CUDA? Falls ja: CUDA-Backend beim ersten Start nachladen statt in die Exe packen.
