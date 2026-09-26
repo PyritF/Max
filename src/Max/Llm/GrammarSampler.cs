@@ -32,6 +32,14 @@ internal sealed class GrammarSampler : ITokenSampler
         _chain.AddTemperature(settings.Temperature);
         _chain.AddDistributionSampler(seed ?? (uint)Random.Shared.Next());
 
+        // Nur ASCII: Nicht-ASCII käme unter Windows verstümmelt an, llama.cpp lieferte keinen Sampler,
+        // und der erste Zugriff darauf wäre ein Absturz, den .NET nicht abfangen kann (siehe AnswerGrammar.AsciiOnly).
+        if (grammar is not null && grammar.Any(c => c >= 128))
+        {
+            LlmEngine.Log("Grammatik enthält Nicht-ASCII-Zeichen – ohne Grammatik weiter.");
+            grammar = null;
+        }
+
         if (grammar is not null)
         {
             try

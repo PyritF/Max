@@ -74,7 +74,27 @@ internal static class AnswerGrammar
         Rule("w-kasten", "\"kasten\" nl setting* nl* content-line ( content-line | nl )* \"```\"");
         Rule("w-baum", "\"baum\" nl setting* content-line ( content-line | nl )* \"```\"");
         Rule("w-spalten", "\"spalten\" nl setting* content-line ( content-line | nl )* \"---\" nl ( content-line | nl )* content-line ( content-line | nl )* \"```\"");
-        return g.ToString();
+        return AsciiOnly(g.ToString());
+    }
+
+    /// <summary>
+    /// Schreibt jedes Nicht-ASCII-Zeichen als <c>\uXXXX</c> (GBNF versteht das in Texten und Zeichenklassen).
+    /// Nötig, weil LLamaSharp die Grammatik unter Windows in der ANSI-Codepage übergibt – Umlaute würden
+    /// dort zu "?", llama.cpp könnte sie nicht lesen, und der kaputte Sampler brächte Max zum Absturz.
+    /// </summary>
+    internal static string AsciiOnly(string gbnf)
+    {
+        var output = new StringBuilder(gbnf.Length);
+        foreach (var rune in gbnf.EnumerateRunes())
+        {
+            if (rune.Value < 128)
+                output.Append((char)rune.Value);
+            else if (rune.Value <= 0xFFFF)
+                output.Append($"\\u{rune.Value:x4}");
+            else
+                output.Append($"\\U{rune.Value:x8}");
+        }
+        return output.ToString();
     }
 
     private static string Alternatives(IEnumerable<string> words) =>

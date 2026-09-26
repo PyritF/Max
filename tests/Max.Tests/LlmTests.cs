@@ -585,13 +585,26 @@ public class AnswerGrammarTests
     {
         var gbnf = AnswerGrammar.Build();
         foreach (var color in ColorTags.Names)
-            Assert.Contains($"\"{color}\"", gbnf);
+            Assert.Contains($"\"{AnswerGrammar.AsciiOnly(color)}\"", gbnf);
         foreach (var font in Max.Ui.Widgets.TitleWidget.BuiltInFonts)
             Assert.Contains($"\"{font}\"", gbnf);
         foreach (var widget in Max.Ui.Widgets.WidgetRegistry.Names)
             Assert.Contains($"\"{widget}\"", gbnf);
         Assert.StartsWith("root ::= ", gbnf);
     }
+
+    [Fact]
+    public void Grammar_IsPureAscii_BecauseWindowsWouldMangleUmlauts()
+    {
+        var gbnf = AnswerGrammar.Build();
+        Assert.All(gbnf, c => Assert.True(c < 128, $"Nicht-ASCII: {c}"));
+        Assert.Contains("\"gr\\u00fcn\"", gbnf);
+        Assert.Contains("\\u00c0-\\u024f", gbnf);
+    }
+
+    [Fact]
+    public void AsciiOnly_EscapesEverythingElse() =>
+        Assert.Equal("gr\\u00fcn \\u024f \\U0001f600", AnswerGrammar.AsciiOnly("grün ɏ 😀"));
 
     [Fact]
     public void CodeLanguages_NeverCollideWithElements() =>
