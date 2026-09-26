@@ -16,7 +16,7 @@ internal sealed class ClosingFilter
         "Wenn du noch", "Wenn du mir", "Wenn du magst", "Wenn du willst", "Wenn du möchtest",
         "Falls du noch", "Falls du mehr", "Falls du weitere",
         "Sag Bescheid", "Sag einfach Bescheid", "Sag mir Bescheid", "Lass mich wissen",
-        "Gibt es noch", "Kann ich dir noch",
+        "Gibt es noch", "Kann ich dir noch", "Was noch", "Oder hast du",
     ];
 
     private readonly StringBuilder _line = new();   // Anfang einer Absatz-Zeile, noch nicht entschieden

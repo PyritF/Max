@@ -671,6 +671,12 @@ public class ClosingFilterTests
         Assert.Equal(text, Run([.. text.Select(c => c.ToString())]));
     }
 
+    [Theory]
+    [InlineData("Ich bin Max.\n\nWas noch?")]
+    [InlineData("Ich bin Max.\n\nHast du noch Fragen dazu?")]
+    [InlineData("Ich bin Max.\n\nWillst du, dass ich dir zeige, wie das geht? Oder hast du eine andere Frage?")]
+    public void FillersSeenInTheSelfTest_AreDropped(string text) => Assert.Equal("Ich bin Max.\n\n", Run(text));
+
     [Fact]
     public void OnlyAQuestion_Stays() => Assert.Equal("Soll ich das für C# oder Python schreiben?", Run("Soll ich das für C# oder Python schreiben?"));
 
