@@ -40,7 +40,8 @@ internal static class AnswerGrammar
 
         Rule("root", "item*");
         Rule("item", "plain | tag | inline-code | fence");
-        Rule("plain", "[^{`]");
+        // Auch kein "}" im Fließtext: Kleine Modelle schließen einen Verlauf sonst mit "Wort}" statt "{/verlauf}".
+        Rule("plain", "[^{}`]");
         Rule("tag", "\"{\" ( \"/\"? color | \"verlauf\" ( \":\" grad )? | \"/verlauf\" ) \"}\"");
         Rule("inline-code", "\"`\" [^`\\n]+ \"`\"");
         Rule("fence", "\"```\" ( code | widget )");

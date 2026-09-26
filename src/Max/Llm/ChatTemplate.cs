@@ -17,6 +17,12 @@ internal interface IChatTemplate
     /// <summary>Beginn einer Antwort mit Nachdenken: Das Modell schreibt zuerst seine Gedanken, dann den Abschluss des Denk-Blocks.</summary>
     string AssistantStartThinking { get; }
 
+    /// <summary>
+    /// Die ersten Worte des Nachdenkens – vorgegeben, damit das Modell auf Deutsch denkt
+    /// (kleine Modelle fallen sonst ins englische "Thinking Process:"). Wird angezeigt wie eigene Gedanken.
+    /// </summary>
+    string ThinkingSeed { get; }
+
     /// <summary>Beendet das Nachdenken, wenn das Budget verbraucht ist.</summary>
     string ForcedThinkingEnd { get; }
 
@@ -36,6 +42,7 @@ internal sealed class ChatMlTemplate : IChatTemplate
     public string AssistantStart => "<|im_start|>assistant\n<think>\n\n</think>\n\n";
     public string HistoryStart => "<|im_start|>assistant\n";
     public string AssistantStartThinking => "<|im_start|>assistant\n<think>\n";
+    public string ThinkingSeed => "Der Nutzer";
     public string ForcedThinkingEnd => "\n\nGenug nachgedacht.\n</think>\n\n";
     public string AssistantEnd => "<|im_end|>\n";
 

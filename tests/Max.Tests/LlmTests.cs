@@ -374,9 +374,9 @@ public class LlmBackendTests
         var backend = Backend(model, thinking: true);
         var (thought, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
 
-        Assert.Equal("hm gut", thought);
+        Assert.Equal(Template.ThinkingSeed + "hm gut", thought);
         Assert.Equal("Klar.", reply);
-        Assert.EndsWith(Template.AssistantStartThinking, model.Decode(model.PromptBeforeFirstSample));
+        Assert.EndsWith(Template.AssistantStartThinking + Template.ThinkingSeed, model.Decode(model.PromptBeforeFirstSample));
         Assert.Equal(3, backend.LastRun!.ThinkingTokens);
     }
 
@@ -388,7 +388,7 @@ public class LlmBackendTests
 
         var (thought, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
 
-        Assert.StartsWith("ab", thought);
+        Assert.StartsWith(Template.ThinkingSeed + "ab", thought);
         Assert.Contains("Genug nachgedacht", thought);
         Assert.Equal("cdAntwort", reply);
         Assert.Equal(2, backend.LastRun!.ThinkingTokens);
@@ -713,6 +713,7 @@ public class AnswerGrammarTests
     {
         var gbnf = AnswerGrammar.Build();
         Assert.Contains("label ::= [^-:|\\n\\t`{ ] ( [^:|\\n\\t`{ ] | \" \" [^:|\\n\\t`{ ] ){0,24}", gbnf);
+        Assert.Contains("plain ::= [^{}`]", gbnf);   // "Wort}" statt "{/verlauf}" geht nicht
         Assert.Contains("unit ::= ( [%\\u20ac$\\u00b0] | \" \" [^0-9:", gbnf);
     }
 

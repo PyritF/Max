@@ -121,6 +121,8 @@ internal sealed class LlmBackend : IChatBackend
         await _model.AppendAsync(head, ct);
 
         var splitter = new ThinkSplitter(startInThinking: think);
+        if (think)
+            yield return new ReplyChunk(_template.ThinkingSeed, IsThinking: true);
         var gate = new ElementGate();
         var decoder = _model.CreateDecoder();
         var answerPhase = !think;
@@ -379,7 +381,7 @@ internal sealed class LlmBackend : IChatBackend
     {
         _systemTokens ??= _model.Tokenize(_template.Message(ChatRole.System, _systemPrompt));
         _assistantStart ??= _model.Tokenize(_template.AssistantStart);
-        _thinkingStart ??= _model.Tokenize(_template.AssistantStartThinking);
+        _thinkingStart ??= _model.Tokenize(_template.AssistantStartThinking + _template.ThinkingSeed);
         _assistantEnd ??= _model.Tokenize(_template.AssistantEnd);
         _historyStart ??= _model.Tokenize(_template.HistoryStart);
         if (_thinkTags is null)
