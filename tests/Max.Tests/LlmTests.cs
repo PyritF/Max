@@ -471,6 +471,22 @@ public class LlmBackendTests
     }
 
     [Fact]
+    public async Task OfferAtTheEnd_IsNeitherShownNorInTheHistory()
+    {
+        var model = new FakeModel("Fertig.", "\n\n", "Möchtest du", " mehr?", null, "Gut.");
+        var backend = Backend(model);
+        var conversation = Single("Hi");
+
+        var (_, reply) = await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
+        Assert.Equal("Fertig.\n\n", reply);
+
+        conversation.AddAssistant(reply);
+        conversation.AddUser("Danke");
+        await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
+        Assert.DoesNotContain("Möchtest", model.Decode(model.PromptBeforeFirstSample));
+    }
+
+    [Fact]
     public async Task RepeatingAnswer_IsStopped()
     {
         var section = "## Abschnitt\nDer Frost wird stärker, doch der Schnee bleibt noch. Die Wärme ist noch warm, aber nicht mehr so sehr.\n\n";
@@ -634,6 +650,39 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
         public int[] Tokens { get; } = tokens;
         public override int TokenCount => Tokens.Length;
     }
+}
+
+public class ClosingFilterTests
+{
+    private static string Run(params string[] chunks)
+    {
+        var filter = new ClosingFilter();
+        return string.Concat(chunks.Select(filter.Push)) + filter.Flush();
+    }
+
+    [Fact]
+    public void OfferAtTheEnd_IsDropped() =>
+        Assert.Equal("Die Antwort.\n\n", Run("Die Antwort.\n\n", "Möch", "test du mehr ", "wissen?\nSag Bescheid!"));
+
+    [Fact]
+    public void OfferInTheMiddle_StaysInOrder()
+    {
+        const string text = "Eins.\n\nWenn du noch Zeit hast, lohnt sich das Museum.\n\nZwei.";
+        Assert.Equal(text, Run([.. text.Select(c => c.ToString())]));
+    }
+
+    [Fact]
+    public void OnlyAQuestion_Stays() => Assert.Equal("Soll ich das für C# oder Python schreiben?", Run("Soll ich das für C# oder Python schreiben?"));
+
+    [Theory]
+    [InlineData("Text.\n\nWenn du Windows nutzt, geht es anders.")]
+    [InlineData("Text.\n\n```python\nSoll ich = 1\n```\n")]
+    [InlineData("Text.\n\nSollich ist kein Wort.")]
+    public void OtherEndings_Stay(string text) => Assert.Equal(text, Run(text));
+
+    [Fact]
+    public void OfferInsideTheParagraph_Stays() =>
+        Assert.Equal("Text.\nMöchtest du", Run("Text.\nMöchtest du"));
 }
 
 public class ElementGateTests

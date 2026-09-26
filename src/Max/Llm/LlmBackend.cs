@@ -127,6 +127,7 @@ internal sealed class LlmBackend : IChatBackend
         if (think)
             yield return new ReplyChunk(_template.ThinkingSeed, IsThinking: true);
         var gate = new ElementGate();
+        var closing = new ClosingFilter();
         var decoder = _model.CreateDecoder();
         var answerPhase = !think;
         // Anfangs darf das Nachdenken nicht gleich wieder enden – sonst denkt das Modell in der Antwort weiter.
@@ -175,7 +176,7 @@ internal sealed class LlmBackend : IChatBackend
                     thinkingTokens++;
                 }
 
-                foreach (var chunk in Route(splitter.Push(text), gate, shown))
+                foreach (var chunk in Route(splitter.Push(text), gate, closing, shown))
                     yield return chunk;
 
                 if (answerPhase && text.Contains('\n') && IsLooping(shown))
@@ -232,7 +233,7 @@ internal sealed class LlmBackend : IChatBackend
                     var forcedText = new StringBuilder();
                     foreach (var t in forced)
                         forcedText.Append(decoder.Add(t));
-                    foreach (var chunk in Route(splitter.Push(forcedText.ToString()), gate, shown))
+                    foreach (var chunk in Route(splitter.Push(forcedText.ToString()), gate, closing, shown))
                         yield return chunk;
                 }
                 if (!answerPhase && splitter.ThinkingEnded)
@@ -281,6 +282,7 @@ internal sealed class LlmBackend : IChatBackend
                     }
                     repair?.Dispose();
                     repair = null;
+                    released = closing.Push(released);
                     if (released.Length > 0)
                     {
                         shown.Append(released);
@@ -290,11 +292,12 @@ internal sealed class LlmBackend : IChatBackend
             }
 
             // Rest: angefangene Tags, offene Zeilen, ein nicht geschlossener Block.
-            foreach (var chunk in Route(splitter.Flush(), gate, shown))
+            foreach (var chunk in Route(splitter.Flush(), gate, closing, shown))
                 yield return chunk;
             var rest = gate.Flush();
             if (gate.Closed is { } open)
                 rest += WidgetValidator.IsValid(open.Name, open.Body) ? gate.Accept() : gate.Drop();
+            rest = closing.Push(rest) + closing.Flush();
             if (rest.Length > 0)
             {
                 shown.Append(rest);
@@ -360,8 +363,8 @@ internal sealed class LlmBackend : IChatBackend
         }
     }
 
-    /// <summary>Verteilt Denk- und Antwort-Stücke: Denken direkt raus, Antwort durch die Element-Schleuse.</summary>
-    private static IEnumerable<ReplyChunk> Route(List<(bool Thinking, string Text)> parts, ElementGate gate, StringBuilder shown)
+    /// <summary>Verteilt Denk- und Antwort-Stücke: Denken direkt raus, Antwort durch die Element-Schleuse und den Floskel-Filter.</summary>
+    private static IEnumerable<ReplyChunk> Route(List<(bool Thinking, string Text)> parts, ElementGate gate, ClosingFilter closing, StringBuilder shown)
     {
         foreach (var (thinking, text) in parts)
         {
@@ -370,7 +373,7 @@ internal sealed class LlmBackend : IChatBackend
                 yield return new ReplyChunk(text, IsThinking: true);
                 continue;
             }
-            var released = gate.Push(text);
+            var released = closing.Push(gate.Push(text));
             if (released.Length > 0)
             {
                 shown.Append(released);

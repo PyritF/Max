@@ -108,6 +108,9 @@ internal static class SelfTest
             var ending = reply.TrimEnd()[Math.Max(0, reply.TrimEnd().Length - 80)..];
             if (WaitingForOrders.FirstOrDefault(word => ending.Contains(word, StringComparison.OrdinalIgnoreCase)) is { } order)
                 output.WriteLine($"WARNUNG: wartet auf Befehle (\"{order}\").");
+            var lastParagraph = reply.TrimEnd().Split("\n\n")[^1];
+            if (reply.Contains("\n\n") && Max.Llm.ClosingFilter.StartsWithPhrase(lastParagraph, complete: true) == true)
+                output.WriteLine($"WARNUNG: Floskel am Ende (\"{Shorten(lastParagraph.Trim(), 60)}\").");
             if (Forbidden.FirstOrDefault(name => reply.Contains(name, StringComparison.OrdinalIgnoreCase)) is { } leaked)
             {
                 output.WriteLine($"FEHLER: Max nennt \"{leaked}\".");
