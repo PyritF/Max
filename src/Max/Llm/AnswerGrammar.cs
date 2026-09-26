@@ -7,7 +7,7 @@ namespace Max.Llm;
 /// <summary>
 /// Die Grammatik (GBNF) für Max' Antworten: Das Modell kann damit nur gültige Farb-Tags und
 /// gültige Elemente schreiben. Freier Text bleibt frei – nur <c>{</c> und Backticks sind festgelegt:
-/// <c>{…}</c> gibt es nur als bekanntes Tag, <c>```</c> nur mit bekannter Sprache oder als Element,
+/// <c>{…}</c> gibt es nur als bekanntes Tag, <c>```</c> nur mit bekannter Sprache (nie ohne) oder als Element,
 /// dessen Inhalt zeilenweise vorgegeben ist (z. B. <c>balken</c>: mindestens eine Zeile "Name: Zahl").
 /// Farben, Schriften und Elemente kommen aus dem Programm selbst, damit Grammatik und Anzeige zusammenpassen.
 /// </summary>
@@ -44,7 +44,7 @@ internal static class AnswerGrammar
         Rule("tag", "\"{\" ( \"/\"? color | \"verlauf\" ( \":\" grad )? | \"/verlauf\" ) \"}\"");
         Rule("inline-code", "\"`\" [^`\\n]+ \"`\"");
         Rule("fence", "\"```\" ( code | widget )");
-        Rule("code", "lang \"\\n\" code-body | plain-lang? \"\\n\" plain-body");
+        Rule("code", "lang \"\\n\" code-body | plain-lang \"\\n\" plain-body");
         Rule("code-body", "( [^`] | \"`\" [^`] | \"``\" [^`] )* \"```\"");
         Rule("plain-body", "( [^`{] | \"{\" [^a-zA-Z/`{] | \"`\" [^`{] | \"``\" [^`{] )* \"```\"");
         Rule("lang", Alternatives(CodeLanguages));
