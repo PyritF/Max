@@ -197,8 +197,7 @@ internal sealed class InlineFormatter(Action<string, Style> output)
     {
         if (tag.Equals("/verlauf", StringComparison.OrdinalIgnoreCase))
         {
-            if (_gradient is null)
-                return false;
+            // Auch ohne offenen Verlauf verschlucken: Modelle setzen das Ende gern in die nächste Zeile.
             FlushGradient();
             return true;
         }
@@ -211,9 +210,10 @@ internal sealed class InlineFormatter(Action<string, Style> output)
 
         if (tag.StartsWith('/'))
         {
-            if (_colors.Count == 0 || !ColorTags.TryGet(tag[1..], out _))
+            if (!ColorTags.TryGet(tag[1..], out _))
                 return false;
-            _colors.Pop();
+            if (_colors.Count > 0)             // ein Ende ohne Anfang (z. B. in der nächsten Zeile) wird still verschluckt
+                _colors.Pop();
             return true;
         }
         if (!ColorTags.TryGet(tag, out var color))

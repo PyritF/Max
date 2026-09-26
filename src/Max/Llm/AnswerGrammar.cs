@@ -21,10 +21,13 @@ internal static class AnswerGrammar
         "toml", "xml", "html", "css", "scss", "sql", "bash", "sh", "shell", "zsh", "powershell", "ps1", "pwsh",
         "bat", "cmd", "batch", "dockerfile", "docker", "makefile", "make", "ruby", "rb", "php", "perl", "lua", "r",
         "dart", "scala", "haskell", "elixir", "erlang", "clojure", "fsharp", "f#", "vb", "vbnet", "objc",
-        "markdown", "md", "text", "txt", "plaintext", "console", "output", "diff", "ini", "csv", "graphql",
+        "markdown", "md", "diff", "ini", "csv", "graphql",
         "proto", "regex", "latex", "tex", "asm", "matlab", "julia", "groovy", "gradle", "terraform", "hcl",
-        "nginx", "log", "http", "vim", "razor", "xaml", "svelte", "vue", "zig", "nim", "ocaml",
+        "nginx", "http", "vim", "razor", "xaml", "svelte", "vue", "zig", "nim", "ocaml",
     ];
+
+    /// <summary>Code-Blöcke für schlichten Text – darin sind Farb-Tags verboten (sie würden dort nicht wirken).</summary>
+    internal static readonly string[] PlainLanguages = ["text", "txt", "plaintext", "console", "output", "log"];
 
     private static readonly Lazy<string> Cached = new(Build);
 
@@ -41,9 +44,11 @@ internal static class AnswerGrammar
         Rule("tag", "\"{\" ( \"/\"? color | \"verlauf\" ( \":\" grad )? | \"/verlauf\" ) \"}\"");
         Rule("inline-code", "\"`\" [^`\\n]+ \"`\"");
         Rule("fence", "\"```\" ( code | widget )");
-        Rule("code", "lang? \"\\n\" code-body");
+        Rule("code", "lang \"\\n\" code-body | plain-lang? \"\\n\" plain-body");
         Rule("code-body", "( [^`] | \"`\" [^`] | \"``\" [^`] )* \"```\"");
+        Rule("plain-body", "( [^`{] | \"{\" [^a-zA-Z/`{] | \"`\" [^`{] | \"``\" [^`{] )* \"```\"");
         Rule("lang", Alternatives(CodeLanguages));
+        Rule("plain-lang", Alternatives(PlainLanguages));
 
         Rule("color", Alternatives(ColorTags.Names));
         Rule("grad", "color \"-\" color");

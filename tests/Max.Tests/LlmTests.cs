@@ -582,7 +582,7 @@ public class AnswerGrammarTests
 
     [Fact]
     public void CodeLanguages_NeverCollideWithElements() =>
-        Assert.DoesNotContain(AnswerGrammar.CodeLanguages, l => Max.Ui.Widgets.WidgetValidator.IsElement(l));
+        Assert.DoesNotContain(AnswerGrammar.CodeLanguages.Concat(AnswerGrammar.PlainLanguages), l => Max.Ui.Widgets.WidgetValidator.IsElement(l));
 
     [Fact]
     public void EveryRule_IsDefined()

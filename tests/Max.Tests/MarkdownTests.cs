@@ -24,6 +24,14 @@ public class InlineFormatterTests
         string.Concat(parts.Where(p => predicate(p.Style)).Select(p => p.Text));
 
     [Fact]
+    public void ClosingTagsWithoutOpening_AreSwallowed()
+    {
+        Assert.Equal("", Plain(Run("{/verlauf}")));
+        Assert.Equal("x", Plain(Run("x{/rot}")));
+        Assert.Equal("{/unbekannt}", Plain(Run("{/unbekannt}")));
+    }
+
+    [Fact]
     public void SquareBracketColorTags_AreUnderstoodToo_OtherBracketsStay()
     {
         var parts = Run("ein [rot]roter[/rot] Text, [Link](x) und arr[0]");
@@ -70,7 +78,6 @@ public class InlineFormatterTests
     [Theory]
     [InlineData("{name} bleibt")]
     [InlineData("if (a) { b(); }")]
-    [InlineData("x{/rot}")]
     [InlineData("Menge {")]
     public void UnknownOrBrokenTags_StayText(string text) => Assert.Equal(text, Plain(Run(text)));
 
