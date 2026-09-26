@@ -53,6 +53,15 @@ public class WidgetTests
         Assert.Contains(body.Split('\n')[^1], output);
     }
 
+    [Fact]
+    public void ChoiceMenu_OnlyForRealChoices_NotForOffers()
+    {
+        Assert.True(Max.Ui.Widgets.WidgetValidator.IsValid("frage", "Frage: Welche Sprache?\n- C#\n- Python\n"));
+        Assert.False(Max.Ui.Widgets.WidgetValidator.IsValid("frage", "Frage: Möchtest du mehr Details?\n- Ja, gerne\n- Nein, das reicht\n"));
+        Assert.False(Max.Ui.Widgets.WidgetValidator.IsValid("frage", "Frage: Max-Identität\n- Ich bin Max.\n- Mehr nicht.\n"));
+        Assert.False(Max.Ui.Widgets.WidgetValidator.IsValid("balken", "Kosten: 5\n"));
+    }
+
     [Theory]
     [InlineData("Salzbergwerk     Führung: 10", false)]
     [InlineData("Salzbergwerk\tFührung: 10", false)]

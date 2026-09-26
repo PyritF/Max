@@ -80,7 +80,8 @@ Schrift: slant
 Verlauf: rot-pink
 ```
 
-Frage – Auswahlmenü, nur wenn du wirklich eine Entscheidung brauchst, immer ganz am Ende:
+Frage – Auswahlmenü, nur wenn du ohne Entscheidung des Nutzers nicht weiterkommst, immer ganz am Ende.
+Nie als Angebot ("Möchtest du mehr?") und nie mit Ja/Nein als Antworten:
 ```frage
 Frage: Welche Variante?
 - Die schnelle

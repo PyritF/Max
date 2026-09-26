@@ -405,12 +405,12 @@ public class LlmBackendTests
     [Fact]
     public async Task BrokenElement_IsGeneratedAgain_Invisibly()
     {
-        var model = new FakeModel("Hier:\n", "```balken\n", "kaputt\n", "```\n", "Schlaf: 8\n", "```\n", "Ende.");
+        var model = new FakeModel("Hier:\n", "```balken\n", "kaputt\n", "```\n", "Schlaf: 8\nArbeit: 8\n", "```\n", "Ende.");
         var backend = Backend(model);
 
         var (_, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
 
-        Assert.Equal("Hier:\n```balken\nSchlaf: 8\n```\nEnde.", reply);
+        Assert.Equal("Hier:\n```balken\nSchlaf: 8\nArbeit: 8\n```\nEnde.", reply);
         Assert.Equal(1, backend.LastRun!.Repairs);
         Assert.DoesNotContain("kaputt", model.Decode(model.Cache));
     }
@@ -449,12 +449,12 @@ public class LlmBackendTests
     [Fact]
     public async Task Repair_WorksAfterThinking_AtTheStartOfTheAnswer()
     {
-        var model = new FakeModel("hm", "</think>", "\n\n", "```balken\n", "kaputt\n", "```\n", "A: 1\n", "```", null);
+        var model = new FakeModel("hm", "</think>", "\n\n", "```balken\n", "kaputt\n", "```\n", "A: 1\nB: 2\n", "```", null);
         var backend = Backend(model, thinking: true);
 
         var (_, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
 
-        Assert.Equal("```balken\nA: 1\n```", reply);
+        Assert.Equal("```balken\nA: 1\nB: 2\n```", reply);
         Assert.Equal(1, backend.LastRun!.Repairs);
     }
 
@@ -727,12 +727,34 @@ public class AnswerGrammarTests
     }
 
     [Fact]
+    public void EveryReferencedRule_IsDefined()
+    {
+        // Eine kaputte Grammatik lehnt llama.cpp ab – und der fehlende Sampler bringt Max zum Absturz.
+        var gbnf = AnswerGrammar.Build();
+        var defined = new HashSet<string>();
+        var bodies = new List<string>();
+        foreach (var line in gbnf.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = line.Split(" ::= ", 2);
+            Assert.Equal(2, parts.Length);
+            defined.Add(parts[0]);
+            bodies.Add(parts[1]);
+        }
+        foreach (var body in bodies)
+        {
+            var bare = System.Text.RegularExpressions.Regex.Replace(body, @"""(\\.|[^""\\])*""|\[(\\.|[^\]\\])*\]|\{\d+(,\d*)?\}", " ");
+            foreach (System.Text.RegularExpressions.Match word in System.Text.RegularExpressions.Regex.Matches(bare, @"[^\s()|*+?]+"))
+                Assert.True(defined.Contains(word.Value), $"Unbekannt: '{word.Value}' in: {body}");
+        }
+    }
+
+    [Fact]
     public void Labels_AreShortAndWithoutColumns_UnitsWithoutNumbers()
     {
         var gbnf = AnswerGrammar.Build();
         Assert.Contains("label ::= [^-:|\\n\\t`{ ] ( [^:|\\n\\t`{ ] | \" \" [^:|\\n\\t`{ ] ){0,24}", gbnf);
         Assert.Contains("plain ::= [^{}`]", gbnf);
-        Assert.Contains("root ::= item* ( \"```\" widget item* )?", gbnf);   // höchstens ein Element
+        Assert.Contains("root ::= item* ( \"```\" widget item* )? ( \"```\" w-frage [ \\n]* )?", gbnf);   // ein Element, Menü nur am Ende
         Assert.DoesNotContain("w-frage |", gbnf.Split("widget ::= ")[1].Split('\n')[0]);   // "Wort}" statt "{/verlauf}" geht nicht
         Assert.Contains("unit ::= ( [%\\u20ac$\\u00b0] | \" \" [^0-9:", gbnf);
     }

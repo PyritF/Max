@@ -49,7 +49,7 @@ internal sealed class LlmBackend : IChatBackend
     internal const int MaxRepairs = 2;
 
     /// <summary>Wird ein Element länger als das, hängt das Modell fest – dann wird abgebrochen.</summary>
-    internal const int MaxElementChars = 1200;
+    internal const int MaxElementChars = 3000;
 
     /// <summary>So viele Tokens denkt Max mindestens nach, bevor er das Nachdenken beenden darf.</summary>
     internal const int MinThinkingTokens = 8;
@@ -308,7 +308,7 @@ internal sealed class LlmBackend : IChatBackend
             var seconds = genClock.Elapsed.TotalSeconds;
             LastRun = new GenerationStats(prompt.Count + head.Count, reused, generated.Count, thinkingTokens,
                 thinkingTime, firstToken, seconds > 0 ? (generated.Count - 1) / seconds : 0, repairs);
-            Finish(beforeReply, head, generated, answerTokens, shown.ToString());
+            Finish(beforeReply, head, generated, shown.ToString());
             beforeReply?.Dispose();
         }
     }
@@ -317,7 +317,7 @@ internal sealed class LlmBackend : IChatBackend
     /// Nach der Antwort: Den Cache so hinterlassen, wie der Verlauf beim nächsten Mal aussieht.
     /// Zurück vor die Antwort und sie in Verlaufsform (ohne Denk-Block) nachrechnen – im Hintergrund.
     /// </summary>
-    private void Finish(ModelCheckpoint? beforeReply, IReadOnlyList<int> head, List<int> generated, List<int> answerTokens, string shown)
+    private void Finish(ModelCheckpoint? beforeReply, IReadOnlyList<int> head, List<int> generated, string shown)
     {
         if (beforeReply is null)
         {
@@ -327,7 +327,8 @@ internal sealed class LlmBackend : IChatBackend
             return;
         }
 
-        var history = new List<int>([.. _historyStart!, .. answerTokens, .. _assistantEnd!]);
+        // Im Verlauf steht genau, was der Nutzer gesehen hat – ohne verworfene Elemente oder abgebrochene Blöcke.
+        var history = new List<int>([.. _historyStart!, .. _model.Tokenize(shown), .. _assistantEnd!]);
         if (!_model.Restore(beforeReply))
         {
             if (shown.Length > 0)

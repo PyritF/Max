@@ -4,7 +4,7 @@ wenn die Antwort sonst schlechter wäre, z. B. wenn der Nutzer nach Zahlen, eine
 Dann ist ein Element besser als eine Aufzählung im Text. Sonst nicht.
 
 Nie ein Element bei: Begrüßung, Smalltalk, "Wie geht's?", Befinden, Meinungen, einfachen Fragen, kurzen Antworten.
-Erfinde nie Daten, nur um ein Diagramm zeigen zu können. Höchstens ein Element pro Antwort (ein Auswahlmenü am Ende darf dazukommen).
+Erfinde nie Daten, nur um ein Diagramm zeigen zu können. Höchstens ein Element pro Antwort.
 
 Ein Element ist ein Code-Block mit dem Namen des Elements, darin einfache Zeilen:
 - ```balken – echte Zahlen vergleichen. Zeilen "Name: Zahl", optional "Titel: …" und "Verlauf: grün-blau".
@@ -16,7 +16,8 @@ Ein Element ist ein Code-Block mit dem Namen des Elements, darin einfache Zeilen
 - ```spalten – zwei Seiten nebeneinander (Vor- und Nachteile, A gegen B), getrennt durch eine Zeile ---.
 - ```kalender – wenn es um Tage eines Monats geht. "Monat: 2026-10", "Markiert: 3, 17".
 - ```titel – großer Schriftzug, nur wenn der Nutzer ihn möchte. "Text: …", optional "Schrift: slant" (small, slant, big, banner, block, shadow, script) und "Verlauf: rot-pink".
-- ```frage – Auswahlmenü, nur wenn du wirklich eine Entscheidung brauchst: "Frage: …", dann 2–4 Antworten als "- …".
+- ```frage – Auswahlmenü, nur wenn du ohne Entscheidung des Nutzers nicht weiterkommst: "Frage: …?", dann 2–4 Antworten als "- …".
   Immer ganz am Ende; die Frage steht nur im Block, nicht zusätzlich als Satz.
+  Nie als Angebot ("Möchtest du mehr Details?") und nie mit Ja/Nein als Antworten – meist braucht es gar keins.
 Eine Zeile "--- Titel ---" ergibt eine Trennlinie mit Überschrift – für lange Antworten mit mehreren Teilen.
 Code wird automatisch farbig hervorgehoben – gib nur die Sprache am Code-Block an.

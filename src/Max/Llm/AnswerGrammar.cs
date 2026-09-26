@@ -40,13 +40,14 @@ internal static class AnswerGrammar
 
         // Höchstens ein Element pro Antwort (das Auswahlmenü zählt nicht) – kleine Modelle hängten sonst
         // an jede Antwort Diagramme oder wiederholten Abschnitte samt Balken in einer Schleife.
-        Rule("root", "item* ( \"```\" widget item* )?");
+        // Ein Auswahlmenü darf nur ganz am Ende stehen – danach kommt nichts mehr.
+        Rule("root", "item* ( \"```\" widget item* )? ( \"```\" w-frage [ \\n]* )?");
         Rule("item", "plain | tag | inline-code | fence");
         // Auch kein "}" im Fließtext: Kleine Modelle schließen einen Verlauf sonst mit "Wort}" statt "{/verlauf}".
         Rule("plain", "[^{}`]");
         Rule("tag", "\"{\" ( \"/\"? color | \"verlauf\" ( \":\" grad )? | \"/verlauf\" ) \"}\"");
         Rule("inline-code", "\"`\" [^`\\n]+ \"`\"");
-        Rule("fence", "\"```\" ( code | w-frage )");
+        Rule("fence", "\"```\" code");
         Rule("code", "lang \"\\n\" code-body | plain-lang \"\\n\" plain-body");
         Rule("code-body", "( [^`] | \"`\" [^`] | \"``\" [^`] )* \"```\"");
         Rule("plain-body", "( [^`{] | \"{\" [^a-zA-ZÀ-ɏ/`{] | \"`\" [^`{] | \"``\" [^`{] )* \"```\"");
@@ -74,7 +75,7 @@ internal static class AnswerGrammar
         Rule("widget", "w-num | w-kurve | w-titel | w-kalender | w-kasten | w-baum | w-spalten");
         Rule("w-num", $"( {Alternatives(numeric)} ) nl setting* num-line ( num-line | setting )* \"```\"");
         Rule("w-kurve", "\"kurve\" nl setting* num-line setting* num-line setting* num-line ( num-line | setting )* \"```\"");
-        Rule("w-frage", $"( {Alternatives(ChoiceQuestion.BlockNames.Select(n => n.ToLowerInvariant()).Distinct())} ) nl \"Frage: \" value nl opt opt opt? opt? opt? \"```\"");
+        Rule("w-frage", $"( {Alternatives(ChoiceQuestion.BlockNames.Select(n => n.ToLowerInvariant()).Distinct())} ) nl \"Frage: \" [^\\n`?]{{1,118}} \"?\" nl opt opt opt? opt? opt? \"```\"");
         Rule("w-titel", "\"titel\" nl \"Text: \" value nl ( \"Schrift: \" font nl )? ( \"Verlauf: \" grad nl | \"Farbe: \" color nl )? \"```\"");
         Rule("w-kalender", "\"kalender\" nl ( \"Titel: \" value nl )? \"Monat: \" [0-9] [0-9] [0-9] [0-9] \"-\" [0-9] [0-9] nl ( \"Markiert: \" day ( \", \" day )* nl )? \"```\"");
         Rule("w-kasten", "\"kasten\" nl setting* nl* content-line ( content-line | nl )* \"```\"");
