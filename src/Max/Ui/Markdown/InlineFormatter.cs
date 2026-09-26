@@ -202,8 +202,10 @@ internal sealed class InlineFormatter(Action<string, Style> output)
             return true;
         }
         // {verlauf}, {verlauf:grün-blau}, {verlauf grün-blau}, {verlauf=grün-blau}
-        if (tag.StartsWith("verlauf", StringComparison.OrdinalIgnoreCase) && _gradient is null)
+        // Ein neuer Verlauf, während einer offen ist, beendet den alten (Modelle vergessen gern das Ende).
+        if (tag.StartsWith("verlauf", StringComparison.OrdinalIgnoreCase))
         {
+            FlushGradient();
             _gradient = Widgets.ChartColors.Gradient(tag.Length > 8 ? tag[8..] : null);
             return true;
         }

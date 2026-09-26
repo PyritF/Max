@@ -32,6 +32,10 @@ public class InlineFormatterTests
     }
 
     [Fact]
+    public void NewGradient_ClosesTheOpenOne_InsteadOfShowingTheTag() =>
+        Assert.Equal("Die Bäume in Rottöne und Gold.", Plain(Run("{verlauf:orange-gold}Die Bäume in {verlauf:rot-lila}Rottöne und {verlauf:gelb-grün}Gold{/verlauf}.")));
+
+    [Fact]
     public void SquareBracketColorTags_AreUnderstoodToo_OtherBracketsStay()
     {
         var parts = Run("ein [rot]roter[/rot] Text, [Link](x) und arr[0]");
