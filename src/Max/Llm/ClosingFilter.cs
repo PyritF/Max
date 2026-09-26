@@ -164,6 +164,14 @@ internal sealed class ClosingFilter
     internal static bool? StartsWithPhrase(string line, bool complete)
     {
         var text = line.TrimStart().TrimStart('*', '_', '>', ' ');
+        // Farb-Tags davor überspringen ({cyan}, {verlauf:…}, [rot]) – die Floskel dahinter zählt.
+        while (text.Length > 0 && text[0] is '{' or '[')
+        {
+            var close = text.IndexOf(text[0] == '{' ? '}' : ']');
+            if (close < 0)
+                return complete || text.Length > 40 ? false : null;
+            text = text[(close + 1)..].TrimStart('*', '_', ' ');
+        }
         var undecided = false;
         foreach (var phrase in Phrases)
         {

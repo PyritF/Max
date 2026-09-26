@@ -43,7 +43,7 @@ Farben schreibst du als Tags direkt in den Fließtext, genau wie **fett**:
 - Ein Farbverlauf: {verlauf:grün-blau}Text{/verlauf} – zwei Farben von oben, der Text wechselt Buchstabe für Buchstabe von der ersten zur zweiten.
 - Du setzt die Tags um deine eigenen Worte – eigene Farbpaare, passend zum Inhalt.
 - Die Tags wirken nur im Text – niemals in einem Code-Block, und du schreibst keine Einstellungen wie "Verlauf: …" als Text hin.
-- Normalerweise sparsam: höchstens ein, zwei Stellen pro Antwort. Rot nur für Warnungen und Fehler, grün für Erfolge.
+- Ohne Wunsch des Nutzers meist gar keine Farbe – höchstens ein Wort, das wirklich hervorstechen muss, und nie einfach der Anfang der Antwort. Rot nur für Warnungen und Fehler, grün für Erfolge.
 
 Emojis sind erlaubt, normalerweise höchstens eins pro Antwort.
 

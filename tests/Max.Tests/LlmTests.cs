@@ -496,6 +496,15 @@ public class LlmBackendTests
     }
 
     [Fact]
+    public async Task RepeatingSentences_WithoutLineBreaks_AreStopped()
+    {
+        var sentence = "Der Herbst ist ein feiner, goldener Tag, der sich in einem dunklen, blauen Farbverlauf ausbreitet. ";
+        var model = new FakeModel([.. Enumerable.Repeat<string?>(sentence, 50)]);
+        var (_, reply) = await Collect(Backend(model).StreamReplyAsync(Single("?"), CancellationToken.None));
+        Assert.True(reply.Length < 8 * sentence.Length, $"{reply.Length} Zeichen");
+    }
+
+    [Fact]
     public void LongDifferentText_IsNoLoop()
     {
         var text = new StringBuilder();
@@ -679,6 +688,16 @@ public class ClosingFilterTests
 
     [Fact]
     public void OnlyAQuestion_Stays() => Assert.Equal("Soll ich das für C# oder Python schreiben?", Run("Soll ich das für C# oder Python schreiben?"));
+
+    [Theory]
+    [InlineData("Text.\n\n{cyan}Falls du mehr wissen willst{/cyan}, frag einfach.", "Text.\n\n")]
+    [InlineData("Text.\n\n{verlauf:rot-gold}Möchtest du mehr?{/verlauf}", "Text.\n\n")]
+    [InlineData("Text.\n\n{cyan}Wichtig{/cyan}: vorher sichern.", "Text.\n\n{cyan}Wichtig{/cyan}: vorher sichern.")]
+    public void ColorTagsBeforeTheOffer_AreSkipped(string text, string expected)
+    {
+        Assert.Equal(expected, Run(text));
+        Assert.Equal(expected, Run([.. text.Select(c => c.ToString())]));
+    }
 
     [Theory]
     [InlineData("Text.\n\nWenn du Windows nutzt, geht es anders.")]

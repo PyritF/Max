@@ -54,6 +54,14 @@ public class WidgetTests
     }
 
     [Fact]
+    public void ThousandsSeparators_AreNumbers()
+    {
+        const string body = "Titel: Einwohner\nWien: 1.911.000\nGraz: 291.000\nLinz: 200.000";
+        Assert.Equal([("Wien", 1911000.0), ("Graz", 291000.0), ("Linz", 200000.0)], new WidgetBody(body).Numbers());
+        Assert.True(Max.Ui.Widgets.WidgetValidator.IsValid("balken", body));
+    }
+
+    [Fact]
     public void ChoiceMenu_OnlyForRealChoices_NotForOffers()
     {
         Assert.True(Max.Ui.Widgets.WidgetValidator.IsValid("frage", "Frage: Welche Sprache?\n- C#\n- Python\n"));
@@ -61,6 +69,13 @@ public class WidgetTests
         Assert.False(Max.Ui.Widgets.WidgetValidator.IsValid("frage", "Frage: Max-Identität\n- Ich bin Max.\n- Mehr nicht.\n"));
         Assert.False(Max.Ui.Widgets.WidgetValidator.IsValid("balken", "Kosten: 5\n"));
     }
+
+    [Theory]
+    [InlineData("Tag: 24", false)]
+    [InlineData("Stadt: 2.900.000", false)]
+    [InlineData("Tagesmitte: 5", true)]
+    public void BarHeadingOrSumRows_AreInvalid(string line, bool valid) =>
+        Assert.Equal(valid, Max.Ui.Widgets.WidgetValidator.IsValid("balken", line + "\nArbeit: 8\nSchlaf: 7\n"));
 
     [Theory]
     [InlineData("Salzbergwerk     Führung: 10", false)]
@@ -143,6 +158,9 @@ public class WidgetTests
     [InlineData("1.234,5", 1234.5)]
     [InlineData("70 %", 70)]
     [InlineData("3 GB", 3)]
+    [InlineData("1.911.000", 1911000)]
+    [InlineData("12.500 €", 12500)]
+    [InlineData("0.125", 0.125)]
     public void ParseNumber(string text, double expected) =>
         Assert.Equal(expected, WidgetBody.ParseNumber(text));
 

@@ -45,7 +45,7 @@ internal static class WidgetRegistry
 }
 
 /// <summary>Der Inhalt eines Widget-Blocks: Zeilen, "Schlüssel: Wert"-Paare, Zahlen.</summary>
-internal sealed class WidgetBody(string text)
+internal sealed partial class WidgetBody(string text)
 {
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
 
@@ -108,6 +108,9 @@ internal sealed class WidgetBody(string text)
     }
 
     /// <summary>Datenpunkte "Name: Zahl" – Zeilen ohne Zahl werden übersprungen.</summary>
+    [System.Text.RegularExpressions.GeneratedRegex(@"^-?[1-9]\d{0,2}(\.\d{3})+$")]
+    private static partial System.Text.RegularExpressions.Regex ThousandsRegex();
+
     public List<(string Label, double Value)> Numbers() =>
         Pairs().Select(p => (p.Key, Value: ParseNumber(p.Value))).Where(p => p.Value is not null).Select(p => (p.Key, p.Value!.Value)).ToList();
 
@@ -117,7 +120,10 @@ internal sealed class WidgetBody(string text)
         var s = new string(text.TakeWhile(c => char.IsDigit(c) || c is '.' or ',' or '-' or ' ' or '+').ToArray()).Replace(" ", "");
         if (s.Length == 0)
             return null;
-        if (s.Contains(',') && s.Contains('.'))
+        // "1.911.000" oder "12.500": deutsche Tausenderpunkte, keine Nachkommastellen.
+        if (ThousandsRegex().IsMatch(s))
+            s = s.Replace(".", "");
+        else if (s.Contains(',') && s.Contains('.'))
             s = s.IndexOf(',') > s.IndexOf('.') ? s.Replace(".", "").Replace(',', '.') : s.Replace(",", "");
         else if (s.Contains(','))
             s = s.Replace(',', '.');

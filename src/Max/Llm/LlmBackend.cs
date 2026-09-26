@@ -179,7 +179,7 @@ internal sealed class LlmBackend : IChatBackend
                 foreach (var chunk in Route(splitter.Push(text), gate, closing, shown))
                     yield return chunk;
 
-                if (answerPhase && text.Contains('\n') && IsLooping(shown))
+                if (answerPhase && text.IndexOfAny(LoopCheckChars) >= 0 && IsLooping(shown))
                 {
                     LlmEngine.Log("Antwort wiederholt sich, abgebrochen.");
                     break;
@@ -431,6 +431,9 @@ internal sealed class LlmBackend : IChatBackend
         var tail = text[^LoopChars..];
         return tail.Trim().Length > LoopChars / 2 && text.IndexOf(tail, StringComparison.Ordinal) < text.Length - LoopChars;
     }
+
+    /// <summary>Nach Zeilen- und Satzenden auf Wiederholung prüfen – auch Schleifen ohne Zeilenumbruch fallen so auf.</summary>
+    private static readonly char[] LoopCheckChars = ['\n', '.', '!', '?'];
 
     private int[] SingleToken(string text) => _model.Tokenize(text) is [var token] ? [token] : [];
 

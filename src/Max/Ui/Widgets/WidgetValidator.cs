@@ -20,6 +20,9 @@ internal static partial class WidgetValidator
             // Doppelte Namen ("Stadt: 1. Wien", "Stadt: 2. Linz") heißen: Das war eine Tabelle, kein Diagramm.
             if (labels.Any(l => !IsShortLabel(l)) || labels.Distinct(StringComparer.OrdinalIgnoreCase).Count() < labels.Count)
                 return false;
+            // "Tag: 24 Stunden" oder "Stadt: 2.900.000" über den eigentlichen Werten: eine Kopf- oder Summenzeile, kein Wert.
+            if (name is "balken" or "anteile" && labels.Any(l => Headings.Contains(l.Trim())))
+                return false;
             // Ein einzelner Balken vergleicht nichts.
             if (name is "balken" or "anteile" && labels.Count < 2)
                 return false;
@@ -37,6 +40,11 @@ internal static partial class WidgetValidator
 
     [System.Text.RegularExpressions.GeneratedRegex(@"^(ja|nein|nö|jep|nee|klar|gerne?|lieber nicht|yes|no)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex YesNoRegex();
+
+    private static readonly HashSet<string> Headings = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Insgesamt", "Stadt", "Städte", "Tag", "Name", "Wert", "Kategorie",
+    };
 
     private static readonly HashSet<string> NumericWidgets = new(StringComparer.OrdinalIgnoreCase) { "balken", "anteile", "kurve", "fortschritt" };
 

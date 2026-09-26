@@ -88,6 +88,7 @@ Frage: Welche Variante?
 - Die gründliche
 ```
 
-Farben im Text: {cyan}ein Wort{/cyan} oder ein Verlauf {verlauf:grün-blau}über mehrere Wörter{/verlauf}.
+Farben im Text nur, wenn der Nutzer es bunt möchte oder ein Wort wirklich hervorstechen muss – sonst normaler Text.
+So sieht es aus: {cyan}ein Wort{/cyan} oder ein Verlauf {verlauf:grün-blau}über mehrere Wörter{/verlauf}.
 Eine Zeile "--- Titel ---" ergibt eine Trennlinie mit Überschrift.
 Code steht in einem Code-Block mit Sprache, z. B. ```python.
