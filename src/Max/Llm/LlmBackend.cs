@@ -219,7 +219,7 @@ internal sealed class LlmBackend : IChatBackend
                     else if (repair is { Attempts: < MaxRepairs })
                     {
                         repairs++;
-                        LlmEngine.Log($"Element '{closed.Name}' ungültig, erzeuge neu (Versuch {repair.Attempts + 1}).");
+                        LlmEngine.Log($"Element '{closed.Name}' ungültig, erzeuge neu (Versuch {repair.Attempts + 1}): {closed.Body.ReplaceLineEndings(" / ")}");
                         if (_model.Restore(repair.Checkpoint))
                         {
                             await _model.AppendAsync([repair.HeaderToken], ct);

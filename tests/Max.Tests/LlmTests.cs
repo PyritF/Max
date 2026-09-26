@@ -369,6 +369,18 @@ public class LlmBackendTests
     }
 
     [Fact]
+    public async Task Repair_WorksAfterThinking_AtTheStartOfTheAnswer()
+    {
+        var model = new FakeModel("hm", "</think>", "\n\n", "```balken\n", "kaputt\n", "```\n", "A: 1\n", "```", null);
+        var backend = Backend(model, thinking: true);
+
+        var (_, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
+
+        Assert.Equal("```balken\nA: 1\n```", reply);
+        Assert.Equal(1, backend.LastRun!.Repairs);
+    }
+
+    [Fact]
     public async Task ElementThatStaysBroken_IsDropped()
     {
         var model = new FakeModel("A\n", "```balken\n", "x\n", "```\n", "y\n", "```\n", "z\n", "```\n", "Ende.");
@@ -566,6 +578,16 @@ public class ElementGateTests
         gate.Push("```bal");
         Assert.True(gate.WouldOpenElement("ken\nA"));
         Assert.False(new ElementGate().WouldOpenElement("```python\n"));
+    }
+
+    [Fact]
+    public void ClosingFenceWithoutNewline_AtTheEnd_IsNotContent()
+    {
+        var gate = new ElementGate();
+        gate.Push("```balken\nA: 1\n```");
+        gate.Flush();
+        Assert.Equal(("balken", "A: 1\n"), gate.Closed);
+        Assert.Equal("```balken\nA: 1\n```", gate.Accept());
     }
 
     [Fact]

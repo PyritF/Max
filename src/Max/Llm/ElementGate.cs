@@ -143,7 +143,8 @@ internal sealed partial class ElementGate
     {
         if (_element is not null && Closed is null)
         {
-            if (_line.Length > 0)
+            // Am Ende fehlt oft nur der Zeilenumbruch nach dem schließenden ``` – das gehört nicht zum Inhalt.
+            if (_line.Length > 0 && !_line.ToString().TrimStart().StartsWith("```", StringComparison.Ordinal))
                 _body.Append(_line);
             _line.Clear();
             Closed = (_element, _body.ToString());
