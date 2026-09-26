@@ -14,8 +14,13 @@ internal static class WidgetValidator
     {
         if (ChoiceQuestion.BlockNames.Contains(name))
             return ChoiceQuestion.TryParse(body) is { Options.Count: > 0 };
-        if (NumericWidgets.Contains(name) && new WidgetBody(body).Numbers().Any(p => !IsShortLabel(p.Label)))
-            return false;
+        if (NumericWidgets.Contains(name))
+        {
+            var labels = new WidgetBody(body).Numbers().Select(p => p.Label).ToList();
+            // Doppelte Namen ("Stadt: 1. Wien", "Stadt: 2. Linz") heißen: Das war eine Tabelle, kein Diagramm.
+            if (labels.Any(l => !IsShortLabel(l)) || labels.Distinct(StringComparer.OrdinalIgnoreCase).Count() < labels.Count)
+                return false;
+        }
         return WidgetRegistry.TryRender(name, body, 80) is not null;
     }
 

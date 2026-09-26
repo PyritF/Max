@@ -713,7 +713,7 @@ public class AnswerGrammarTests
     {
         var gbnf = AnswerGrammar.Build();
         Assert.Contains("label ::= [^-:|\\n\\t`{ ] ( [^:|\\n\\t`{ ] | \" \" [^:|\\n\\t`{ ] ){0,24}", gbnf);
-        Assert.Contains("unit ::= [^0-9:", gbnf);
+        Assert.Contains("unit ::= ( [%\\u20ac$\\u00b0] | \" \" [^0-9:", gbnf);
     }
 
     [Fact]

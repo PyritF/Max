@@ -60,8 +60,9 @@ internal static class AnswerGrammar
         // Kurze Namen ohne "Spalten": höchstens einzelne Leerzeichen zwischen Wörtern, keine Tabs.
         Rule("label", "[^-:|\\n\\t`{ ] ( [^:|\\n\\t`{ ] | \" \" [^:|\\n\\t`{ ] ){0,24}");
         Rule("number", "\"-\"? [0-9]+ ( [.,] [0-9]+ )*");
-        // Einheit ("%", " Mio. €") – ohne weitere Zahlen oder Doppelpunkte, sonst stünden mehrere Werte in einer Zeile.
-        Rule("unit", "[^0-9:\\n`|{]{0,12}");
+        // Einheit ("%", " Mio. €") – ohne weitere Zahlen oder Doppelpunkte, sonst stünden mehrere Werte in einer Zeile;
+        // direkt an der Zahl nur ein Zeichen wie % oder €, sonst mit Leerzeichen ("1. Wien" ist keine Zahl mit Einheit).
+        Rule("unit", "( [%\u20ac$\u00b0] | \" \" [^0-9:\\n`|{ ] [^0-9:\\n`|{]{0,10} )?");
         Rule("opt", "\"- \" value nl");
         Rule("day", "[0-9] [0-9]?");
         Rule("font", Alternatives(TitleWidget.BuiltInFonts.Append("standard").Distinct()));
