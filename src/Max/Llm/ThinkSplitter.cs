@@ -6,6 +6,8 @@ namespace Max.Llm;
 /// Trennt den Antwort-Strom in Nachdenken (<c>&lt;think&gt;…&lt;/think&gt;</c>) und Antwort.
 /// Tags dürfen über mehrere Stücke verteilt ankommen. Beginnt die Erzeugung schon im Denk-Block
 /// (der Prompt endet mit <c>&lt;think&gt;</c>), startet der Splitter im Denk-Modus.
+/// Ein verirrtes <c>&lt;/think&gt;</c> in der Antwort (und nach dem Nachdenken jedes weitere Denk-Tag)
+/// wird verschluckt – es soll nie im Text stehen.
 /// </summary>
 internal sealed class ThinkSplitter(bool startInThinking = false)
 {
@@ -29,24 +31,27 @@ internal sealed class ThinkSplitter(bool startInThinking = false)
         while (_pending.Length > 0)
         {
             var text = _pending.ToString();
-            var tag = Thinking ? Close : Open;
-            var index = text.IndexOf(tag, StringComparison.Ordinal);
+            var (index, tag) = Thinking ? (text.IndexOf(Close, StringComparison.Ordinal), Close) : FirstTag(text);
 
             if (index >= 0)
             {
                 Emit(output, text[..index]);
                 _pending.Remove(0, index + tag.Length);
-                Thinking = !Thinking;
-                if (!Thinking)
+                if (Thinking)
                 {
+                    Thinking = false;
                     ThinkingEnded = true;
                     TrimLeadingNewlines();
                 }
-                continue;
+                else if (tag == Open && !ThinkingEnded)
+                {
+                    Thinking = true;
+                }
+                continue;                              // sonst: verschluckt
             }
 
             // Kein ganzes Tag: alles ausgeben – bis auf ein mögliches angefangenes Tag am Ende.
-            var keep = PartialTagSuffix(text, tag);
+            var keep = Thinking ? PartialTagSuffix(text, Close) : Math.Max(PartialTagSuffix(text, Open), PartialTagSuffix(text, Close));
             Emit(output, text[..^keep]);
             _pending.Remove(0, text.Length - keep);
             break;
@@ -74,6 +79,15 @@ internal sealed class ThinkSplitter(bool startInThinking = false)
         }
         if (text.Length > 0)
             output.Add((Thinking, text));
+    }
+
+    private static (int Index, string Tag) FirstTag(string text)
+    {
+        var open = text.IndexOf(Open, StringComparison.Ordinal);
+        var close = text.IndexOf(Close, StringComparison.Ordinal);
+        if (open < 0)
+            return (close, Close);
+        return close >= 0 && close < open ? (close, Close) : (open, Open);
     }
 
     private void TrimLeadingNewlines()

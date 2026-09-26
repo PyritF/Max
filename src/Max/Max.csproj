@@ -20,7 +20,7 @@
   <!-- Eingebaut: das Manifest (erster Start klappt auch, wenn GitHub kurz nicht erreichbar ist) und Max' System-Prompt. -->
   <ItemGroup>
     <EmbeddedResource Include="..\..\manifest.json" LogicalName="manifest.json" />
-    <EmbeddedResource Include="Persona\system-prompt.md" LogicalName="system-prompt.md" />
+    <EmbeddedResource Include="Persona\*.md" LogicalName="%(Filename).md" />
     <!-- FIGlet-Schriften für große Schriftzüge (BSD-Lizenz, siehe Ui/Fonts/LICENSE-figlet.txt). -->
     <EmbeddedResource Include="Ui\Fonts\*.flf" LogicalName="font.%(Filename).flf" />
   </ItemGroup>

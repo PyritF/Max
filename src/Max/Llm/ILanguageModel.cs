@@ -39,7 +39,7 @@ internal interface ILanguageModel
     Task AppendAsync(IReadOnlyList<int> tokens, CancellationToken ct);
 
     /// <summary>Ein Sampler für die nächsten Tokens, optional mit Grammatik (GBNF), die nur gültige Tokens zulässt.</summary>
-    ITokenSampler CreateSampler(SamplingSettings settings, string? grammar = null, uint? seed = null);
+    ITokenSampler CreateSampler(SamplingSettings settings, string? grammar = null, uint? seed = null, IReadOnlyCollection<int>? banned = null);
 
     /// <summary>Setzt Tokens wieder zu Text zusammen – auch Zeichen, die über mehrere Tokens verteilt sind.</summary>
     ITokenDecoder CreateDecoder();

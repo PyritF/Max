@@ -117,8 +117,8 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
 
     public ITokenDecoder CreateDecoder() => new Decoder(new StreamingTokenDecoder(_context));
 
-    public ITokenSampler CreateSampler(SamplingSettings settings, string? grammar = null, uint? seed = null) =>
-        new GrammarSampler(_context.NativeHandle, () => _logitIndex, settings, grammar, seed);
+    public ITokenSampler CreateSampler(SamplingSettings settings, string? grammar = null, uint? seed = null, IReadOnlyCollection<int>? banned = null) =>
+        new GrammarSampler(_context.NativeHandle, () => _logitIndex, settings, grammar, seed, banned);
 
     /// <summary>
     /// Bringt den Kontext auf den Stand des Prompts. Liefert, wie viele Tokens wiederverwendet wurden.

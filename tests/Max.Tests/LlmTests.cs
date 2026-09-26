@@ -21,10 +21,10 @@ public class ChatTemplateTests
     }
 
     [Fact]
-    public void Assistant_StartsWithEmptyThinkBlock_AlsoInHistory()
+    public void NewAnswer_StartsWithEmptyThinkBlock_HistoryHasNone()
     {
         Assert.Equal("<|im_start|>assistant\n<think>\n\n</think>\n\n", _template.AssistantStart);
-        Assert.Equal(_template.AssistantStart + "Guten Abend.<|im_end|>\n", _template.Message(ChatRole.Assistant, "Guten Abend."));
+        Assert.Equal("<|im_start|>assistant\nGuten Abend.<|im_end|>\n", _template.Message(ChatRole.Assistant, "Guten Abend."));
     }
 }
 
@@ -63,6 +63,14 @@ public class ThinkSplitterTests
 
     [Fact]
     public void LookalikeTag_IsKept() => Assert.Equal(("", "a <thin client"), Run(false, "a <thin", " client"));
+
+    [Fact]
+    public void StrayClosingTag_InTheAnswer_IsSwallowed() =>
+        Assert.Equal(("", "Entwurf Antwort"), Run(false, "Entwurf</th", "ink> Antwort"));
+
+    [Fact]
+    public void AfterThinking_NoFurtherThinkBlock() =>
+        Assert.Equal(("x", "Da. Noch was"), Run(true, "x</think>Da. <think>Noch", "</think> was"));
 
     [Fact]
     public void LeadingBlankLines_OfTheAnswer_AreTrimmed() => Assert.Equal(("x", "Da."), Run(true, "x</think>", "\n", "\nDa."));
@@ -141,6 +149,46 @@ public class SystemPromptTests
         Assert.Contains("Nutzer: Alex Beispiel (Vorname: Alex)", prompt);
         Assert.Contains("Du duzt den Nutzer immer", prompt);
         Assert.DoesNotContain("\r", prompt);
+    }
+
+    private static readonly SystemSnapshot Snapshot = new(new DateTime(2026, 9, 25, 21, 14, 0), UserIdentity.Create("alex", "Alex Beispiel"), "Windows 11", 16,
+        new HardwareInfo(32L << 30, null), @"C:\Users\alex");
+
+    [Theory]
+    [InlineData("S", true)]
+    [InlineData("M", true)]
+    [InlineData("L", false)]
+    [InlineData("XL", false)]
+    public void SmallTiers_LearnFromExamples_BigOnesFromRules(string tier, bool examples)
+    {
+        var prompt = SystemPrompt.Build(Snapshot, Parse(tier));
+        Assert.Equal(examples, prompt.Contains("Schreib es genau so wie im Beispiel"));
+        Assert.Equal(!examples, prompt.Contains("Nie ein Element bei:"));
+        Assert.DoesNotContain("{{", prompt);
+        Assert.DoesNotContain("Stufe", prompt);
+    }
+
+    [Theory]
+    [InlineData("S")]
+    [InlineData("L")]
+    public void EveryTier_KnowsEveryElement(string tier)
+    {
+        var prompt = SystemPrompt.Build(Snapshot, Parse(tier));
+        foreach (var name in Max.Ui.Widgets.WidgetRegistry.Names.Append("frage"))
+            Assert.Contains("```" + name, prompt);
+        Assert.Contains("{verlauf:", prompt);
+    }
+
+    private static Tier Parse(string tier) => Enum.Parse<Tier>(tier);
+
+    [Fact]
+    public void ExampleElements_AreValid()
+    {
+        var prompt = SystemPrompt.Build(Snapshot, Max.Setup.Tier.S);
+        var blocks = System.Text.RegularExpressions.Regex.Matches(prompt, "```(\\p{L}+)\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline);
+        Assert.True(blocks.Count >= 10);
+        foreach (System.Text.RegularExpressions.Match block in blocks)
+            Assert.True(Max.Ui.Widgets.WidgetValidator.IsValid(block.Groups[1].Value, block.Groups[2].Value), block.Value);
     }
 }
 
@@ -294,7 +342,29 @@ public class LlmBackendTests
 
         Assert.Equal(cacheAfterFirst.Count, backend.LastRun!.ReusedTokens);
         Assert.DoesNotContain("überleg", model.Decode(cacheAfterFirst));
-        Assert.Contains("Antwort", model.Decode(cacheAfterFirst));
+        Assert.DoesNotContain("think>", model.Decode(cacheAfterFirst));
+        Assert.EndsWith("<|im_start|>assistant\nAntwort<|im_end|>\n", model.Decode(cacheAfterFirst));
+    }
+
+    [Fact]
+    public async Task Answer_BansBothThinkTags_Thinking_BansTheEndOnlyAtFirst()
+    {
+        var thoughts = Enumerable.Repeat<string?>("hm ", LlmBackend.MinThinkingTokens + 2);
+        var model = new FakeModel([.. thoughts, "</think>", "Ja."]);
+        await Collect(Backend(model, thinking: true).StreamReplyAsync(Single("?"), CancellationToken.None));
+
+        Assert.Equal(3, model.SamplerBans.Count);
+        Assert.Equal([FakeModel.ThinkClose], model.SamplerBans[0]);                    // die ersten Denk-Tokens
+        Assert.Empty(model.SamplerBans[1]);                                            // danach frei
+        Assert.Equal([FakeModel.ThinkOpen, FakeModel.ThinkClose], model.SamplerBans[2]); // Antwort
+    }
+
+    [Fact]
+    public async Task WithoutThinking_TheAnswerAlsoBansThinkTags()
+    {
+        var model = new FakeModel("Ja.");
+        await Collect(Backend(model).StreamReplyAsync(Single("?"), CancellationToken.None));
+        Assert.Equal([FakeModel.ThinkOpen, FakeModel.ThinkClose], Assert.Single(model.SamplerBans));
     }
 
     [Fact]
@@ -352,7 +422,7 @@ public class LlmBackendTests
         var (_, reply) = await Collect(Backend(model).StreamReplyAsync(Single("?"), CancellationToken.None));
 
         Assert.Equal("A\nEnde.", reply);
-        Assert.EndsWith("Ende.", model.Decode(model.Cache));
+        Assert.DoesNotContain("x\n", model.Decode(model.Cache));   // Zwischenstände unbrauchbar: der nächste Prompt rechnet neu
     }
 
     [Fact]
@@ -462,10 +532,15 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
     public int ContextSize => 100_000;
     public int CachedCount => Cache.Count;
 
-    public IReadOnlyList<int> Tokenize(string text) => text.Select(c => (int)c).ToArray();
+    // Wie beim echten Modell sind die Denk-Tags je ein einzelnes Token.
+    public const int ThinkOpen = 0xE001, ThinkClose = 0xE002;
+    public List<IReadOnlyCollection<int>> SamplerBans { get; } = [];
 
-    public string Decode(IEnumerable<int> tokens) =>
-        string.Concat(tokens.Select(t => _generatedText.TryGetValue(t, out var s) ? s : ((char)t).ToString()));
+    public IReadOnlyList<int> Tokenize(string text) =>
+        text.Replace("</think>", ((char)ThinkClose).ToString()).Replace("<think>", ((char)ThinkOpen).ToString()).Select(c => (int)c).ToArray();
+
+    public string Decode(IEnumerable<int> tokens) => string.Concat(tokens.Select(t =>
+        _generatedText.TryGetValue(t, out var s) ? s : t == ThinkOpen ? "<think>" : t == ThinkClose ? "</think>" : ((char)t).ToString()));
 
     public Task<int> PrefillAsync(IReadOnlyList<int> prompt, CancellationToken ct)
     {
@@ -488,9 +563,10 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
         Cache.AddRange(tokens);
     }
 
-    public ITokenSampler CreateSampler(SamplingSettings settings, string? grammar = null, uint? seed = null)
+    public ITokenSampler CreateSampler(SamplingSettings settings, string? grammar = null, uint? seed = null, IReadOnlyCollection<int>? banned = null)
     {
         SamplerGrammars.Add(grammar is not null);
+        SamplerBans.Add(banned ?? []);
         return new Sampler(this, grammar is not null);
     }
 
@@ -630,6 +706,14 @@ public class AnswerGrammarTests
         Assert.All(gbnf, c => Assert.True(c < 128, $"Nicht-ASCII: {c}"));
         Assert.Contains("\"gr\\u00fcn\"", gbnf);
         Assert.Contains("\\u00c0-\\u024f", gbnf);
+    }
+
+    [Fact]
+    public void Labels_AreShortAndWithoutColumns_UnitsWithoutNumbers()
+    {
+        var gbnf = AnswerGrammar.Build();
+        Assert.Contains("label ::= [^-:|\\n\\t`{ ] ( [^:|\\n\\t`{ ] | \" \" [^:|\\n\\t`{ ] ){0,24}", gbnf);
+        Assert.Contains("unit ::= [^0-9:", gbnf);
     }
 
     [Fact]

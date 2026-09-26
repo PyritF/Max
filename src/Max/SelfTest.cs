@@ -20,6 +20,8 @@ internal static class SelfTest
         "Erklär mir, wie ein Sprachmodell funktioniert.",
         "Zeig mir als Diagramm, wie sich ein Tag typischerweise auf Schlaf, Arbeit und Freizeit aufteilt.",
         "Zeig mir eine typische Ordnerstruktur für ein kleines C#-Projekt.",
+        "Was kann man in Wien machen? Gib mir eine Übersicht mit Kosten.",
+        "Zeig mir die Einwohnerzahlen der drei größten Städte Österreichs als Diagramm.",
         "Schreib ab jetzt bitte alles schön bunt, mit Farbverläufen. Erzähl mir was über den Herbst.",
         "Was machst du eigentlich an einem Regentag?",
     ];
@@ -81,6 +83,13 @@ internal static class SelfTest
             output.WriteLine();
             if (Forbidden.FirstOrDefault(name => thought.Contains(name, StringComparison.OrdinalIgnoreCase)) is { } thoughtName)
                 output.WriteLine($"WARNUNG: \"{thoughtName}\" im Nachdenken (wird in der Anzeige ersetzt).");
+
+            if (reply.Contains("think>", StringComparison.Ordinal))
+                output.WriteLine("WARNUNG: Denk-Tag in der Antwort.");
+            if (backend.ThinkingEnabled && backend.LastRun is { ThinkingTokens: <= 1 })
+                output.WriteLine("WARNUNG: Nachdenken sofort beendet.");
+            if (System.Text.RegularExpressions.Regex.IsMatch(reply, @"```balken\n(?:[^`]*\n)?[^\n`]*(?:  |\t)[^\n`]*:"))
+                output.WriteLine("WARNUNG: Balken mit Spalten-Namen.");
 
             if (SmallTalk.Contains(question) && reply.Contains("```", StringComparison.Ordinal))
                 output.WriteLine("WARNUNG: Element bei Smalltalk.");

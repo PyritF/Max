@@ -33,7 +33,9 @@ internal sealed record BackendOptions(
 /// <list type="bullet">
 /// <item>Nachdenken: Das Modell schreibt zuerst Gedanken (werden grau gezeigt), dann die Antwort.
 /// Die Gedanken kommen nicht in den Verlauf: Nach der Antwort springt das Modell auf einen Zwischenstand
-/// vor dem Nachdenken zurück und rechnet nur die Antwort nach – so passt der Cache weiter Token für Token.</item>
+/// vor der Antwort zurück und rechnet nur die Antwort in Verlaufsform nach (ohne Denk-Block) –
+/// so passt der Cache weiter Token für Token. Das gilt auch ohne Nachdenken.</item>
+/// <item>Denk-Tags: In der Antwort sind sie gesperrt, und das Nachdenken endet nicht vor ein paar Tokens.</item>
 /// <item>Grammatik: Die Antwort kann nur gültige Farb-Tags und Elemente enthalten.</item>
 /// <item>Reparatur: Lässt sich ein Element trotzdem nicht zeichnen, wird es unsichtbar neu erzeugt.</item>
 /// </list>
@@ -48,6 +50,9 @@ internal sealed class LlmBackend : IChatBackend
 
     /// <summary>Wird ein Element länger als das, hängt das Modell fest – dann wird abgebrochen.</summary>
     internal const int MaxElementChars = 1200;
+
+    /// <summary>So viele Tokens denkt Max mindestens nach, bevor er das Nachdenken beenden darf.</summary>
+    internal const int MinThinkingTokens = 8;
 
     private readonly ILanguageModel _model;
     private readonly string _systemPrompt;
@@ -64,6 +69,9 @@ internal sealed class LlmBackend : IChatBackend
     private IReadOnlyList<int>? _assistantStart;
     private IReadOnlyList<int>? _thinkingStart;
     private IReadOnlyList<int>? _assistantEnd;
+    private IReadOnlyList<int>? _historyStart;
+    private int[]? _thinkTags;          // <think> und </think>, falls je ein einzelnes Token
+    private int[]? _thinkEnd;
 
     // Die Antwort in Verlaufsform wird nach der Ausgabe im Hintergrund nachgerechnet.
     private Task? _pendingCommit;
@@ -109,14 +117,16 @@ internal sealed class LlmBackend : IChatBackend
         var clock = Stopwatch.StartNew();
 
         var reused = await _model.PrefillAsync(prompt, ct);
-        var beforeReply = think ? _model.Checkpoint() : null;
+        var beforeReply = _model.Checkpoint();
         await _model.AppendAsync(head, ct);
 
         var splitter = new ThinkSplitter(startInThinking: think);
         var gate = new ElementGate();
         var decoder = _model.CreateDecoder();
         var answerPhase = !think;
-        var sampler = answerPhase ? CreateAnswerSampler() : _model.CreateSampler(_thinking);
+        // Anfangs darf das Nachdenken nicht gleich wieder enden – sonst denkt das Modell in der Antwort weiter.
+        var sampler = answerPhase ? CreateAnswerSampler() : _model.CreateSampler(_thinking, banned: _thinkEnd);
+        var thinkingFree = _thinkEnd!.Length == 0;
 
         var generated = new List<int>();        // alles, was nach dem Kopf im Cache steht
         var answerTokens = new List<int>();     // die Antwort (ab dem ersten sichtbaren Zeichen)
@@ -193,6 +203,13 @@ internal sealed class LlmBackend : IChatBackend
                         yield return new ReplyChunk(sorry);
                     }
                     break;
+                }
+
+                if (!answerPhase && !thinkingFree && thinkingTokens >= MinThinkingTokens)
+                {
+                    thinkingFree = true;
+                    sampler.Dispose();
+                    sampler = _model.CreateSampler(_thinking);
                 }
 
                 // Nachdenken vorbei (selbst beendet oder Budget aufgebraucht) → ab jetzt die Antwort mit Grammatik.
@@ -280,33 +297,26 @@ internal sealed class LlmBackend : IChatBackend
             var seconds = genClock.Elapsed.TotalSeconds;
             LastRun = new GenerationStats(prompt.Count + head.Count, reused, generated.Count, thinkingTokens,
                 thinkingTime, firstToken, seconds > 0 ? (generated.Count - 1) / seconds : 0, repairs);
-            Finish(think, beforeReply, head, generated, answerTokens, shown.ToString());
+            Finish(beforeReply, head, generated, answerTokens, shown.ToString());
             beforeReply?.Dispose();
         }
     }
 
     /// <summary>
     /// Nach der Antwort: Den Cache so hinterlassen, wie der Verlauf beim nächsten Mal aussieht.
-    /// Mit Nachdenken: zurück vor das Nachdenken und die Antwort in Verlaufsform nachrechnen (im Hintergrund).
+    /// Zurück vor die Antwort und sie in Verlaufsform (ohne Denk-Block) nachrechnen – im Hintergrund.
     /// </summary>
-    private void Finish(bool think, ModelCheckpoint? beforeReply, IReadOnlyList<int> head, List<int> generated, List<int> answerTokens, string shown)
+    private void Finish(ModelCheckpoint? beforeReply, IReadOnlyList<int> head, List<int> generated, List<int> answerTokens, string shown)
     {
-        if (!think)
-        {
-            if (shown.Length > 0)
-                Remember(shown, [.. _assistantStart!, .. generated, .. _assistantEnd!]);
-            return;
-        }
-
         if (beforeReply is null)
         {
-            // Ohne Zwischenstand bleibt das Nachdenken im Cache – dann eben auch im Verlauf (kostet Kontext, bleibt schnell).
+            // Ohne Zwischenstand bleibt der Kopf (samt Nachdenken) im Cache – dann eben auch im Verlauf (bleibt schnell).
             if (shown.Length > 0)
                 Remember(shown, [.. head, .. generated, .. _assistantEnd!]);
             return;
         }
 
-        var history = new List<int>([.. _assistantStart!, .. answerTokens, .. _assistantEnd!]);
+        var history = new List<int>([.. _historyStart!, .. answerTokens, .. _assistantEnd!]);
         if (!_model.Restore(beforeReply))
         {
             if (shown.Length > 0)
@@ -361,7 +371,8 @@ internal sealed class LlmBackend : IChatBackend
         _model.CreateSampler(
             temperature is { } t ? _answer with { Temperature = t } : _answer,
             _options.UseGrammar ? AnswerGrammar.Gbnf : null,
-            seed);
+            seed,
+            _thinkTags);
 
     /// <summary>System-Prompt und Verlauf – ohne den Beginn der Antwort (der hängt vom Nachdenken ab).</summary>
     internal IReadOnlyList<int> BuildPrompt(IReadOnlyList<ChatMessage> messages)
@@ -370,6 +381,12 @@ internal sealed class LlmBackend : IChatBackend
         _assistantStart ??= _model.Tokenize(_template.AssistantStart);
         _thinkingStart ??= _model.Tokenize(_template.AssistantStartThinking);
         _assistantEnd ??= _model.Tokenize(_template.AssistantEnd);
+        _historyStart ??= _model.Tokenize(_template.HistoryStart);
+        if (_thinkTags is null)
+        {
+            _thinkEnd = SingleToken("</think>");
+            _thinkTags = [.. SingleToken("<think>"), .. _thinkEnd];
+        }
 
         var first = _window.FirstIncluded(messages, _systemTokens.Count + _thinkingStart.Count, m => TokensOf(m).Count);
 
@@ -389,6 +406,8 @@ internal sealed class LlmBackend : IChatBackend
         }
         return tokens;
     }
+
+    private int[] SingleToken(string text) => _model.Tokenize(text) is [var token] ? [token] : [];
 
     private void Remember(string content, IReadOnlyList<int> tokens) => _tokens[(ChatRole.Assistant, content)] = tokens;
 

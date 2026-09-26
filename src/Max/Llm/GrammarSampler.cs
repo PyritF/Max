@@ -8,6 +8,7 @@ namespace Max.Llm;
 /// dieses eine Token gegen die Grammatik geprüft; nur wenn es ungültig ist, filtert die Grammatik
 /// das ganze Vokabular. Die Grammatik wird sofort angelegt, damit <see cref="Accept"/> sie auch
 /// für eingefügte Tokens nachführt (z. B. nach dem Wiederherstellen eines Zwischenstands).
+/// Gesperrte Tokens (z. B. Denk-Tags in der Antwort) werden nie gezogen.
 /// </summary>
 internal sealed class GrammarSampler : ITokenSampler
 {
@@ -18,13 +19,18 @@ internal sealed class GrammarSampler : ITokenSampler
     private readonly LLamaTokenData[] _buffer;
     private readonly LLamaTokenData[] _single = new LLamaTokenData[1];
 
-    public GrammarSampler(SafeLLamaContextHandle context, Func<int> logitIndex, SamplingSettings settings, string? grammar, uint? seed)
+    public GrammarSampler(SafeLLamaContextHandle context, Func<int> logitIndex, SamplingSettings settings, string? grammar, uint? seed, IReadOnlyCollection<int>? banned = null)
     {
         _context = context;
         _logitIndex = logitIndex;
         _buffer = new LLamaTokenData[context.ModelHandle.Vocab.Count];
 
         _chain = SafeLLamaSamplerChainHandle.Create(LLamaSamplerChainParams.Default());
+        if (banned is { Count: > 0 })
+        {
+            var vocab = context.ModelHandle.Vocab.Count;
+            _chain.AddLogitBias(vocab, banned.Select(t => new LLamaLogitBias { Token = (LLamaToken)t, Bias = float.NegativeInfinity }).ToArray());
+        }
         _chain.AddPenalties(64, settings.RepeatPenalty, 0, 0);
         _chain.AddTopK(settings.TopK);
         _chain.AddTopP(settings.TopP, 1);

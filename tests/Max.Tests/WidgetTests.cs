@@ -53,6 +53,14 @@ public class WidgetTests
         Assert.Contains(body.Split('\n')[^1], output);
     }
 
+    [Theory]
+    [InlineData("Salzbergwerk     Führung: 10", false)]
+    [InlineData("Salzbergwerk\tFührung: 10", false)]
+    [InlineData("Eine sehr lange Beschreibung als Name einer Zeile: 10", false)]
+    [InlineData("Neue Mittelschule: 10", true)]
+    public void BarLabels_MustBeShort_AndWithoutColumns(string line, bool valid) =>
+        Assert.Equal(valid, Max.Ui.Widgets.WidgetValidator.IsValid("balken", line + "\nB: 5\n"));
+
     [Fact]
     public void WidgetName_OnTheLineAfterTheFence_IsUnderstood()
     {

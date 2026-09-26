@@ -57,9 +57,11 @@ internal static class AnswerGrammar
         Rule("content-line", "[^`\\n]+ nl");
         Rule("setting", "\"Titel: \" value nl | \"Einheit: \" value nl | \"Verlauf: \" grad nl | \"Farbe: \" color nl");
         Rule("num-line", "( \"- \" )? label \": \" number unit nl");
-        Rule("label", "[^-:|\\n`{] [^:|\\n`{]{0,40}");
+        // Kurze Namen ohne "Spalten": höchstens einzelne Leerzeichen zwischen Wörtern, keine Tabs.
+        Rule("label", "[^-:|\\n\\t`{ ] ( [^:|\\n\\t`{ ] | \" \" [^:|\\n\\t`{ ] ){0,24}");
         Rule("number", "\"-\"? [0-9]+ ( [.,] [0-9]+ )*");
-        Rule("unit", "[^\\n`|]{0,12}");
+        // Einheit ("%", " Mio. €") – ohne weitere Zahlen oder Doppelpunkte, sonst stünden mehrere Werte in einer Zeile.
+        Rule("unit", "[^0-9:\\n`|{]{0,12}");
         Rule("opt", "\"- \" value nl");
         Rule("day", "[0-9] [0-9]?");
         Rule("font", Alternatives(TitleWidget.BuiltInFonts.Append("standard").Distinct()));
