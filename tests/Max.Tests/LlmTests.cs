@@ -369,6 +369,14 @@ public class LlmBackendTests
     }
 
     [Fact]
+    public async Task RunawayElement_AtTheStart_GivesAnHonestSentence_NotAnEmptyAnswer()
+    {
+        var model = new FakeModel(["```balken\n", .. Enumerable.Repeat<string?>("| 5% ", 1000)]);
+        var (_, reply) = await Collect(Backend(model).StreamReplyAsync(Single("?"), CancellationToken.None));
+        Assert.StartsWith("Das wollte mir gerade nicht gelingen.", reply);
+    }
+
+    [Fact]
     public async Task Repair_WorksAfterThinking_AtTheStartOfTheAnswer()
     {
         var model = new FakeModel("hm", "</think>", "\n\n", "```balken\n", "kaputt\n", "```\n", "A: 1\n", "```", null);

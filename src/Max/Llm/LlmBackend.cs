@@ -47,7 +47,7 @@ internal sealed class LlmBackend : IChatBackend
     internal const int MaxRepairs = 2;
 
     /// <summary>Wird ein Element länger als das, hängt das Modell fest – dann wird abgebrochen.</summary>
-    internal const int MaxElementChars = 3000;
+    internal const int MaxElementChars = 1200;
 
     private readonly ILanguageModel _model;
     private readonly string _systemPrompt;
@@ -184,6 +184,13 @@ internal sealed class LlmBackend : IChatBackend
                     else
                     {
                         await _model.PrefillAsync([.. prompt, .. head, .. generated], ct);
+                    }
+                    if (shown.ToString().Trim().Length == 0)
+                    {
+                        // Lieber ein ehrlicher Satz als eine leere Antwort. Er steht nur in der Anzeige, nicht im Cache.
+                        const string sorry = "Das wollte mir gerade nicht gelingen. Frag mich gern noch einmal, vielleicht etwas anders.";
+                        shown.Append(sorry);
+                        yield return new ReplyChunk(sorry);
                     }
                     break;
                 }
