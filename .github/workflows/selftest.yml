@@ -9,15 +9,23 @@ on:
         description: Stufe (S, M, L, XL)
         default: S
         required: true
+      os:
+        description: System (Windows findet z. B. Fehler bei der Zeichenkodierung)
+        type: choice
+        options: [ubuntu-latest, windows-latest]
+        default: ubuntu-latest
 
 jobs:
   selftest:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.os || 'ubuntu-latest' }}
     timeout-minutes: 45
     env:
       MAX_HOME: ${{ github.workspace }}/.maxhome
       MAX_TIER: ${{ inputs.tier }}
       DOTNET_NOLOGO: true
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +40,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .maxhome
-          key: model-${{ inputs.tier }}-${{ hashFiles('manifest.json') }}
+          key: model-${{ runner.os }}-${{ inputs.tier }}-${{ hashFiles('manifest.json') }}
 
       - name: Selbsttest
         run: dotnet run --project src/Max -c Release -- --selftest < /dev/null
