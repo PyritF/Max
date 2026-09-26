@@ -54,6 +54,9 @@ internal sealed class LlmBackend : IChatBackend
     /// <summary>So viele Tokens denkt Max mindestens nach, bevor er das Nachdenken beenden darf.</summary>
     internal const int MinThinkingTokens = 8;
 
+    /// <summary>Wiederholen sich die letzten so vielen Zeichen der Antwort wörtlich, steckt das Modell in einer Schleife.</summary>
+    internal const int LoopChars = 200;
+
     private readonly ILanguageModel _model;
     private readonly string _systemPrompt;
     private readonly IChatTemplate _template;
@@ -174,6 +177,12 @@ internal sealed class LlmBackend : IChatBackend
 
                 foreach (var chunk in Route(splitter.Push(text), gate, shown))
                     yield return chunk;
+
+                if (answerPhase && text.Contains('\n') && IsLooping(shown))
+                {
+                    LlmEngine.Log("Antwort wiederholt sich, abgebrochen.");
+                    break;
+                }
 
                 if (headerPoint is not null)
                 {
@@ -407,6 +416,16 @@ internal sealed class LlmBackend : IChatBackend
             _tokens[key] = tokens;
         }
         return tokens;
+    }
+
+    /// <summary>Stehen die letzten <see cref="LoopChars"/> Zeichen schon einmal weiter vorn? Dann dreht sich die Antwort im Kreis.</summary>
+    internal static bool IsLooping(StringBuilder shown)
+    {
+        if (shown.Length < 2 * LoopChars)
+            return false;
+        var text = shown.ToString();
+        var tail = text[^LoopChars..];
+        return tail.Trim().Length > LoopChars / 2 && text.IndexOf(tail, StringComparison.Ordinal) < text.Length - LoopChars;
     }
 
     private int[] SingleToken(string text) => _model.Tokenize(text) is [var token] ? [token] : [];

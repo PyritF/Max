@@ -38,13 +38,15 @@ internal static class AnswerGrammar
         var g = new StringBuilder();
         void Rule(string name, string body) => g.Append(name).Append(" ::= ").Append(body).Append('\n');
 
-        Rule("root", "item*");
+        // Höchstens ein Element pro Antwort (das Auswahlmenü zählt nicht) – kleine Modelle hängten sonst
+        // an jede Antwort Diagramme oder wiederholten Abschnitte samt Balken in einer Schleife.
+        Rule("root", "item* ( \"```\" widget item* )?");
         Rule("item", "plain | tag | inline-code | fence");
         // Auch kein "}" im Fließtext: Kleine Modelle schließen einen Verlauf sonst mit "Wort}" statt "{/verlauf}".
         Rule("plain", "[^{}`]");
         Rule("tag", "\"{\" ( \"/\"? color | \"verlauf\" ( \":\" grad )? | \"/verlauf\" ) \"}\"");
         Rule("inline-code", "\"`\" [^`\\n]+ \"`\"");
-        Rule("fence", "\"```\" ( code | widget )");
+        Rule("fence", "\"```\" ( code | w-frage )");
         Rule("code", "lang \"\\n\" code-body | plain-lang \"\\n\" plain-body");
         Rule("code-body", "( [^`] | \"`\" [^`] | \"``\" [^`] )* \"```\"");
         Rule("plain-body", "( [^`{] | \"{\" [^a-zA-ZÀ-ɏ/`{] | \"`\" [^`{] | \"``\" [^`{] )* \"```\"");
@@ -69,7 +71,7 @@ internal static class AnswerGrammar
         Rule("font", Alternatives(TitleWidget.BuiltInFonts.Append("standard").Distinct()));
 
         var numeric = new[] { "balken", "anteile", "fortschritt" };
-        Rule("widget", "w-num | w-kurve | w-frage | w-titel | w-kalender | w-kasten | w-baum | w-spalten");
+        Rule("widget", "w-num | w-kurve | w-titel | w-kalender | w-kasten | w-baum | w-spalten");
         Rule("w-num", $"( {Alternatives(numeric)} ) nl setting* num-line ( num-line | setting )* \"```\"");
         Rule("w-kurve", "\"kurve\" nl setting* num-line setting* num-line setting* num-line ( num-line | setting )* \"```\"");
         Rule("w-frage", $"( {Alternatives(ChoiceQuestion.BlockNames.Select(n => n.ToLowerInvariant()).Distinct())} ) nl \"Frage: \" value nl opt opt opt? opt? opt? \"```\"");

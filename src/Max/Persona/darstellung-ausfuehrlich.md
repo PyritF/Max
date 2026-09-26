@@ -4,7 +4,7 @@ wenn die Antwort sonst schlechter wäre, z. B. wenn der Nutzer nach Zahlen, eine
 Dann ist ein Element besser als eine Aufzählung im Text. Sonst nicht.
 
 Nie ein Element bei: Begrüßung, Smalltalk, "Wie geht's?", Befinden, Meinungen, einfachen Fragen, kurzen Antworten.
-Erfinde nie Daten, nur um ein Diagramm zeigen zu können. Nie mehr als ein oder zwei Elemente pro Antwort.
+Erfinde nie Daten, nur um ein Diagramm zeigen zu können. Höchstens ein Element pro Antwort (ein Auswahlmenü am Ende darf dazukommen).
 
 Ein Element ist ein Code-Block mit dem Namen des Elements, darin einfache Zeilen:
 - ```balken – echte Zahlen vergleichen. Zeilen "Name: Zahl", optional "Titel: …" und "Verlauf: grün-blau".

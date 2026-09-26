@@ -471,6 +471,24 @@ public class LlmBackendTests
     }
 
     [Fact]
+    public async Task RepeatingAnswer_IsStopped()
+    {
+        var section = "## Abschnitt\nDer Frost wird stärker, doch der Schnee bleibt noch. Die Wärme ist noch warm, aber nicht mehr so sehr.\n\n";
+        var model = new FakeModel([.. Enumerable.Repeat<string?>(section, 50)]);
+        var (_, reply) = await Collect(Backend(model).StreamReplyAsync(Single("?"), CancellationToken.None));
+        Assert.True(reply.Length < 6 * section.Length, $"{reply.Length} Zeichen");
+    }
+
+    [Fact]
+    public void LongDifferentText_IsNoLoop()
+    {
+        var text = new StringBuilder();
+        for (var i = 0; i < 100; i++)
+            text.Append($"Satz Nummer {i} erzählt etwas anderes als die davor.\n");
+        Assert.False(LlmBackend.IsLooping(text));
+    }
+
+    [Fact]
     public async Task Cancellation_IsPassedThrough()
     {
         using var cts = new CancellationTokenSource();
@@ -713,7 +731,9 @@ public class AnswerGrammarTests
     {
         var gbnf = AnswerGrammar.Build();
         Assert.Contains("label ::= [^-:|\\n\\t`{ ] ( [^:|\\n\\t`{ ] | \" \" [^:|\\n\\t`{ ] ){0,24}", gbnf);
-        Assert.Contains("plain ::= [^{}`]", gbnf);   // "Wort}" statt "{/verlauf}" geht nicht
+        Assert.Contains("plain ::= [^{}`]", gbnf);
+        Assert.Contains("root ::= item* ( \"```\" widget item* )?", gbnf);   // höchstens ein Element
+        Assert.DoesNotContain("w-frage |", gbnf.Split("widget ::= ")[1].Split('\n')[0]);   // "Wort}" statt "{/verlauf}" geht nicht
         Assert.Contains("unit ::= ( [%\\u20ac$\\u00b0] | \" \" [^0-9:", gbnf);
     }
 
