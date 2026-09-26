@@ -356,6 +356,19 @@ public class LlmBackendTests
     }
 
     [Fact]
+    public async Task RunawayElement_IsAbandoned_AndTheAnswerEnds()
+    {
+        var endless = Enumerable.Repeat<string?>("| 5% ", 1000);
+        var model = new FakeModel(["Vorher\n", "```balken\n", .. endless, "nie"]);
+        var backend = Backend(model);
+
+        var (_, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
+
+        Assert.Equal("Vorher\n", reply);
+        Assert.DoesNotContain("5%", model.Decode(model.Cache));
+    }
+
+    [Fact]
     public async Task ElementThatStaysBroken_IsDropped()
     {
         var model = new FakeModel("A\n", "```balken\n", "x\n", "```\n", "y\n", "```\n", "z\n", "```\n", "Ende.");

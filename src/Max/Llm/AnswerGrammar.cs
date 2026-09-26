@@ -46,20 +46,20 @@ internal static class AnswerGrammar
         Rule("fence", "\"```\" ( code | widget )");
         Rule("code", "lang \"\\n\" code-body | plain-lang \"\\n\" plain-body");
         Rule("code-body", "( [^`] | \"`\" [^`] | \"``\" [^`] )* \"```\"");
-        Rule("plain-body", "( [^`{] | \"{\" [^a-zA-Z/`{] | \"`\" [^`{] | \"``\" [^`{] )* \"```\"");
+        Rule("plain-body", "( [^`{] | \"{\" [^a-zA-ZÀ-ɏ/`{] | \"`\" [^`{] | \"``\" [^`{] )* \"```\"");
         Rule("lang", Alternatives(CodeLanguages));
         Rule("plain-lang", Alternatives(PlainLanguages));
 
         Rule("color", Alternatives(ColorTags.Names));
         Rule("grad", "color \"-\" color");
         Rule("nl", "\"\\n\"");
-        Rule("value", "[^\\n`]+");
+        Rule("value", "[^\\n`]{1,120}");
         Rule("content-line", "[^`\\n]+ nl");
         Rule("setting", "\"Titel: \" value nl | \"Einheit: \" value nl | \"Verlauf: \" grad nl | \"Farbe: \" color nl");
         Rule("num-line", "( \"- \" )? label \": \" number unit nl");
-        Rule("label", "[^-:\\n`{] [^:\\n`{]*");
+        Rule("label", "[^-:|\\n`{] [^:|\\n`{]{0,40}");
         Rule("number", "\"-\"? [0-9]+ ( [.,] [0-9]+ )*");
-        Rule("unit", "[^\\n`]*");
+        Rule("unit", "[^\\n`|]{0,12}");
         Rule("opt", "\"- \" value nl");
         Rule("day", "[0-9] [0-9]?");
         Rule("font", Alternatives(TitleWidget.BuiltInFonts.Append("standard").Distinct()));

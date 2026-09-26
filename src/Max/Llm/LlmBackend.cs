@@ -46,6 +46,9 @@ internal sealed class LlmBackend : IChatBackend
     /// <summary>So oft wird ein kaputtes Element höchstens neu erzeugt, dann wird es weggelassen.</summary>
     internal const int MaxRepairs = 2;
 
+    /// <summary>Wird ein Element länger als das, hängt das Modell fest – dann wird abgebrochen.</summary>
+    internal const int MaxElementChars = 3000;
+
     private readonly ILanguageModel _model;
     private readonly string _systemPrompt;
     private readonly IChatTemplate _template;
@@ -141,6 +144,7 @@ internal sealed class LlmBackend : IChatBackend
 
                 // Vor dem Token, das die Kopfzeile eines Elements abschließt, einen Zwischenstand merken.
                 ModelCheckpoint? headerPoint = answerPhase && gate.WouldOpenElement(text) ? _model.Checkpoint() : null;
+                var before = (generated.Count, answerTokens.Count, answerAll.Count);
 
                 // Erst verarbeiten, dann ausgeben: So passt der Cache immer genau zu dem, was der Nutzer gesehen hat.
                 await _model.AppendAsync([token], ct);
@@ -162,7 +166,26 @@ internal sealed class LlmBackend : IChatBackend
                 if (headerPoint is not null)
                 {
                     repair?.Dispose();
-                    repair = new Repair(headerPoint, token, gate.Save(), generated.Count, answerTokens.Count, answerAll.Count);
+                    repair = new Repair(headerPoint, token, gate.Save(), generated.Count, answerTokens.Count, answerAll.Count, before);
+                }
+
+                // Endlosschleife im Element (das Modell findet keinen gültigen Abschluss): zurück vor den Block, Antwort beenden.
+                if (gate.InElement && gate.HeldLength > MaxElementChars)
+                {
+                    LlmEngine.Log("Element viel zu lang, abgebrochen.");
+                    repairs++;
+                    gate.Abandon();
+                    if (repair is not null && _model.Restore(repair.Checkpoint))
+                    {
+                        Truncate(generated, repair.Before.Generated);
+                        Truncate(answerTokens, repair.Before.AnswerTokens);
+                        Truncate(answerAll, repair.Before.AnswerAll);
+                    }
+                    else
+                    {
+                        await _model.PrefillAsync([.. prompt, .. head, .. generated], ct);
+                    }
+                    break;
                 }
 
                 // Nachdenken vorbei (selbst beendet oder Budget aufgebraucht) → ab jetzt die Antwort mit Grammatik.
@@ -365,8 +388,12 @@ internal sealed class LlmBackend : IChatBackend
     private static void Truncate(List<int> list, int count) => list.RemoveRange(count, list.Count - count);
 
     /// <summary>Wohin es zurückgeht, wenn ein Element neu erzeugt werden muss.</summary>
-    private sealed class Repair(ModelCheckpoint checkpoint, int headerToken, ElementGate.Snapshot gate, int generated, int answerTokens, int answerAll) : IDisposable
+    private sealed class Repair(
+        ModelCheckpoint checkpoint, int headerToken, ElementGate.Snapshot gate, int generated, int answerTokens, int answerAll,
+        (int Generated, int AnswerTokens, int AnswerAll) before) : IDisposable
     {
+        /// <summary>Stand vor dem Token mit der Kopfzeile – so weit geht es zurück, wenn das Element ganz wegfällt.</summary>
+        public (int Generated, int AnswerTokens, int AnswerAll) Before { get; } = before;
         public ModelCheckpoint Checkpoint { get; } = checkpoint;
         public int HeaderToken { get; } = headerToken;
         public ElementGate.Snapshot Gate { get; } = gate;

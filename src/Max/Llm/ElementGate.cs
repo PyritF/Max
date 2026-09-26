@@ -26,6 +26,16 @@ internal sealed partial class ElementGate
     /// <summary>Gerade in einem Element-Block (nach der Kopfzeile)?</summary>
     public bool InElement => _element is not null && Closed is null;
 
+    /// <summary>Wie viel vom offenen Element-Block schon zurückgehalten ist (gegen Endlosschleifen).</summary>
+    public int HeldLength => _held.Length;
+
+    /// <summary>Den offenen Element-Block verwerfen, ohne dass etwas herauskommt.</summary>
+    public void Abandon()
+    {
+        Continue();
+        _rest.Clear();
+    }
+
     /// <summary>Nimmt Antwort-Text an und liefert, was schon angezeigt werden darf.</summary>
     public string Push(string text)
     {
