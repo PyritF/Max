@@ -9,7 +9,7 @@ internal enum GpuVendor { Nvidia, Amd, Intel, Other }
 
 internal sealed record GpuInfo(string Name, long VramBytes, GpuVendor Vendor);
 
-/// <summary>Was Max über die Hardware wissen muss, um die passende Stufe zu wählen.</summary>
+/// <summary>Was Max über die Hardware wissen muss, um zu prüfen, ob der Rechner reicht.</summary>
 internal sealed record HardwareInfo(long RamBytes, GpuInfo? Gpu)
 {
     /// <summary>Grafikkarten mit weniger Speicher (meist integrierte Grafik) zählen nicht.</summary>

@@ -7,12 +7,10 @@ namespace Max.Setup;
 /// Steuert App- und Modell-Updates (PLAN.md §4). Liegt als <c>manifest.json</c> im Repo;
 /// eine Kopie ist in die Exe eingebaut.
 /// </summary>
-internal sealed record Manifest(AppInfo App, Dictionary<string, TierEntry> Tiers)
+internal sealed record Manifest(AppInfo App, ModelEntry? Model)
 {
-    public TierEntry? For(Tier tier) => Tiers.GetValueOrDefault(tier.ToString());
-
-    /// <summary>Taugt das Manifest? Alle Stufen müssen eine Adresse haben.</summary>
-    public bool IsComplete => Enum.GetValues<Tier>().All(t => For(t) is { Url.Length: > 0 });
+    /// <summary>Taugt das Manifest? Das Modell muss eine Adresse haben (ältere Fassungen mit Stufen fallen durch).</summary>
+    public bool IsComplete => Model is { Url.Length: > 0 };
 }
 
 internal sealed record AppInfo(
@@ -24,7 +22,7 @@ internal sealed record AppInfo(
 
 internal sealed record AppAsset(string File, string? Sha256 = null);
 
-/// <param name="Revision">Wird erhöht, wenn es für die Stufe ein neues Modell gibt.</param>
+/// <param name="Revision">Wird erhöht, wenn es ein neues Modell gibt.</param>
 /// <param name="Url">Download-Adresse der GGUF-Datei.</param>
 /// <param name="Sha256">
 /// Erwartete Prüfsumme. Fehlt sie, nimmt Max die, die Hugging Face beim Download mitliefert.
@@ -32,7 +30,11 @@ internal sealed record AppAsset(string File, string? Sha256 = null);
 /// <param name="SizeBytes">Ungefähre Größe – für die Speicherplatz-Prüfung, bevor der Download startet.</param>
 /// <param name="ContextSize">Wie viele Tokens das Modell auf einmal sieht.</param>
 /// <param name="ThinkingBudget">Höchstens so viele Tokens Nachdenken vor einer Antwort.</param>
-internal sealed record TierEntry(int Revision, string Url, string? Sha256, long SizeBytes, int ContextSize, int ThinkingBudget = 512);
+internal sealed record ModelEntry(int Revision, string Url, string? Sha256, long SizeBytes, int ContextSize, int ThinkingBudget = 512)
+{
+    /// <summary>Dateiname aus der Adresse, z. B. "Qwen3.5-9B-Q4_K_M.gguf" – kennzeichnet, welches Modell installiert ist.</summary>
+    public string FileName => Uri.UnescapeDataString(Url[(Url.LastIndexOf('/') + 1)..]);
+}
 
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
@@ -83,7 +85,8 @@ internal static class ManifestSource
     {
         using var stream = typeof(ManifestSource).Assembly.GetManifestResourceStream("manifest.json")
             ?? throw new InvalidOperationException("manifest.json fehlt in der Exe.");
-        return JsonSerializer.Deserialize(stream, SetupJson.Default.Manifest)
-            ?? throw new InvalidOperationException("manifest.json ist leer.");
+        return JsonSerializer.Deserialize(stream, SetupJson.Default.Manifest) is { IsComplete: true } manifest
+            ? manifest
+            : throw new InvalidOperationException("manifest.json ist unvollständig.");
     }
 }

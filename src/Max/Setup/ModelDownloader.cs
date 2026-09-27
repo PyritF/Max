@@ -29,7 +29,7 @@ internal sealed class ModelDownloader(HttpClient http, Func<string, long>? freeS
 
     private readonly Func<string, long> _freeSpace = freeSpace ?? DefaultFreeSpace;
 
-    public async Task<DownloadResult> DownloadAsync(TierEntry entry, MaxPaths paths, StepProgress progress, CancellationToken ct)
+    public async Task<DownloadResult> DownloadAsync(ModelEntry entry, MaxPaths paths, StepProgress progress, CancellationToken ct)
     {
         paths.EnsureExists();
 
@@ -47,7 +47,7 @@ internal sealed class ModelDownloader(HttpClient http, Func<string, long>? freeS
         }
     }
 
-    private async Task<DownloadResult> DownloadOnceAsync(TierEntry entry, MaxPaths paths, StepProgress progress, CancellationToken ct)
+    private async Task<DownloadResult> DownloadOnceAsync(ModelEntry entry, MaxPaths paths, StepProgress progress, CancellationToken ct)
     {
         var existing = File.Exists(paths.ModelPart) ? new FileInfo(paths.ModelPart).Length : 0;
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);

@@ -4,7 +4,7 @@ using Spectre.Console;
 namespace Max.Commands;
 
 /// <summary>
-/// Technische Innereien: Modell, Stufe, Backend, Geschwindigkeit. Versteckt – taucht in /help nicht auf.
+/// Technische Innereien: Modell, Backend, Geschwindigkeit. Versteckt – taucht in /help nicht auf.
 /// </summary>
 internal sealed class DebugCommand(Func<IReadOnlyList<(string Label, string Value)>> rows) : ICommand
 {

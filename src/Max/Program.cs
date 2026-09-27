@@ -15,14 +15,9 @@ if (AnsiConsole.Profile.Width <= 0)
 
 var paths = MaxPaths.Default();
 
-// Zum Ausprobieren: "--stufe S" wirkt wie MAX_TIER=S. Das bisherige Modell wird beiseitegelegt, nicht gelöscht.
-if (Array.IndexOf(args, "--stufe") is var stufeAt and >= 0 && stufeAt + 1 < args.Length)
-    Environment.SetEnvironmentVariable("MAX_TIER", args[stufeAt + 1]);
-if (TierSelector.Forced() is { } forcedTier && !args.Contains("--demo-first-start"))
-{
-    paths.EnsureExists();
-    ModelShelf.Prepare(paths, forcedTier);
-}
+// Früher gab es mehrere Modelle je nach Rechner – ein altes kleineres Modell wird durch das aktuelle ersetzt.
+if (!args.Contains("--demo-first-start"))
+    InstallState.RemoveOutdated(paths);
 Max.Ui.Widgets.TitleWidget.UserFontDirectory = Path.Combine(paths.Root, "fonts");
 var demo = args.Contains("--demo-first-start");
 

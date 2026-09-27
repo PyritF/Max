@@ -12,7 +12,8 @@
 | Sprache / Plattform | **C# mit .NET 10** |
 | LLM-Engine | **LLamaSharp 0.27** (C#-Bindings für llama.cpp) mit den Backends **CPU und Vulkan**. Vulkan läuft auf NVIDIA, AMD und Intel mit dem normalen Treiber; CUDA (über 200 MB) bleibt vorerst draußen |
 | Oberfläche | **Spectre.Console** im Stil von Claude Code: scrollender Chat, Eingabe unten, Farben, Markdown |
-| Modellformat | **GGUF** (quantisiert, meist Q4_K_M) |
+| Modell | **Ein einziges Modell: Qwen3.5-9B** (GGUF, Q4_K_M, ~5,7 GB). Früher gab es vier Stufen (2B bis 35B); die kleinen waren zu unzuverlässig, das große passt auf keinen üblichen Rechner |
+| Voraussetzung | **Grafikkarte ab 6 GB** und 8 GB Arbeitsspeicher (siehe Abschnitt 4) |
 | Modellquelle | **Hugging Face**: direkte Download-Links, kein eigenes Hosting nötig |
 | Zielsysteme | Windows x64 zuerst, danach Linux x64 |
 | Auslieferung | Single-File-Publish; das Modell wird beim ersten Start heruntergeladen |
@@ -26,9 +27,9 @@
 
 Max soll wie ein eigenständiges Wesen wirken und nicht wie „noch eine KI mit Modell X dahinter“.
 
-- **Kein Modellname und keine Stufe in der normalen Oberfläche.** Der Nutzer sieht nur „Max“.
+- **Kein Modellname in der normalen Oberfläche.** Der Nutzer sieht nur „Max“.
 - **Max entscheidet selbst**, welches Modell zur Hardware passt. Der Nutzer wählt nichts aus.
-- **Technische Details gibt es nur unter `/debug`**: Modell, Stufe, Backend (CPU/CUDA/Vulkan), VRAM, Tokens pro Sekunde, Kontextgröße.
+- **Technische Details gibt es nur unter `/debug`**: Modell, Backend (CPU/Vulkan), VRAM, Tokens pro Sekunde, Kontextgröße.
 - **Neutrale Dateinamen auf der Festplatte.** Modelldateien heißen zum Beispiel `core.bin` und nicht `Qwen3-8B-Q4_K_M.gguf`.
 - **Eigener System-Prompt** mit fester Identität (siehe Abschnitt 7). Max verrät nie, welches Modell oder welche Firma dahintersteckt.
 
@@ -39,14 +40,14 @@ Max soll wie ein eigenständiges Wesen wirken und nicht wie „noch eine KI mit 
 ```
 Max/
 ├── PLAN.md
-├── manifest.json               ← aktuelle App-Version + Modell pro Stufe, wird von Max online gelesen
+├── manifest.json               ← aktuelle App-Version + Modell, wird von Max online gelesen
 ├── src/
 │   └── Max/
 │       ├── Max.csproj
 │       ├── Program.cs          ← Einstiegspunkt: Setup → Chat-Loop
 │       ├── Setup/              ← Erststart / „Installer“
 │       │   ├── HardwareInfo.cs       (RAM, GPU, VRAM, CPU-Kerne)
-│       │   ├── TierSelector.cs       (Hardware → Stufe)
+│       │   ├── Requirements.cs       (reicht der Rechner? Grafikkarte, RAM)
 │       │   ├── Manifest.cs           (manifest.json laden, eingebauter Fallback)
 │       │   └── ModelDownloader.cs    (Download mit Fortschritt, Fortsetzen, Prüfsumme)
 │       ├── Update/
@@ -80,7 +81,7 @@ Max/
 │       └── Setup/
 │           ├── MaxPaths.cs           (Datenordner je Betriebssystem)
 │           ├── HardwareInfo.cs       (RAM, GPU, VRAM)
-│           ├── TierSelector.cs       (Stufe S/M/L/XL)
+│           ├── Requirements.cs       (Grafikkarte ab 6 GB, RAM ab 8 GB)
 │           ├── Manifest.cs           (manifest.json laden, Fallback aus der Exe)
 │           ├── ModelDownloader.cs    (fortsetzbar, SHA-256)
 │           └── InstallState.cs       (state.json)
@@ -88,7 +89,7 @@ Max/
 │       ├── Tools/                    (ITool + konkrete Tools)
 │       └── Agent/                    (Agent-Loop, Berechtigungen)
 └── tests/
-    └── Max.Tests/                    (xUnit: TierSelector, ChatTemplate, MarkdownRenderer …)
+    └── Max.Tests/                    (xUnit: Requirements, ChatTemplate, MarkdownRenderer …)
 ```
 
 **Schichten** (damit Phase 2 später leicht dazukommt):
@@ -112,34 +113,40 @@ Ui  ──►  ChatSession  ──►  LlmEngine
 
 Mit `MAX_HOME` lässt sich der Ordner verlegen (Tests, Ausprobieren).
 
-Inhalt: `core.bin` (Modell), `state.json` (installierte Stufe, Version, Prüfsumme), `history/` (gespeicherte Chats, optional), `logs/`.
+Inhalt: `core.bin` (Modell), `state.json` (installiertes Modell, Version, Prüfsumme), `cache/` (gerechneter System-Prompt), `history/` (gespeicherte Chats, optional), `logs/`.
 
 ---
 
-## 4. Hardware-Stufen und Modellauswahl
+## 4. Modell und Voraussetzungen
 
-Max ermittelt beim Start RAM, GPU und VRAM und wählt daraus eine Stufe. Die Stufe ist **nur intern** und erscheint nur unter `/debug`.
+Max nutzt **ein einziges Modell: Qwen3.5-9B** (Q4_K_M, ~5,7 GB, Kontext 16.384 Tokens, Denk-Budget 1.024 Tokens).
 
-| Stufe | Hardware | Modell (Stand Sept. 2026) | Größe (Q4_K_M) |
-|---|---|---|---|
-| S | alles darunter | Qwen3.5-2B | ~1,3 GB |
-| M | ab 8 GB RAM oder GPU ab 6 GB | Qwen3.5-4B | ~2,7 GB |
-| L | GPU ab 8 GB | Qwen3.5-9B | ~5,7 GB |
-| XL | GPU ab 16 GB oder ab 48 GB RAM | Qwen3.5-35B-A3B (MoE, 3B aktiv) | ~21 GB |
+**Warum nur eines (Entscheidung vom September 2026):** Anfangs gab es vier Stufen je nach Rechner – 2B, 4B, 9B und 35B-A3B. Die Selbsttests zeigten: 2B und 4B erfinden Fakten, bauen sinnlose Diagramme und ignorieren Stilwünsche; mit Regeln war das nicht zu beheben. Das 35B-Modell braucht über 20 GB Grafik- bzw. Arbeitsspeicher. Ein Modell heißt außerdem: ein Prompt, ein Satz Tests, kein Wechseln zwischen Modellen.
 
-- **Warum Qwen3.5:** gutes Deutsch, Tool-Calling (Phase 2), Apache-2.0-Lizenz, eine Familie für alle Stufen (gleiches Chat-Format). LLamaSharp 0.27 unterstützt die Architektur ausdrücklich.
-- **Quelle:** die GGUF-Dateien von `unsloth` auf Hugging Face.
+- **Warum Qwen3.5:** gutes Deutsch, Tool-Calling (Phase 2), Apache-2.0-Lizenz. LLamaSharp 0.27 unterstützt die Architektur ausdrücklich.
+- **Quelle:** die GGUF-Datei von `unsloth` auf Hugging Face.
 - **Prüfsumme:** Steht im Manifest `sha256: null`, nimmt Max die SHA-256, die Hugging Face beim Download mitschickt (`X-Linked-ETag`). Soll eine Datei fest angepinnt werden, trägt man ihre Prüfsumme ins Manifest ein.
-- **Kandidat für später:** Qwen3.6-35B-A3B für XL, sobald geprüft ist, dass LLamaSharp es lädt (Schritt 10).
-- XL ohne GPU erst ab 48 GB RAM: Das 21-GB-Modell braucht Platz, und das System will auch noch leben.
+- **Später denkbar:** das 35B-A3B-Modell als Option für sehr starke Rechner.
+
+**Voraussetzungen** (`Setup/Requirements.cs`), geprüft beim Schritt „Analysiere Hardware“ – **vor** dem Download:
+
+| | Mindestens | Warum |
+|---|---|---|
+| Grafikkarte | 6 GB Speicher (ab 8 GB passt das Modell ganz darauf) | Ohne Grafikkarte dauert eine Antwort eine halbe bis ganze Minute |
+| Arbeitsspeicher | 8 GB | Sonst passt das Modell nicht |
+
+- Fehlt etwas, sagt Max das in einem Satz („Ich brauche eine Grafikkarte mit mindestens 6 GB Speicher – auf diesem Rechner habe ich keine gefunden.“) und lädt nichts herunter.
+- Grenzwerte in GB wie auf dem Karton, mit 10 % Toleranz (eine 6-GB-Karte meldet etwas weniger).
+- `MAX_CPU=1` erlaubt den Start ohne Grafikkarte – für den Selbsttest auf GitHub (keine Grafikkarte) und falls die Erkennung eine Karte übersieht.
+- Scheitert das Laden auf der Grafikkarte trotzdem, versucht Max es auf der CPU; `/debug` zeigt „CPU (Grafikkarte fehlgeschlagen)“.
+- **Umstieg:** Eine Installation aus der Zeit der Stufen (state.json ohne Modellnamen) wird beim Start entfernt, samt beiseitegelegter Modelle; danach richtet Max sich mit dem aktuellen Modell neu ein.
 
 **Hardware-Erkennung** (`Setup/HardwareInfo.cs`):
 - RAM: `GC.GetGCMemoryInfo().TotalAvailableMemoryBytes`
 - NVIDIA: `nvidia-smi --query-gpu=name,memory.total --format=csv,noheader,nounits`
 - Andere GPUs unter Windows: Registry (`HardwareInformation.qwMemorySize` der Grafikkarten-Treiber); WMI schneidet bei 4 GB ab und taugt nicht
 - Unter 2 GB Grafikspeicher (integrierte Grafik) zählt als „keine GPU“
-- Grenzwerte im Record `TierRules`, mit 10 % Toleranz (eine 16-GB-Karte meldet z. B. 15,99 GB)
-- `MAX_TIER=S|M|L|XL` erzwingt eine Stufe (Tests, Fehlersuche)
+- **Lücke:** AMD- und Intel-Karten unter Linux werden noch nicht erkannt (später z. B. über `vulkaninfo`); bis dahin hilft `MAX_CPU=1`, geladen wird trotzdem über Vulkan
 
 ### Manifest (`manifest.json`)
 
@@ -155,18 +162,13 @@ Das Manifest liegt im Repo und steuert **App-Updates und Modell-Updates** gemein
       "linux-x64": { "file": "max",     "sha256": "…" }
     }
   },
-  "tiers": {
-    "S":  { "revision": 1, "url": "https://huggingface.co/…/resolve/main/…Q4_K_M.gguf", "sha256": "…", "sizeBytes": 0, "contextSize": 8192 },
-    "M":  { "revision": 1, "url": "…", "sha256": "…", "sizeBytes": 0, "contextSize": 8192 },
-    "L":  { "revision": 1, "url": "…", "sha256": "…", "sizeBytes": 0, "contextSize": 16384 },
-    "XL": { "revision": 1, "url": "…", "sha256": "…", "sizeBytes": 0, "contextSize": 16384 }
-  }
+  "model": { "revision": 1, "url": "https://huggingface.co/…/resolve/main/…Q4_K_M.gguf", "sha256": "…", "sizeBytes": 0, "contextSize": 16384, "thinkingBudget": 1024 }
 }
 ```
 
 - `version`: die neueste App-Version. Ist sie neuer als die laufende, lädt Max sie still herunter.
 - `minVersion`: Ist die laufende Version älter, gilt das als **Pflicht-Update** (siehe 5a).
-- `revision` pro Stufe: Wird die Zahl erhöht (neues, besseres Modell), lädt Max das neue Modell still nach.
+- `revision`: Wird die Zahl erhöht (neues, besseres Modell), lädt Max das neue Modell still nach.
 - **Eine Kopie des Manifests ist in die Exe eingebaut**, damit der allererste Start auch funktioniert, falls GitHub kurz nicht erreichbar ist.
 - Die Modelle selbst kommen weiterhin direkt von Hugging Face (öffentlich, ohne Token).
 
@@ -193,7 +195,7 @@ Schlicht und sauber wie ein Installer, ohne Technik-Begriffe:
 ```
 
 Der Ablauf:
-1. Hardware analysieren → Stufe bestimmen (unsichtbar)
+1. Hardware analysieren → reicht der Rechner nicht, freundliche Meldung und Schluss (siehe Abschnitt 4)
 2. Speicherplatz prüfen und bei zu wenig Platz eine verständliche Meldung zeigen
 3. Download in eine Datei `core.bin.part`, **fortsetzbar** per HTTP-Range-Header, falls die Verbindung abbricht
 4. SHA-256 prüfen → umbenennen zu `core.bin` → `state.json` schreiben
@@ -234,9 +236,8 @@ Falls Max beendet wird, bevor der Download fertig ist, macht er beim nächsten S
 
 ### Stilles Auto-Update (Modell)
 
-- Wird die `revision` der eigenen Stufe erhöht, lädt Max das neue Modell im Hintergrund als `core.next.bin`.
+- Wird die `revision` des Modells erhöht, lädt Max das neue Modell im Hintergrund als `core.next.bin`.
 - Die aktuell geladene `core.bin` ist während der Laufzeit gesperrt. Deshalb wird **beim nächsten Start, vor dem Laden,** getauscht: `core.next.bin` → `core.bin`.
-- Hat sich die Hardware geändert (z. B. neue Grafikkarte), erkennt Max das beim Start und lädt still das Modell der neuen Stufe.
 
 ### Wann Max den Start verweigert
 
@@ -302,7 +303,7 @@ Zusätzlich kann das Manifest ein `disabled: true` („Not-Aus“) und eine `mes
   Im Fließtext: `{verlauf}…{/verlauf}` für einen Farbverlauf, `--- Titel ---` für eine Linie mit Überschrift, Emoji-Kürzel wie `:rocket:`.
   - Eingebaute Schriften: small, slant, big, banner, block, shadow, smslant, mini, script, standard (FIGlet, BSD-Lizenz). Eigene `.flf`-Dateien gehören in `fonts/` im Datenordner.
   - Der versteckte Befehl `/demo` zeigt alles auf einmal, `/demo schriften` alle Schriften.
-- **Nachdenken:** Vor jeder Antwort denkt Max nach (Denkmodus des Modells). Der Denk-Text läuft grau und kursiv mit (letzte 6 Zeilen) und verschwindet, sobald die Antwort beginnt. Budget je Stufe im Manifest (`thinkingBudget`: S 384, M 512, L 1024, XL 1536 Tokens), danach wird das Nachdenken beendet. `/denken an|aus` schaltet es, gemerkt in `settings.json`. Das Nachdenken kommt nicht in den Verlauf: Vor der Antwort merkt sich die Engine einen Zwischenstand (`LLamaContext.GetState`), springt danach zurück und rechnet nur die Antwort in Verlaufsform nach – im Hintergrund, der Cache passt weiter Token für Token.
+- **Nachdenken:** Vor jeder Antwort denkt Max nach (Denkmodus des Modells). Der Denk-Text läuft grau und kursiv mit (letzte 6 Zeilen) und verschwindet, sobald die Antwort beginnt. Budget im Manifest (`thinkingBudget`: 1024 Tokens), danach wird das Nachdenken beendet. `/denken an|aus` schaltet es, gemerkt in `settings.json`. Das Nachdenken kommt nicht in den Verlauf: Vor der Antwort merkt sich die Engine einen Zwischenstand (`LLamaContext.GetState`), springt danach zurück und rechnet nur die Antwort in Verlaufsform nach – im Hintergrund, der Cache passt weiter Token für Token.
 - **Feste Schreibweise:** Die Antwort wird mit einer Grammatik (GBNF, `AnswerGrammar`) erzeugt. `{…}` gibt es nur als bekanntes Farb-Tag, ```` ``` ```` nur mit bekannter Sprache oder als Element mit vorgegebenem Zeilenformat. Geprüft wird nur das gezogene Token, nur bei einem ungültigen die ganze Auswahl. `MAX_GRAMMAR=0` schaltet sie ab.
 - **Reparatur:** Elemente werden bis zum Blockende zurückgehalten (`ElementGate`) und mit derselben Logik geprüft, die sie zeichnet. Ist ein Block kaputt, geht die Engine auf den Stand nach der Kopfzeile zurück und erzeugt den Inhalt neu (Temperatur 0,3, höchstens zweimal), sonst wird er weggelassen.
 - **Eingabezeile**: zuerst einfach, später mit Verlauf (↑/↓), mehrzeiliger Eingabe und Autovervollständigung für `/`-Befehle.
@@ -315,7 +316,7 @@ Zusätzlich kann das Manifest ein `disabled: true` („Not-Aus“) und eine `mes
 |---|---|
 | `/help` | Befehle anzeigen |
 | `/clear` | Gespräch zurücksetzen |
-| `/debug` | Technische Infos: Modell, Stufe, Backend, VRAM/RAM, Tokens/s, Kontextauslastung; schaltet außerdem einen Debug-Modus an/aus, der den Denk-Text und Timings zeigt |
+| `/debug` | Technische Infos: Modell, Backend, VRAM/RAM, Tokens/s, Kontextauslastung; schaltet außerdem einen Debug-Modus an/aus, der den Denk-Text und Timings zeigt |
 | `/exit` | Beenden |
 | *(optional)* `/save`, `/load` | Gespräch speichern bzw. laden |
 | `/memory`, `/forget` | Gedächtnis anzeigen bzw. Einträge löschen (siehe 8a) |
@@ -385,10 +386,10 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 | 3 | Chat-Schleife **ohne** KI (Platzhalter-Antworten) mit Befehlen `/help`, `/clear`, `/exit` und Strg+C ✅ |
 | 4 | `MaxPaths` – Datenordner je Betriebssystem ✅ |
 | 5 | Hardware-Erkennung (`HardwareInfo`) ✅ |
-| 6 | `TierSelector` + Unit-Tests ✅ |
+| 6 | `TierSelector` + Unit-Tests ✅ (später ersetzt durch `Requirements`: nur noch ein Modell) |
 | 7 | `Manifest` – JSON laden, Fallback aus Embedded Resource ✅ |
 | 8 | `ModelDownloader` mit Fortschrittsbalken, Fortsetzen, SHA-256 ✅ |
-| 9 | Modellauswahl festlegen: aktuelle GGUF-Modelle pro Stufe prüfen, Manifest befüllen ✅ |
+| 9 | Modellauswahl festlegen, Manifest befüllen ✅ |
 | 10 | `LlmEngine` – Modell laden, Backend wählen, Antwort streamen ✅ |
 | 11 | `Conversation` + `ChatSession` – Verlauf, Rollen, Kontext kürzen ✅ |
 | 12 | System-Prompt einbinden und Persona testen ✅ |
@@ -396,7 +397,7 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 | 14 | `MarkdownRenderer` – eigener, streamender Renderer (Überschriften, Listen, Code-Blöcke, Tabellen, Zitate, Farb-Tags) ✅ |
 | 14a | Syntax-Hervorhebung, Widgets (Diagramme, Baum, Kasten, Spalten, Kalender, Titel), Farbverlauf, `/demo` ✅ |
 | 14b | Rückfragen mit Auswahlmenü (`frage`) ✅ |
-| 14c | Sichtbares Nachdenken (grau, live, Budget je Stufe, `/denken`), feste Schreibweise per Grammatik, unsichtbare Reparatur kaputter Elemente ✅ |
+| 14c | Sichtbares Nachdenken (grau, live, Denk-Budget, `/denken`), feste Schreibweise per Grammatik, unsichtbare Reparatur kaputter Elemente ✅ |
 | 15 | `/debug`, `/clear`, Tokens pro Sekunde messen ✅ (Denk-Text-Schalter für `/debug` fehlt noch) |
 | 16 | Eigene Eingabezeile: Einfügen ohne Abschicken, Shift/Alt+Enter und `\`+Enter für neue Zeilen, ↑/↓-Verlauf (gespeichert), Tab für Befehle ✅ |
 | 17 | Publish: Single-File-Exe für `win-x64`, danach `linux-x64` |
@@ -496,6 +497,22 @@ public interface ITool
 
 ---
 
+## 9b. Spezialisten (Idee, nach der Tool-Schnittstelle)
+
+Das 9B-Modell bleibt das Gesprächsmodell. Manche Tools haben statt festem Code ein **kleines Spezialmodell** dahinter – für Max ist das ein Tool wie jedes andere (`bild_beschreiben`, `audio_abschreiben`, `bild_erstellen` …). Ein Spezialist kommt nur dazu, wenn er das 9B-Modell in seinem Gebiet nachweislich schlägt.
+
+| Spezialist | Ansatz | Bemerkung |
+|---|---|---|
+| Bilder und Screenshots lesen | Vision-Zusatz von Qwen3.5 (`mmproj`), falls vorhanden | kein zweites Modell nötig; LLamaSharp kann das (mtmd) |
+| Sprache → Text | Whisper (whisper.cpp / Whisper.net) | klein, sehr gut, lokal |
+| Bilder erzeugen | kleines Diffusionsmodell über stable-diffusion.cpp | eigene Laufzeit; Anzeige im Terminal (Kitty/Sixel) oder als Datei |
+| Mathe | Spezialmodell nur bei klarem Vorsprung | exaktes Rechnen besser über ein Rechen-/Python-Tool |
+| Recherche | hängt vor allem an Websuche und Seiten lesen (Tools) | ein kleines Modell höchstens zum Zusammenfassen |
+
+**Technik:**
+- Ein `SpecialistManager` lädt Spezialisten erst bei Bedarf und entlädt sie danach – neben dem 9B-Modell ist auf der Grafikkarte wenig Platz.
+- Die Dateien stehen als eigene Einträge im Manifest und kommen über den Hintergrund-Download (Schritt 20) erst, wenn der Spezialist zum ersten Mal gebraucht wird.
+
 ## 9a. Eigener Max-Adapter (Fine-Tuning, nach Phase 2)
 
 Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem Modell mit einem **LoRA-Adapter** antrainiert. Ein LoRA-Adapter ist ein kleiner Zusatz mit wenigen Millionen Werten auf dem fertigen Modell; das Modell selbst wird nicht neu trainiert.
@@ -505,7 +522,7 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
 **Was es bringt:**
 - Die Persönlichkeit ist fest eingebaut: Ton, Duzen, kein Verraten des Modells, gute Formatierung mit Markdown und Farb-Tags.
 - Der System-Prompt wird deutlich kürzer. Das Aufwärmen beim Start geht dadurch schneller, und im Kontext bleibt mehr Platz.
-- Tool-Aufrufe klappen zuverlässiger, vor allem bei den kleinen Stufen S und M.
+- Tool-Aufrufe klappen zuverlässiger.
 
 **Was es nicht bringt:** neues Wissen oder mehr Grundintelligenz. Wissen kommt weiter über Gedächtnis (8a) und Tools (Phase 2).
 
@@ -514,11 +531,10 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
    - Die Beispiele lassen sich zum Teil mit einem großen Modell erzeugen. Danach werden sie von Hand geprüft und aussortiert.
    - Der Datensatz liegt im Repo unter `training/` als JSONL.
 2. **Training:** QLoRA mit **Unsloth** auf den Originalgewichten von Hugging Face, also nicht auf der GGUF-Datei.
-   - Für 4B reicht die RTX 3080 Ti (12 GB) locker.
-   - Für 9B wird es knapp; alternativ eine gemietete Cloud-GPU oder Google Colab.
-   - Pro Stufe gibt es einen eigenen Adapter, weil ein Adapter nur zu seinem Grundmodell passt.
-3. **Umwandeln:** Den Adapter mit llama.cpp nach GGUF konvertieren (`convert_lora_to_gguf.py`), etwa 20–100 MB pro Stufe.
-4. **Einbinden:** Das Manifest bekommt pro Stufe ein Feld `adapter` (URL, SHA-256, Revision).
+   - 9B braucht für QLoRA eine Grafikkarte mit reichlich Speicher; sonst eine gemietete Cloud-GPU oder Google Colab.
+   - Ein Adapter passt nur zu seinem Grundmodell – mit einem einzigen Modell gibt es auch nur einen Adapter.
+3. **Umwandeln:** Den Adapter mit llama.cpp nach GGUF konvertieren (`convert_lora_to_gguf.py`), etwa 50–100 MB.
+4. **Einbinden:** Das Manifest bekommt beim Modell ein Feld `adapter` (URL, SHA-256, Revision).
    - Max lädt den Adapter wie das Modell und hängt ihn beim Laden an; LLamaSharp kann LoRA-Adapter laden.
    - Neue Adapter-Versionen kommen über die stillen Updates (Abschnitt 5a).
 5. **Prüfen:** Der Selbsttest-Workflow vergleicht die Antworten mit und ohne Adapter: Ton, Anrede, verratene Herkunft, Format der Tool-Aufrufe.
@@ -526,15 +542,15 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
 | # | Schritt |
 |---|---|
 | 25 | Datensatz-Format festlegen, erste 200 Beispiele, Skript zum Erzeugen und Prüfen |
-| 26 | Training mit Unsloth für Stufe M (4B), Vergleich im Selbsttest |
+| 26 | Training mit Unsloth für das 9B-Modell, Vergleich im Selbsttest |
 | 27 | Adapter im Manifest, Laden in `LlmEngine`, kürzerer System-Prompt |
-| 28 | Adapter für die übrigen Stufen, stilles Update der Adapter |
+| 28 | Stilles Update des Adapters |
 
 ---
 
 ## 10. Offene Punkte
 
-- [x] **Aufwärmen zwischenspeichern:** Auf Rechnern ohne Grafikkarte dauert das Aufwärmen mit dem langen System-Prompt lange (Stufe M auf 4 Kernen: ca. 90 s). Lösung: den aufgewärmten Zustand mit `LLamaContext.SaveState` im Datenordner speichern. Der Schlüssel ist eine Prüfsumme aus Prompt und Modell; beim nächsten Start wird der Zustand in etwa einer Sekunde geladen.
+- [x] **Aufwärmen zwischenspeichern:** Auf Rechnern ohne Grafikkarte dauert das Aufwärmen mit dem langen System-Prompt lange (4B-Modell auf 4 Kernen: ca. 90 s, danach 2,5 s). Lösung: den aufgewärmten Zustand mit `LLamaContext.SaveState` im Datenordner speichern. Der Schlüssel ist eine Prüfsumme aus Prompt und Modell; beim nächsten Start wird der Zustand in etwa einer Sekunde geladen.
 - [ ] Ist Vulkan auf NVIDIA spürbar langsamer als CUDA? Falls ja: CUDA-Backend beim ersten Start nachladen statt in die Exe packen.
 - [ ] Repo auf öffentlich stellen und Zwei-Faktor-Anmeldung auf GitHub prüfen.
 - [ ] Soll ein Pflicht-Update auch einen „Wartungsmodus“ bekommen (Max per Manifest komplett sperren)?

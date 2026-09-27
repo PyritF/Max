@@ -154,41 +154,15 @@ public class SystemPromptTests
     internal static readonly SystemSnapshot Snapshot = new(new DateTime(2026, 9, 25, 21, 14, 0), UserIdentity.Create("alex", "Alex Beispiel"), "Windows 11", 16,
         new HardwareInfo(32L << 30, null), @"C:\Users\alex");
 
-    [Theory]
-    [InlineData("S", true)]
-    [InlineData("M", true)]
-    [InlineData("L", false)]
-    [InlineData("XL", false)]
-    public void SmallTiers_LearnFromExamples_BigOnesFromRules(string tier, bool examples)
+    [Fact]
+    public void Prompt_DescribesEveryElement_WithoutPlaceholders()
     {
-        var prompt = SystemPrompt.Build(Snapshot, Parse(tier));
-        Assert.Equal(examples, prompt.Contains("Schreib es genau so wie im Beispiel"));
-        Assert.Equal(!examples, prompt.Contains("Nie ein Element bei:"));
-        Assert.DoesNotContain("{{", prompt);
-        Assert.DoesNotContain("Stufe", prompt);
-    }
-
-    [Theory]
-    [InlineData("S")]
-    [InlineData("L")]
-    public void EveryTier_KnowsEveryElement(string tier)
-    {
-        var prompt = SystemPrompt.Build(Snapshot, Parse(tier));
+        var prompt = SystemPrompt.Build(Snapshot);
         foreach (var name in Max.Ui.Widgets.WidgetRegistry.Names.Append("frage"))
             Assert.Contains("```" + name, prompt);
         Assert.Contains("{verlauf:", prompt);
-    }
-
-    private static Tier Parse(string tier) => Enum.Parse<Tier>(tier);
-
-    [Fact]
-    public void ExampleElements_AreValid()
-    {
-        var prompt = SystemPrompt.Build(Snapshot, Max.Setup.Tier.S);
-        var blocks = System.Text.RegularExpressions.Regex.Matches(prompt, "```(\\p{L}+)\n(.*?)```", System.Text.RegularExpressions.RegexOptions.Singleline);
-        Assert.True(blocks.Count >= 10);
-        foreach (System.Text.RegularExpressions.Match block in blocks)
-            Assert.True(Max.Ui.Widgets.WidgetValidator.IsValid(block.Groups[1].Value, block.Groups[2].Value), block.Value);
+        Assert.Contains("Nie ein Element bei:", prompt);
+        Assert.DoesNotContain("{{", prompt);
     }
 }
 
@@ -780,7 +754,7 @@ public class PromptCacheTests : IDisposable
     [Fact]
     public void FixedPart_EndsBeforeTheFirstPlaceholderLine()
     {
-        var prompt = SystemPrompt.BuildParts(SystemPromptTests.Snapshot, Max.Setup.Tier.M);
+        var prompt = SystemPrompt.BuildParts(SystemPromptTests.Snapshot);
         Assert.True(prompt.StableLength > prompt.Text.Length / 2);
         var rest = prompt.Text[prompt.StableLength..];
         Assert.StartsWith("- Heute ist", rest);

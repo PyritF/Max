@@ -79,40 +79,35 @@ public class HardwareInfoTests
         Assert.Equal(Enum.Parse<GpuVendor>(vendor), HardwareInfo.VendorFromName(name));
 }
 
-public class TierSelectorTests
+public class RequirementsTests
 {
     private const long GiB = 1024L * 1024 * 1024;
 
     private static HardwareInfo Hw(double ramGb, double vramGb = 0) =>
-        new((long)(ramGb * GiB), vramGb > 0 ? new GpuInfo("GPU", (long)(vramGb * GiB), GpuVendor.Nvidia) : null);
+        new((long)(ramGb * GiB), vramGb > 0 ? new GpuInfo("RTX Test", (long)(vramGb * GiB), GpuVendor.Nvidia) : null);
 
     [Theory]
-    [InlineData(4, 0, "S")]
-    [InlineData(7.8, 0, "M")]     // "8 GB" meldet sich oft etwas kleiner
-    [InlineData(16, 0, "M")]
-    [InlineData(32, 0, "M")]      // nur CPU: großes Modell wäre zu langsam
-    [InlineData(47.8, 0, "XL")]
-    [InlineData(4, 6, "M")]
-    [InlineData(16, 8, "L")]
-    [InlineData(16, 12, "L")]
-    [InlineData(16, 15.99, "XL")] // 16-GB-Karte meldet 16376 MiB
-    [InlineData(32, 24, "XL")]
-    public void Select_FollowsTable(double ram, double vram, string expected) =>
-        Assert.Equal(Enum.Parse<Tier>(expected), TierSelector.Select(Hw(ram, vram)));
-
-    [Fact]
-    public void Resolve_Override_WinsOverHardware()
+    [InlineData(16, 0, "keine gefunden")]
+    [InlineData(16, 4, "hat 4 GB")]
+    [InlineData(6, 12, "Arbeitsspeicher")]
+    [InlineData(7.8, 8, null)]        // "8 GB" melden Rechner oft etwas kleiner
+    [InlineData(16, 5.9, null)]       // 6-GB-Karte meldet etwas weniger
+    [InlineData(32, 12, null)]
+    public void Problem_NamesWhatIsMissing(double ram, double vram, string? expected)
     {
-        Assert.Equal(Tier.S, TierSelector.Resolve(Hw(64, 24), "s"));
-        Assert.Equal(Tier.XL, TierSelector.Resolve(Hw(4), " XL "));
+        var problem = Requirements.Problem(Hw(ram, vram), cpuAllowed: false);
+        if (expected is null)
+            Assert.Null(problem);
+        else
+            Assert.Contains(expected, problem);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("XXL")]
-    [InlineData("7")]
-    public void Resolve_InvalidOverride_IsIgnored(string value) =>
-        Assert.Equal(Tier.M, TierSelector.Resolve(Hw(16), value));
+    [Fact]
+    public void CpuAllowed_SkipsOnlyTheGraphicsCard()
+    {
+        Assert.Null(Requirements.Problem(Hw(16), cpuAllowed: true));
+        Assert.NotNull(Requirements.Problem(Hw(4), cpuAllowed: true));
+    }
 }
 
 public class ManifestTests
@@ -122,14 +117,13 @@ public class ManifestTests
     {
         var manifest = ManifestSource.Embedded();
         Assert.True(manifest.IsComplete);
-        foreach (var tier in Enum.GetValues<Tier>())
-        {
-            var entry = manifest.For(tier)!;
-            Assert.StartsWith("https://", entry.Url);
-            Assert.True(entry.SizeBytes > 0);
-            Assert.True(entry.ContextSize >= 4096);
-            Assert.True(entry.Revision >= 1);
-        }
+        var entry = manifest.Model!;
+        Assert.StartsWith("https://", entry.Url);
+        Assert.EndsWith(".gguf", entry.FileName);
+        Assert.Contains("9B", entry.FileName);
+        Assert.True(entry.SizeBytes > 0);
+        Assert.True(entry.ContextSize >= 4096);
+        Assert.True(entry.Revision >= 1);
     }
 
     [Fact]
@@ -137,19 +131,18 @@ public class ManifestTests
     {
         var json = """
             { "app": { "version": "9.9.9" },
-              "tiers": { "S": { "revision": 2, "url": "https://a", "sha256": null, "sizeBytes": 1, "contextSize": 4096 },
-                         "M": { "revision": 2, "url": "https://b", "sha256": null, "sizeBytes": 1, "contextSize": 4096 },
-                         "L": { "revision": 2, "url": "https://c", "sha256": null, "sizeBytes": 1, "contextSize": 4096 },
-                         "XL": { "revision": 2, "url": "https://d", "sha256": null, "sizeBytes": 1, "contextSize": 4096 } } }
+              "model": { "revision": 2, "url": "https://a/b/Neu-Q4.gguf", "sha256": null, "sizeBytes": 1, "contextSize": 4096 } }
             """;
         using var http = new HttpClient(new FakeHandler(_ => Text(HttpStatusCode.OK, json)));
         var manifest = await ManifestSource.LoadAsync(http, CancellationToken.None, "https://example/manifest.json");
         Assert.Equal("9.9.9", manifest.App.Version);
+        Assert.Equal("Neu-Q4.gguf", manifest.Model!.FileName);
     }
 
     [Theory]
     [InlineData(HttpStatusCode.OK, "{ kaputt")]
-    [InlineData(HttpStatusCode.OK, """{ "app": { "version": "1" }, "tiers": {} }""")]
+    [InlineData(HttpStatusCode.OK, """{ "app": { "version": "1" }, "tiers": {} }""")]     // altes Format mit Stufen
+    [InlineData(HttpStatusCode.OK, """{ "app": { "version": "1" }, "model": { "revision": 1, "url": "", "sizeBytes": 1, "contextSize": 1 } }""")]
     [InlineData(HttpStatusCode.NotFound, "")]
     public async Task Load_FallsBackToEmbedded(HttpStatusCode status, string body)
     {
@@ -190,7 +183,7 @@ public sealed class ModelDownloaderTests : IDisposable
             Directory.Delete(_dir, recursive: true);
     }
 
-    private TierEntry Entry(string? sha = null) => new(1, "https://hf.example/resolve/main/model.gguf", sha, _data.Length, 4096);
+    private ModelEntry Entry(string? sha = null) => new(1, "https://hf.example/resolve/main/model.gguf", sha, _data.Length, 4096);
 
     [Fact]
     public async Task Download_Complete_WithShaFromManifest()
@@ -412,15 +405,50 @@ public sealed class InstallStateTests : IDisposable
         paths.EnsureExists();
         File.WriteAllBytes(paths.ModelPart, new byte[42]);
 
-        InstallState.Commit(paths, Tier.M, new TierEntry(3, "https://x", null, 42, 16384), new DownloadResult(new string('b', 64), 42), new DateTime(2026, 9, 25, 21, 0, 0));
+        InstallState.Commit(paths, new ModelEntry(3, "https://x/Modell-9B.gguf", null, 42, 16384), new DownloadResult(new string('b', 64), 42), new DateTime(2026, 9, 25, 21, 0, 0));
 
         Assert.True(InstallState.IsInstalled(paths));
         Assert.False(File.Exists(paths.ModelPart));
         var state = InstallState.Load(paths)!;
-        Assert.Equal("M", state.Tier);
+        Assert.Equal("Modell-9B.gguf", state.Model);
         Assert.Equal(3, state.Revision);
         Assert.Equal(42, state.SizeBytes);
         Assert.Equal(16384, state.ContextSize);
+    }
+
+    [Fact]
+    public void OldInstallFromTheTierEra_IsRemoved_AndSetupRunsAgain()
+    {
+        var paths = new MaxPaths(_dir);
+        paths.EnsureExists();
+        File.WriteAllBytes(paths.Model, new byte[5]);
+        File.WriteAllBytes(paths.ModelPart, new byte[3]);
+        File.WriteAllText(paths.State, """{ "tier": "M", "revision": 1, "sha256": "x", "sizeBytes": 5, "installedAt": "2026-09-25T21:00:00" }""");
+        Directory.CreateDirectory(Path.Combine(_dir, "models"));
+        File.WriteAllBytes(Path.Combine(_dir, "models", "S.bin"), new byte[2]);
+
+        Assert.False(InstallState.IsInstalled(paths));
+        Assert.True(InstallState.RemoveOutdated(paths));
+
+        Assert.False(File.Exists(paths.Model));
+        Assert.False(File.Exists(paths.ModelPart));
+        Assert.False(File.Exists(paths.State));
+        Assert.False(Directory.Exists(Path.Combine(_dir, "models")));
+    }
+
+    [Fact]
+    public void CurrentInstall_AndAnInterruptedFirstDownload_StayUntouched()
+    {
+        var paths = new MaxPaths(_dir);
+        paths.EnsureExists();
+        File.WriteAllBytes(paths.ModelPart, new byte[3]);            // erster Download, abgebrochen: weitermachen
+        Assert.False(InstallState.RemoveOutdated(paths));
+        Assert.True(File.Exists(paths.ModelPart));
+
+        File.WriteAllBytes(paths.ModelPart, new byte[42]);
+        InstallState.Commit(paths, new ModelEntry(1, "https://x/m.gguf", null, 42, 8192), new DownloadResult(new string('b', 64), 42), DateTime.Now);
+        Assert.False(InstallState.RemoveOutdated(paths));
+        Assert.True(InstallState.IsInstalled(paths));
     }
 
     [Fact]
@@ -438,73 +466,13 @@ public sealed class InstallStateTests : IDisposable
         var paths = new MaxPaths(_dir);
         paths.EnsureExists();
         File.WriteAllBytes(paths.ModelPart, new byte[42]);
-        InstallState.Commit(paths, Tier.S, new TierEntry(1, "https://x", null, 42, 8192), new DownloadResult(new string('b', 64), 42), DateTime.Now);
+        InstallState.Commit(paths, new ModelEntry(1, "https://x/m.gguf", null, 42, 8192), new DownloadResult(new string('b', 64), 42), DateTime.Now);
 
         File.WriteAllBytes(paths.Model, new byte[10]);
         Assert.False(InstallState.IsInstalled(paths));
 
         File.WriteAllText(paths.State, "{ kaputt");
         Assert.Null(InstallState.Load(paths));
-    }
-}
-
-public sealed class ModelShelfTests : IDisposable
-{
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "max-tests-" + Guid.NewGuid().ToString("N"));
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_dir))
-            Directory.Delete(_dir, recursive: true);
-    }
-
-    private static void Install(MaxPaths paths, Tier tier, int size)
-    {
-        File.WriteAllBytes(paths.ModelPart, new byte[size]);
-        InstallState.Commit(paths, tier, new TierEntry(1, "https://x", null, size, 8192), new DownloadResult(new string('b', 64), size), DateTime.Now);
-    }
-
-    [Fact]
-    public void Gleiche_Stufe_bleibt_liegen()
-    {
-        var paths = new MaxPaths(_dir);
-        paths.EnsureExists();
-        Install(paths, Tier.L, 50);
-
-        Assert.False(ModelShelf.Prepare(paths, Tier.L));
-        Assert.True(InstallState.IsInstalled(paths));
-    }
-
-    [Fact]
-    public void Neue_Stufe_legt_das_alte_Modell_beiseite_und_verlangt_die_Einrichtung()
-    {
-        var paths = new MaxPaths(_dir);
-        paths.EnsureExists();
-        Install(paths, Tier.L, 50);
-        File.WriteAllBytes(paths.ModelPart, new byte[3]);
-
-        Assert.True(ModelShelf.Prepare(paths, Tier.S));
-
-        Assert.False(InstallState.IsInstalled(paths));
-        Assert.False(File.Exists(paths.ModelPart));
-        Assert.Equal(50, new FileInfo(ModelShelf.ModelFile(paths, "L")).Length);
-        Assert.Equal(["L"], ModelShelf.Shelved(paths));
-    }
-
-    [Fact]
-    public void Zurueckwechseln_holt_das_beiseitegelegte_Modell()
-    {
-        var paths = new MaxPaths(_dir);
-        paths.EnsureExists();
-        Install(paths, Tier.L, 50);
-        ModelShelf.Prepare(paths, Tier.S);
-        Install(paths, Tier.S, 20);
-
-        ModelShelf.Prepare(paths, Tier.L);
-
-        Assert.True(InstallState.IsInstalled(paths));
-        Assert.Equal("L", InstallState.Load(paths)!.Tier);
-        Assert.Equal(["S"], ModelShelf.Shelved(paths));
     }
 }
 

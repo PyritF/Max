@@ -12,7 +12,7 @@ internal static class StartupPlan
         SystemSnapshot? system = null;
         return
         [
-            Hardware(s => { system = s; onHardware(s); }),
+            Hardware(s => { system = s; onHardware(s); }, checkRequirements: true),
             // TODO (Schritt 19/20): echter Update-Check über das Manifest.
             new("Suche nach Updates", async (_, ct) => { await Task.Delay(700, ct); return "aktuell"; }),
             Load(paths, () => system, thinking, onLoaded),
@@ -20,34 +20,28 @@ internal static class StartupPlan
     }
 
     /// <summary>
-    /// Der erste Start: Hardware prüfen, passende Stufe wählen, Modell laden und einrichten.
-    /// Die Stufe bleibt unsichtbar – der Nutzer sieht nur "Download Max".
+    /// Der erste Start: Hardware prüfen (vor dem Download – sonst lädt ein zu schwacher Rechner umsonst
+    /// mehrere GB), Modell laden und einrichten.
     /// </summary>
     public static IReadOnlyList<StartupStep> Setup(MaxPaths paths, HttpClient http, Func<bool> thinking, Action<SystemSnapshot> onHardware, Action<LlmEngine, LlmBackend> onLoaded)
     {
         SystemSnapshot? system = null;
-        var tier = Tier.S;
-        TierEntry? entry = null;
+        ModelEntry? entry = null;
         DownloadResult? download = null;
 
         return
         [
-            Hardware(s =>
-            {
-                system = s;
-                tier = TierSelector.Resolve(s.Hardware);
-                onHardware(s);
-            }),
+            Hardware(s => { system = s; onHardware(s); }, checkRequirements: true),
             new("Download Max", async (progress, ct) =>
             {
                 var manifest = await ManifestSource.LoadAsync(http, ct);
-                entry = manifest.For(tier) ?? throw new SetupException("Für diesen Rechner ist gerade kein Download hinterlegt.");
+                entry = manifest.Model!;
                 download = await new ModelDownloader(http).DownloadAsync(entry, paths, progress, ct);
                 return $"{Format.Gigabytes(download.SizeBytes)} GB";
             }),
             new("Richte Max ein", (_, _) =>
             {
-                InstallState.Commit(paths, tier, entry!, download!, DateTime.Now);
+                InstallState.Commit(paths, entry!, download!, DateTime.Now);
                 return Task.FromResult("fertig");
             }),
             Load(paths, () => system, thinking, onLoaded),
@@ -67,7 +61,7 @@ internal static class StartupPlan
             try
             {
                 engine = await LlmEngine.LoadAsync(paths.Model, state.ContextSize, snapshot.Hardware, paths.EngineLog, progress, ct);
-                var prompt = SystemPrompt.BuildParts(snapshot, TierSelector.TryParse(state.Tier, out var tier) ? tier : null);
+                var prompt = SystemPrompt.BuildParts(snapshot);
                 var options = BackendOptionsFor(state, thinking) with
                 {
                     PromptCache = new PromptCache(paths.PromptCache, $"{state.Sha256}|{engine.StateIdentity}"),
@@ -91,12 +85,11 @@ internal static class StartupPlan
             }
         });
 
-    /// <summary>Denk-Budget der Stufe aus dem Manifest; <c>MAX_GRAMMAR=0</c> schaltet die Grammatik ab (Fehlersuche).</summary>
+    /// <summary>Denk-Budget aus dem Manifest; <c>MAX_GRAMMAR=0</c> schaltet die Grammatik ab (Fehlersuche).</summary>
     private static BackendOptions BackendOptionsFor(InstallState state, Func<bool> thinking)
     {
-        var budget = TierSelector.TryParse(state.Tier, out var tier) ? ManifestSource.Embedded().For(tier)?.ThinkingBudget : null;
         return new BackendOptions(
-            ThinkingBudget: budget ?? 512,
+            ThinkingBudget: ManifestSource.Embedded().Model!.ThinkingBudget,
             ThinkingEnabled: thinking,
             UseGrammar: Environment.GetEnvironmentVariable("MAX_GRAMMAR") != "0");
     }
@@ -112,12 +105,14 @@ internal static class StartupPlan
         new("Richte Max ein", async (_, ct) => { await Task.Delay(1000, ct); return "fertig"; }),
     ];
 
-    private static StartupStep Hardware(Action<SystemSnapshot> onHardware) =>
+    private static StartupStep Hardware(Action<SystemSnapshot> onHardware, bool checkRequirements = false) =>
         new("Analysiere Hardware", async (_, ct) =>
         {
             // Eigener Thread: nvidia-smi kann einen Moment brauchen, der Spinner soll weiterlaufen.
             var system = await Task.Run(SystemSnapshot.Capture, ct);
             onHardware(system);
+            if (checkRequirements && Requirements.Problem(system.Hardware, Requirements.CpuAllowed) is { } problem)
+                throw new SetupException(problem);
             return system.Summary;
         });
 
