@@ -551,6 +551,7 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
 ## 10. Offene Punkte
 
 - [x] **Aufwärmen zwischenspeichern:** Auf Rechnern ohne Grafikkarte dauert das Aufwärmen mit dem langen System-Prompt lange (4B-Modell auf 4 Kernen: ca. 90 s, danach 2,5 s). Lösung: den aufgewärmten Zustand mit `LLamaContext.SaveState` im Datenordner speichern. Der Schlüssel ist eine Prüfsumme aus Prompt und Modell; beim nächsten Start wird der Zustand in etwa einer Sekunde geladen.
+- [ ] **Test auf einem Rechner mit Grafikkarte** (die GitHub-Rechner haben keine): Max starten, ein paar Fragen stellen, `/debug` ansehen – liegt das Modell ganz auf der Grafikkarte (Schichten 32/32), wie viele Tokens pro Sekunde, wie lange das erste und das zweite Aufwärmen dauert. Danach die Frage darunter beantworten.
 - [ ] Ist Vulkan auf NVIDIA spürbar langsamer als CUDA? Falls ja: CUDA-Backend beim ersten Start nachladen statt in die Exe packen.
 - [ ] Repo auf öffentlich stellen und Zwei-Faktor-Anmeldung auf GitHub prüfen.
 - [ ] Soll ein Pflicht-Update auch einen „Wartungsmodus“ bekommen (Max per Manifest komplett sperren)?
