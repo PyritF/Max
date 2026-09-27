@@ -139,7 +139,6 @@ Max nutzt **ein einziges Modell: Qwen3.5-9B** (Q4_K_M, ~5,7 GB, Kontext 16.384 T
 - Grenzwerte in GB wie auf dem Karton, mit 10 % Toleranz (eine 6-GB-Karte meldet etwas weniger).
 - `MAX_CPU=1` erlaubt den Start ohne Grafikkarte – für den Selbsttest auf GitHub (keine Grafikkarte) und falls die Erkennung eine Karte übersieht.
 - Scheitert das Laden auf der Grafikkarte trotzdem, versucht Max es auf der CPU; `/debug` zeigt „CPU (Grafikkarte fehlgeschlagen)“.
-- **Umstieg:** Eine Installation aus der Zeit der Stufen (state.json ohne Modellnamen) wird beim Start entfernt, samt beiseitegelegter Modelle; danach richtet Max sich mit dem aktuellen Modell neu ein.
 
 **Hardware-Erkennung** (`Setup/HardwareInfo.cs`):
 - RAM: `GC.GetGCMemoryInfo().TotalAvailableMemoryBytes`
@@ -551,8 +550,8 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
 ## 10. Offene Punkte
 
 - [x] **Aufwärmen zwischenspeichern:** Auf Rechnern ohne Grafikkarte dauert das Aufwärmen mit dem langen System-Prompt lange (4B-Modell auf 4 Kernen: ca. 90 s, danach 2,5 s). Lösung: den aufgewärmten Zustand mit `LLamaContext.SaveState` im Datenordner speichern. Der Schlüssel ist eine Prüfsumme aus Prompt und Modell; beim nächsten Start wird der Zustand in etwa einer Sekunde geladen.
-- [ ] **Test auf einem Rechner mit Grafikkarte** (die GitHub-Rechner haben keine): Max starten, ein paar Fragen stellen, `/debug` ansehen – liegt das Modell ganz auf der Grafikkarte (Schichten 32/32), wie viele Tokens pro Sekunde, wie lange das erste und das zweite Aufwärmen dauert. Danach die Frage darunter beantworten.
-- [ ] Ist Vulkan auf NVIDIA spürbar langsamer als CUDA? Falls ja: CUDA-Backend beim ersten Start nachladen statt in die Exe packen.
+- [x] **Test auf einem Rechner mit Grafikkarte:** Grafikkarte mit 12 GB über Vulkan – alle 32 Schichten auf der Karte, **49 Tokens/s**, erstes Token nach 0,3 s, Nachdenken ~6 s (280 Tokens), Aufwärmen aus dem Zwischenspeicher 1,4 s, Laden 5 s.
+- [x] Ist Vulkan auf NVIDIA spürbar langsamer als CUDA? Nicht nötig: Mit 49 Tokens/s ist Vulkan schnell genug, CUDA bleibt draußen.
 - [ ] Repo auf öffentlich stellen und Zwei-Faktor-Anmeldung auf GitHub prüfen.
 - [ ] Soll ein Pflicht-Update auch einen „Wartungsmodus“ bekommen (Max per Manifest komplett sperren)?
 - [ ] Akzentfarbe und Banner-Design festlegen.

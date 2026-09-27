@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace Max.Setup;
 
 /// <summary>Was installiert ist – steht in <c>state.json</c> im Datenordner.</summary>
-/// <param name="Model">Dateiname des Modells. Fehlt bei Installationen aus der Zeit der Stufen (S, M, L, XL).</param>
+/// <param name="Model">Dateiname des Modells, z. B. "Qwen3.5-9B-Q4_K_M.gguf".</param>
 /// <param name="ContextSize">Aus dem Manifest; ältere state.json haben den Wert noch nicht.</param>
 internal sealed record InstallState(string? Model, int Revision, string Sha256, long SizeBytes, DateTime InstalledAt, int ContextSize = InstallState.DefaultContextSize)
 {
@@ -34,36 +34,6 @@ internal sealed record InstallState(string? Model, int Revision, string Sha256, 
         return state is { Model: not null }
                && File.Exists(paths.Model)
                && new FileInfo(paths.Model).Length == state.SizeBytes;
-    }
-
-    /// <summary>
-    /// Räumt Reste aus der Zeit der Stufen weg: ein kleineres Modell (state.json ohne Modellnamen), einen
-    /// angefangenen Download dazu und beiseitegelegte Modelle. Danach richtet sich Max mit dem aktuellen Modell neu ein.
-    /// </summary>
-    /// <returns>true, wenn etwas entfernt wurde.</returns>
-    public static bool RemoveOutdated(MaxPaths paths)
-    {
-        var removed = false;
-        if (File.Exists(paths.State) && Load(paths) is not { Model: not null })
-        {
-            foreach (var file in new[] { paths.Model, paths.ModelPart, paths.State })
-                removed |= TryDelete(file);
-        }
-        var shelf = Path.Combine(paths.Root, "models");
-        if (Directory.Exists(shelf))
-        {
-            Directory.Delete(shelf, recursive: true);
-            removed = true;
-        }
-        return removed;
-    }
-
-    private static bool TryDelete(string file)
-    {
-        if (!File.Exists(file))
-            return false;
-        File.Delete(file);
-        return true;
     }
 
     /// <summary>Macht aus dem fertig geprüften Download das Modell und merkt sich, was installiert ist.</summary>

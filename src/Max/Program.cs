@@ -15,9 +15,6 @@ if (AnsiConsole.Profile.Width <= 0)
 
 var paths = MaxPaths.Default();
 
-// Früher gab es mehrere Modelle je nach Rechner – ein altes kleineres Modell wird durch das aktuelle ersetzt.
-if (!args.Contains("--demo-first-start"))
-    InstallState.RemoveOutdated(paths);
 Max.Ui.Widgets.TitleWidget.UserFontDirectory = Path.Combine(paths.Root, "fonts");
 var demo = args.Contains("--demo-first-start");
 

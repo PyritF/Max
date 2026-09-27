@@ -417,41 +417,6 @@ public sealed class InstallStateTests : IDisposable
     }
 
     [Fact]
-    public void OldInstallFromTheTierEra_IsRemoved_AndSetupRunsAgain()
-    {
-        var paths = new MaxPaths(_dir);
-        paths.EnsureExists();
-        File.WriteAllBytes(paths.Model, new byte[5]);
-        File.WriteAllBytes(paths.ModelPart, new byte[3]);
-        File.WriteAllText(paths.State, """{ "tier": "M", "revision": 1, "sha256": "x", "sizeBytes": 5, "installedAt": "2026-09-25T21:00:00" }""");
-        Directory.CreateDirectory(Path.Combine(_dir, "models"));
-        File.WriteAllBytes(Path.Combine(_dir, "models", "S.bin"), new byte[2]);
-
-        Assert.False(InstallState.IsInstalled(paths));
-        Assert.True(InstallState.RemoveOutdated(paths));
-
-        Assert.False(File.Exists(paths.Model));
-        Assert.False(File.Exists(paths.ModelPart));
-        Assert.False(File.Exists(paths.State));
-        Assert.False(Directory.Exists(Path.Combine(_dir, "models")));
-    }
-
-    [Fact]
-    public void CurrentInstall_AndAnInterruptedFirstDownload_StayUntouched()
-    {
-        var paths = new MaxPaths(_dir);
-        paths.EnsureExists();
-        File.WriteAllBytes(paths.ModelPart, new byte[3]);            // erster Download, abgebrochen: weitermachen
-        Assert.False(InstallState.RemoveOutdated(paths));
-        Assert.True(File.Exists(paths.ModelPart));
-
-        File.WriteAllBytes(paths.ModelPart, new byte[42]);
-        InstallState.Commit(paths, new ModelEntry(1, "https://x/m.gguf", null, 42, 8192), new DownloadResult(new string('b', 64), 42), DateTime.Now);
-        Assert.False(InstallState.RemoveOutdated(paths));
-        Assert.True(InstallState.IsInstalled(paths));
-    }
-
-    [Fact]
     public void OldStateWithoutContextSize_UsesDefault()
     {
         var paths = new MaxPaths(_dir);
