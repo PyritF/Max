@@ -27,7 +27,7 @@ internal static class DebugReport
             rows.Add(("Kontext", $"{engine.CachedCount:N0} / {info.ContextSize:N0} Tokens".Replace(',', '.')));
             rows.Add(("Ladezeit", Seconds(info.LoadTime)));
             if (backend?.WarmUpTime is { } warmUp)
-                rows.Add(("Aufwärmen", Seconds(warmUp)));
+                rows.Add(("Aufwärmen", Seconds(warmUp) + (backend.WarmUpFromCache ? " · aus dem Zwischenspeicher" : "")));
 
             if (backend is not null)
                 rows.Add(("Denken", backend.ThinkingEnabled ? "an" : "aus"));

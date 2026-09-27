@@ -55,6 +55,15 @@ internal interface ILanguageModel
     /// (der nächste <see cref="PrefillAsync"/> rechnet dann alles neu) und false geliefert.
     /// </summary>
     bool Restore(ModelCheckpoint checkpoint);
+
+    /// <summary>Schreibt den aktuellen Stand in eine Datei. False, wenn das nicht geht.</summary>
+    bool SaveState(string path);
+
+    /// <summary>
+    /// Lädt einen mit <see cref="SaveState"/> geschriebenen Stand, der genau <paramref name="tokens"/> enthält.
+    /// Wie bei <see cref="Restore"/>: Die Logits sind danach nicht gültig; scheitert es, ist der Cache leer.
+    /// </summary>
+    bool LoadState(string path, IReadOnlyList<int> tokens);
 }
 
 /// <summary>Zieht das nächste Token aus den aktuellen Logits des Modells.</summary>

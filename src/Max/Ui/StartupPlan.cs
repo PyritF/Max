@@ -67,7 +67,13 @@ internal static class StartupPlan
             try
             {
                 engine = await LlmEngine.LoadAsync(paths.Model, state.ContextSize, snapshot.Hardware, paths.EngineLog, progress, ct);
-                var backend = new LlmBackend(engine, SystemPrompt.Build(snapshot, TierSelector.TryParse(state.Tier, out var tier) ? tier : null), BackendOptionsFor(state, thinking));
+                var prompt = SystemPrompt.BuildParts(snapshot, TierSelector.TryParse(state.Tier, out var tier) ? tier : null);
+                var options = BackendOptionsFor(state, thinking) with
+                {
+                    PromptCache = new PromptCache(paths.PromptCache, $"{state.Sha256}|{engine.StateIdentity}"),
+                    StablePromptLength = prompt.StableLength,
+                };
+                var backend = new LlmBackend(engine, prompt.Text, options);
                 await backend.WarmUpAsync(ct);
                 onLoaded(engine, backend);
                 return "bereit";

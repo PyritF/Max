@@ -47,7 +47,16 @@ internal static class SelfTest
     {
         var info = engine.Info;
         output.WriteLine($"Modell:  {info.Description} ({info.Architecture}), {info.Backend}, {info.GpuLayers}/{info.LayerCount} Schichten auf GPU");
-        output.WriteLine($"Kontext: {info.ContextSize}, geladen in {info.LoadTime.TotalSeconds:0.0} s, aufgewärmt in {backend.WarmUpTime?.TotalSeconds:0.0} s");
+        var firstWarmUp = backend.WarmUpTime;
+        var firstFromCache = backend.WarmUpFromCache;
+        // Zweiter Start im Kleinen: Cache leeren und noch einmal aufwärmen – jetzt sollte der gespeicherte Stand greifen.
+        engine.Reset();
+        await backend.WarmUpAsync(CancellationToken.None);
+        output.WriteLine($"Kontext: {info.ContextSize}, geladen in {info.LoadTime.TotalSeconds:0.0} s, " +
+            $"aufgewärmt in {firstWarmUp?.TotalSeconds:0.0} s{(firstFromCache ? " (Zwischenspeicher)" : "")}, " +
+            $"beim zweiten Mal in {backend.WarmUpTime?.TotalSeconds:0.0} s{(backend.WarmUpFromCache ? " (Zwischenspeicher)" : " (OHNE Zwischenspeicher)")}");
+        if (!backend.WarmUpFromCache)
+            output.WriteLine("WARNUNG: gespeicherter System-Prompt wurde nicht genutzt.");
         output.WriteLine();
 
         var conversation = new Conversation();

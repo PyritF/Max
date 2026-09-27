@@ -27,7 +27,9 @@ internal sealed record BackendOptions(
     Func<bool>? ThinkingEnabled = null,
     bool UseGrammar = true,
     SamplingSettings? Answer = null,
-    SamplingSettings? Thinking = null);
+    SamplingSettings? Thinking = null,
+    PromptCache? PromptCache = null,
+    int StablePromptLength = 0);
 
 /// <summary>
 /// Max' Antworten aus dem lokalen Sprachmodell: System-Prompt + Verlauf → Prompt → Modell → Text.
@@ -107,8 +109,40 @@ internal sealed partial class LlmBackend : IChatBackend
     {
         var clock = Stopwatch.StartNew();
         _systemTokens ??= _model.Tokenize(_template.Message(ChatRole.System, _systemPrompt));
+        WarmUpFromCache = false;
+        // Der feste Teil des System-Prompts liegt gerechnet auf der Platte – dann bleibt nur der Rest (Datum, Name …).
+        if (_options.PromptCache is { } cache && StableTokens() is { } stable)
+        {
+            WarmUpFromCache = cache.TryLoad(_model, stable);
+            if (!WarmUpFromCache)
+            {
+                await _model.PrefillAsync(stable, ct);
+                cache.Save(_model, stable);
+            }
+        }
         await _model.PrefillAsync(_systemTokens, ct);
         WarmUpTime = clock.Elapsed;
+    }
+
+    /// <summary>Ob das letzte Aufwärmen den gespeicherten Stand nutzen konnte – für /debug und den Selbsttest.</summary>
+    public bool WarmUpFromCache { get; private set; }
+
+    /// <summary>Die Tokens des festen Anfangs – nur, wenn der ganze System-Prompt genau damit beginnt.</summary>
+    private IReadOnlyList<int>? StableTokens()
+    {
+        if (_options.StablePromptLength <= 0)
+            return null;
+        var message = _template.Message(ChatRole.System, _systemPrompt);
+        var start = message.IndexOf(_systemPrompt, StringComparison.Ordinal);
+        if (start < 0)
+            return null;
+        var stable = _model.Tokenize(message[..(start + _options.StablePromptLength)]);
+        if (stable.Count >= _systemTokens!.Count || !_systemTokens.Take(stable.Count).SequenceEqual(stable))
+        {
+            LlmEngine.Log("Fester Teil des System-Prompts endet nicht an einer Token-Grenze – ohne Zwischenspeicher.");
+            return null;
+        }
+        return stable;
     }
 
     public async IAsyncEnumerable<ReplyChunk> StreamReplyAsync(Conversation conversation, [EnumeratorCancellation] CancellationToken ct)

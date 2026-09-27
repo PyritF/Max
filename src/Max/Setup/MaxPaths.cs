@@ -25,6 +25,9 @@ internal sealed class MaxPaths(string root)
     /// <summary>Frühere Eingaben für ↑/↓.</summary>
     public string History => Path.Combine(Root, "history.txt");
 
+    /// <summary>Der fertig gerechnete System-Prompt – damit der nächste Start nicht wieder alles rechnen muss.</summary>
+    public string PromptCache => Path.Combine(Root, "cache");
+
     /// <summary>Protokoll von llama.cpp – im Terminal hätte es nichts verloren.</summary>
     public string EngineLog => Path.Combine(Root, "logs", "llama.log");
 

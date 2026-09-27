@@ -151,7 +151,7 @@ public class SystemPromptTests
         Assert.DoesNotContain("\r", prompt);
     }
 
-    private static readonly SystemSnapshot Snapshot = new(new DateTime(2026, 9, 25, 21, 14, 0), UserIdentity.Create("alex", "Alex Beispiel"), "Windows 11", 16,
+    internal static readonly SystemSnapshot Snapshot = new(new DateTime(2026, 9, 25, 21, 14, 0), UserIdentity.Create("alex", "Alex Beispiel"), "Windows 11", 16,
         new HardwareInfo(32L << 30, null), @"C:\Users\alex");
 
     [Theory]
@@ -623,6 +623,7 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
             common = 0;
         }
         Cache.AddRange(prompt.Skip(common));
+        ComputedTokens += prompt.Count - common;
         return Task.FromResult(common);
     }
 
@@ -656,6 +657,25 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
         return true;
     }
 
+    /// <summary>Wie viele Tokens insgesamt gerechnet wurden – zeigt, ob der gespeicherte Stand Arbeit gespart hat.</summary>
+    public int ComputedTokens { get; private set; }
+
+    public bool SaveState(string path)
+    {
+        File.WriteAllText(path, string.Join(',', Cache));
+        return true;
+    }
+
+    public bool LoadState(string path, IReadOnlyList<int> tokens)
+    {
+        Cache.Clear();
+        var saved = File.ReadAllText(path).Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+        if (!saved.SequenceEqual(tokens))
+            return false;
+        Cache.AddRange(saved);
+        return true;
+    }
+
     private int NextToken()
     {
         if (_samples == 0)
@@ -686,6 +706,86 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
     {
         public int[] Tokens { get; } = tokens;
         public override int TokenCount => Tokens.Length;
+    }
+}
+
+public class PromptCacheTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "max-cache-" + Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+            Directory.Delete(_dir, recursive: true);
+    }
+
+    private const string Fixed = "Du bist Max.\nViele feste Regeln.\n";
+
+    private LlmBackend Backend(FakeModel model, string time, string identity = "modell-a", string? fixedPart = null)
+    {
+        var prompt = (fixedPart ?? Fixed) + $"- Es ist {time} Uhr.";
+        return new LlmBackend(model, prompt, new BackendOptions(
+            ThinkingEnabled: () => false,
+            PromptCache: new PromptCache(_dir, identity),
+            StablePromptLength: (fixedPart ?? Fixed).Length));
+    }
+
+    [Fact]
+    public async Task SecondStart_OnlyComputesTheVariableEnd()
+    {
+        var first = new FakeModel();
+        var backend = Backend(first, "09:00");
+        await backend.WarmUpAsync(CancellationToken.None);
+        Assert.False(backend.WarmUpFromCache);
+
+        var second = new FakeModel();
+        backend = Backend(second, "21:30");                   // andere Uhrzeit – der feste Teil passt trotzdem
+        await backend.WarmUpAsync(CancellationToken.None);
+        Assert.True(backend.WarmUpFromCache);
+        Assert.True(second.ComputedTokens < first.ComputedTokens / 2, $"{second.ComputedTokens} von {first.ComputedTokens}");
+        Assert.EndsWith("- Es ist 21:30 Uhr.<|im_end|>\n", second.Decode(second.Cache));
+    }
+
+    [Theory]
+    [InlineData("modell-b", null)]
+    [InlineData("modell-a", "Du bist Max.\nNeue Regeln.\n")]
+    public async Task OtherModelOrPrompt_ComputesEverythingAgain(string identity, string? fixedPart)
+    {
+        await Backend(new FakeModel(), "09:00").WarmUpAsync(CancellationToken.None);
+
+        var model = new FakeModel();
+        var backend = Backend(model, "09:00", identity, fixedPart);
+        await backend.WarmUpAsync(CancellationToken.None);
+        Assert.False(backend.WarmUpFromCache);
+
+        // … und der neue Stand ist danach gespeichert.
+        var again = Backend(new FakeModel(), "10:00", identity, fixedPart);
+        await again.WarmUpAsync(CancellationToken.None);
+        Assert.True(again.WarmUpFromCache);
+    }
+
+    [Fact]
+    public async Task BrokenFile_IsComputedAgain_WithoutCrash()
+    {
+        await Backend(new FakeModel(), "09:00").WarmUpAsync(CancellationToken.None);
+        File.WriteAllText(Path.Combine(_dir, "prompt.state"), "kaputt");
+
+        var model = new FakeModel();
+        var backend = Backend(model, "09:00");
+        await backend.WarmUpAsync(CancellationToken.None);
+        Assert.False(backend.WarmUpFromCache);
+        Assert.EndsWith("- Es ist 09:00 Uhr.<|im_end|>\n", model.Decode(model.Cache));
+    }
+
+    [Fact]
+    public void FixedPart_EndsBeforeTheFirstPlaceholderLine()
+    {
+        var prompt = SystemPrompt.BuildParts(SystemPromptTests.Snapshot, Max.Setup.Tier.M);
+        Assert.True(prompt.StableLength > prompt.Text.Length / 2);
+        var rest = prompt.Text[prompt.StableLength..];
+        Assert.StartsWith("- Heute ist", rest);
+        Assert.DoesNotContain("21:14", prompt.Text[..prompt.StableLength]);
+        Assert.DoesNotContain("Alex", prompt.Text[..prompt.StableLength]);
     }
 }
 

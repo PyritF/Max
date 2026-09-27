@@ -213,6 +213,47 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
         }
     }
 
+    public bool SaveState(string path)
+    {
+        var temp = path + ".tmp";
+        try
+        {
+            _context.SaveState(temp, Sequence);
+            File.Move(temp, path, overwrite: true);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log($"Stand konnte nicht gespeichert werden: {e.Message}");
+            try { File.Delete(temp); } catch { /* egal */ }
+            return false;
+        }
+    }
+
+    public bool LoadState(string path, IReadOnlyList<int> tokens)
+    {
+        try
+        {
+            Clear();
+            _context.LoadState(path, Sequence);
+            _cached.AddRange(tokens);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Log($"Gespeicherter Stand passt nicht, rechne neu: {e.Message}");
+            Clear();
+            return false;
+        }
+    }
+
+    /// <summary>Was einen gespeicherten Stand ungültig macht: Kontextgröße, Grafik-Aufteilung, llama.cpp-Version.</summary>
+    public string StateIdentity =>
+        $"{Info.ContextSize}|{Info.Backend}|{Info.GpuLayers}|{typeof(LLamaContext).Assembly.GetName().Version}";
+
+    /// <summary>Leert den Cache – der Selbsttest misst damit, wie schnell ein zweiter Start aufwärmt.</summary>
+    public void Reset() => Clear();
+
     private void Clear()
     {
         _context.NativeHandle.MemoryClear(true);
