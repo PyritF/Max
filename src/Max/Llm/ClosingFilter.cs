@@ -69,7 +69,7 @@ internal sealed class ClosingFilter
         {
             _line.Append(c);
             var line = _line.ToString();
-            switch (StartsWithPhrase(line, complete: c == '\n'))
+            switch (Decide(line, complete: c == '\n'))
             {
                 case true:
                     _deciding = false;
@@ -158,6 +158,44 @@ internal sealed class ClosingFilter
                 _inFence = !_inFence;
             _shownLine.Clear();
         }
+    }
+
+    /// <summary>
+    /// Entfernt eine Aufzählung ganz am Ende, wenn direkt davor eine Frage steht – die Frage bleibt.
+    /// Nur Listen aus kurzen Punkten (Antwortmöglichkeiten), keine inhaltlichen Aufzählungen.
+    /// </summary>
+    internal static string WithoutTrailingOptions(string text)
+    {
+        var lines = text.TrimEnd().Split('\n');
+        var first = lines.Length;
+        while (first > 0 && IsOption(lines[first - 1]))
+            first--;
+        if (first == lines.Length || lines.Length - first < 2 || first == 0 || !lines[first - 1].TrimEnd().EndsWith('?'))
+            return text;
+        return string.Join('\n', lines[..first]);
+    }
+
+    private static bool IsOption(string line)
+    {
+        var text = line.Trim();
+        return text.Length is > 2 and <= 60 && (text.StartsWith("- ", StringComparison.Ordinal) || text.StartsWith("* ", StringComparison.Ordinal) || text.StartsWith("• ", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Gehört die Zeile zur Floskel? Hinter einer zurückgehaltenen Floskel zählen auch Aufzählungspunkte dazu –
+    /// "Möchtest du mehr? / - Theorie / - Praxis" ist ein Angebot mit Antwortmöglichkeiten.
+    /// </summary>
+    private bool? Decide(string line, bool complete)
+    {
+        if (_holding)
+        {
+            var text = line.TrimStart();
+            if (text.Length == 1 && text[0] is '-' or '*' or '•' && !complete)
+                return null;
+            if (text.StartsWith("- ", StringComparison.Ordinal) || text.StartsWith("* ", StringComparison.Ordinal) || text.StartsWith("• ", StringComparison.Ordinal))
+                return true;
+        }
+        return StartsWithPhrase(line, complete);
     }
 
     /// <summary>true = Floskel, false = sicher keine, null = noch zu kurz, um es zu sagen.</summary>

@@ -367,7 +367,9 @@ internal sealed partial class LlmBackend : IChatBackend
 
         // Im Verlauf steht, was der Nutzer gesehen hat – ohne verworfene Elemente oder abgebrochene Blöcke.
         // Farb-Tags nur, wenn er Farben wollte: Sonst färbt eine zufällig bunte Antwort alle weiteren mit.
-        var remembered = keepColors ? shown : ColorTags.Strip(shown);
+        // Antwortmöglichkeiten nach einer Schlussfrage ("Was willst du machen? / - Plaudern / - Arbeiten") nur zeigen,
+        // nicht merken: Sonst hängt das Modell ab da an jede Antwort so ein Menü aus Text.
+        var remembered = ClosingFilter.WithoutTrailingOptions(keepColors ? shown : ColorTags.Strip(shown));
         var history = new List<int>([.. _historyStart!, .. _model.Tokenize(remembered), .. _assistantEnd!]);
         if (!_model.Restore(beforeReply))
         {

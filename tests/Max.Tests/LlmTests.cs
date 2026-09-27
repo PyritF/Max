@@ -808,6 +808,24 @@ public class ClosingFilterTests
     public void OtherEndings_Stay(string text) => Assert.Equal(text, Run(text));
 
     [Fact]
+    public void OfferWithOptions_IsDroppedCompletely() =>
+        Assert.Equal("Text.\n\n", Run("Text.\n\nMöchtest du mehr wissen?\n- Theorie\n- Praxis"));
+
+    [Fact]
+    public void ListAfterAnOffer_InTheMiddle_StaysInOrder()
+    {
+        const string text = "Text.\n\nMöchtest du mehr?\n- A\n- B\n\nWeiter geht's.";
+        Assert.Equal(text, Run(text));
+    }
+
+    [Theory]
+    [InlineData("Gut.\n\nWas willst du machen?\n- Plaudern\n- Arbeiten", "Gut.\n\nWas willst du machen?")]
+    [InlineData("Schritte:\n- Erst das\n- Dann das", "Schritte:\n- Erst das\n- Dann das")]           // keine Frage davor
+    [InlineData("Welche?\n- Nur eine", "Welche?\n- Nur eine")]                                          // eine Zeile ist kein Menü
+    public void TrailingOptions_AreLeftOutOfTheHistory(string text, string expected) =>
+        Assert.Equal(expected, ClosingFilter.WithoutTrailingOptions(text));
+
+    [Fact]
     public void OfferInsideTheParagraph_Stays() =>
         Assert.Equal("Text.\nMöchtest du", Run("Text.\nMöchtest du"));
 }
