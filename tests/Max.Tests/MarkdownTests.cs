@@ -35,6 +35,12 @@ public class InlineFormatterTests
     public void NewGradient_ClosesTheOpenOne_InsteadOfShowingTheTag() =>
         Assert.Equal("Die Bäume in Rottöne und Gold.", Plain(Run("{verlauf:orange-gold}Die Bäume in {verlauf:rot-lila}Rottöne und {verlauf:gelb-grün}Gold{/verlauf}.")));
 
+    [Theory]
+    [InlineData("{verlauf:grau-blau}Hallo{/verlauf} und {cyan}du{/cyan}.", "Hallo und du.")]
+    [InlineData("[rot]Achtung[/rot]: {name} bleibt, arr[0] auch.", "Achtung: {name} bleibt, arr[0] auch.")]
+    [InlineData("Code: `{rot}` bleibt.\n```js\nx = {rot};\n```\n{gold}Ende{/gold}", "Code: `{rot}` bleibt.\n```js\nx = {rot};\n```\nEnde")]
+    public void Strip_RemovesOnlyColorTags(string text, string expected) => Assert.Equal(expected, ColorTags.Strip(text));
+
     [Fact]
     public void SquareBracketColorTags_AreUnderstoodToo_OtherBracketsStay()
     {

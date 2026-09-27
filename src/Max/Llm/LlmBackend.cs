@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Max.Chat;
+using Max.Ui;
 using Max.Ui.Widgets;
 
 namespace Max.Llm;
@@ -40,7 +41,7 @@ internal sealed record BackendOptions(
 /// <item>Reparatur: Lässt sich ein Element trotzdem nicht zeichnen, wird es unsichtbar neu erzeugt.</item>
 /// </list>
 /// </summary>
-internal sealed class LlmBackend : IChatBackend
+internal sealed partial class LlmBackend : IChatBackend
 {
     /// <summary>So viele Tokens bleiben im Kontext mindestens für die Antwort frei (plus Denk-Budget).</summary>
     internal const int AnswerReserve = 1024;
@@ -311,7 +312,7 @@ internal sealed class LlmBackend : IChatBackend
             var seconds = genClock.Elapsed.TotalSeconds;
             LastRun = new GenerationStats(prompt.Count + head.Count, reused, generated.Count, thinkingTokens,
                 thinkingTime, firstToken, seconds > 0 ? (generated.Count - 1) / seconds : 0, repairs);
-            Finish(beforeReply, head, generated, shown.ToString());
+            Finish(beforeReply, head, generated, shown.ToString(), WantsColors(conversation.Messages));
             beforeReply?.Dispose();
         }
     }
@@ -320,7 +321,7 @@ internal sealed class LlmBackend : IChatBackend
     /// Nach der Antwort: Den Cache so hinterlassen, wie der Verlauf beim nächsten Mal aussieht.
     /// Zurück vor die Antwort und sie in Verlaufsform (ohne Denk-Block) nachrechnen – im Hintergrund.
     /// </summary>
-    private void Finish(ModelCheckpoint? beforeReply, IReadOnlyList<int> head, List<int> generated, string shown)
+    private void Finish(ModelCheckpoint? beforeReply, IReadOnlyList<int> head, List<int> generated, string shown, bool keepColors)
     {
         if (beforeReply is null)
         {
@@ -330,8 +331,10 @@ internal sealed class LlmBackend : IChatBackend
             return;
         }
 
-        // Im Verlauf steht genau, was der Nutzer gesehen hat – ohne verworfene Elemente oder abgebrochene Blöcke.
-        var history = new List<int>([.. _historyStart!, .. _model.Tokenize(shown), .. _assistantEnd!]);
+        // Im Verlauf steht, was der Nutzer gesehen hat – ohne verworfene Elemente oder abgebrochene Blöcke.
+        // Farb-Tags nur, wenn er Farben wollte: Sonst färbt eine zufällig bunte Antwort alle weiteren mit.
+        var remembered = keepColors ? shown : ColorTags.Strip(shown);
+        var history = new List<int>([.. _historyStart!, .. _model.Tokenize(remembered), .. _assistantEnd!]);
         if (!_model.Restore(beforeReply))
         {
             if (shown.Length > 0)
@@ -434,6 +437,13 @@ internal sealed class LlmBackend : IChatBackend
 
     /// <summary>Nach Zeilen- und Satzenden auf Wiederholung prüfen – auch Schleifen ohne Zeilenumbruch fallen so auf.</summary>
     private static readonly char[] LoopCheckChars = ['\n', '.', '!', '?'];
+
+    /// <summary>Hat der Nutzer im Gespräch Farben gewünscht ("schreib bunt", "mit Farbverläufen")?</summary>
+    internal static bool WantsColors(IEnumerable<ChatMessage> messages) =>
+        messages.Any(m => m.Role == ChatRole.User && ColorWishRegex().IsMatch(m.Content));
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(bunt\w*|farbig\w*|farben?|farbverl[äa]uf\w*|verl[äa]uf\w*|colou?r\w*)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex ColorWishRegex();
 
     private int[] SingleToken(string text) => _model.Tokenize(text) is [var token] ? [token] : [];
 

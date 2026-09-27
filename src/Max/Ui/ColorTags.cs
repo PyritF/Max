@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Spectre.Console;
 
 namespace Max.Ui;
@@ -7,7 +8,7 @@ namespace Max.Ui;
 /// Spectre-Markup, damit eckige Klammern in Code (<c>arr[0]</c>) nie etwas kaputt machen.
 /// Ausgewertet werden sie im <see cref="Markdown.InlineFormatter"/>.
 /// </summary>
-internal static class ColorTags
+internal static partial class ColorTags
 {
     private static readonly Dictionary<string, Color> Colors = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -35,4 +36,33 @@ internal static class ColorTags
     public static IEnumerable<string> Names => Colors.Keys;
 
     public static bool TryGet(string name, out Color color) => Colors.TryGetValue(name, out color);
+
+    /// <summary>
+    /// Entfernt Farb- und Verlaufs-Tags, der Text bleibt. Code (Blöcke und `…`) und unbekannte Klammern
+    /// wie <c>{name}</c> bleiben unverändert.
+    /// </summary>
+    public static string Strip(string text)
+    {
+        var lines = text.Split('\n');
+        var inFence = false;
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].TrimStart().StartsWith("```", StringComparison.Ordinal))
+                inFence = !inFence;
+            else if (!inFence)
+                lines[i] = TagRegex().Replace(lines[i], m => IsTag(m) ? "" : m.Value);
+        }
+        return string.Join('\n', lines);
+    }
+
+    private static bool IsTag(Match m)
+    {
+        if (!m.Groups["name"].Success)
+            return false;                               // Inline-Code
+        var name = m.Groups["name"].Value;
+        return name.StartsWith("verlauf", StringComparison.OrdinalIgnoreCase) || Colors.ContainsKey(name);
+    }
+
+    [GeneratedRegex(@"`[^`\n]*`|[{\[]/?(?<name>verlauf[^}\]\n]*|[\p{L}]+)[}\]]", RegexOptions.IgnoreCase)]
+    private static partial Regex TagRegex();
 }

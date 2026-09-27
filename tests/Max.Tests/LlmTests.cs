@@ -483,8 +483,32 @@ public class LlmBackendTests
         conversation.AddAssistant(reply);
         conversation.AddUser("Danke");
         await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
-        Assert.DoesNotContain("Möchtest", model.Decode(model.PromptBeforeFirstSample));
+        var prompt = model.Decode(model.LastPromptBeforeSampler);
+        Assert.Contains("Danke", prompt);
+        Assert.DoesNotContain("Möchtest", prompt);
     }
+
+    [Theory]
+    [InlineData("Wie geht's?", false)]
+    [InlineData("Schreib ab jetzt alles schön bunt.", true)]
+    public async Task ColorTags_StayInTheHistory_OnlyWhenColorsWereWanted(string question, bool keep)
+    {
+        var model = new FakeModel("{verlauf:grau-blau}Hallo{/verlauf} du.", null, "Gut.");
+        var backend = Backend(model);
+        var conversation = Single(question);
+
+        var (_, reply) = await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
+        Assert.Equal("{verlauf:grau-blau}Hallo{/verlauf} du.", reply);   // angezeigt wird, was das Modell schrieb
+
+        conversation.AddAssistant(reply);
+        conversation.AddUser("Und?");
+        await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
+        var prompt = model.Decode(model.LastPromptBeforeSampler);
+        Assert.Contains(keep ? "{verlauf:grau-blau}Hallo{/verlauf} du." : Template.HistoryStart + "Hallo du.", prompt);
+        Assert.Equal(backend.LastRun!.PromptTokens - Tokens(model, "<|im_start|>user\nUnd?<|im_end|>\n") - Tokens(model, Template.AssistantStart), backend.LastRun.ReusedTokens);
+    }
+
+    private static int Tokens(FakeModel model, string text) => model.Tokenize(text).Count;
 
     [Fact]
     public async Task RepeatingAnswer_IsStopped()
@@ -568,6 +592,9 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
 
     public List<int> Cache { get; } = [];
     public IReadOnlyList<int> PromptBeforeFirstSample { get; private set; } = [];
+
+    /// <summary>Der Cache, als zuletzt ein Sampler erzeugt wurde – bei der zweiten Antwort also deren Prompt.</summary>
+    public IReadOnlyList<int> LastPromptBeforeSampler { get; private set; } = [];
     public List<bool> SamplerGrammars { get; } = [];
     public Action<int>? OnSample { get; init; }
     public bool FailRestore { get; set; }
@@ -610,6 +637,7 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
     {
         SamplerGrammars.Add(grammar is not null);
         SamplerBans.Add(banned ?? []);
+        LastPromptBeforeSampler = Cache.ToArray();
         return new Sampler(this, grammar is not null);
     }
 
