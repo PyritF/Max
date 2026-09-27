@@ -4,7 +4,8 @@ namespace Max.Setup;
 
 /// <summary>Einstellungen, die man in Max selbst ändert – stehen in <c>settings.json</c> im Datenordner.</summary>
 /// <param name="Thinking">Denkt Max vor jeder Antwort nach? (/denken)</param>
-internal sealed record Settings(bool Thinking = true)
+/// <param name="SeenMessage">Die zuletzt gezeigte Nachricht aus dem Manifest – jede erscheint nur einmal.</param>
+internal sealed record Settings(bool Thinking = true, string? SeenMessage = null)
 {
     /// <summary>Liest die Einstellungen; fehlt die Datei oder ist sie kaputt, gelten die Standardwerte.</summary>
     public static Settings Load(MaxPaths paths)

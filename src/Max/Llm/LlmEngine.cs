@@ -328,6 +328,12 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
                 _log = new StreamWriter(new FileStream(logFile, FileMode.Create, FileAccess.Write, FileShare.Read)) { AutoFlush = true };
             }
 
+            // Als einzelne Datei entpackt .NET die llama.cpp-Bibliotheken in einen eigenen Ordner –
+            // LLamaSharp sucht sonst nur neben der Exe und fände sie nicht.
+            var extracted = (AppContext.GetData("NATIVE_DLL_SEARCH_DIRECTORIES") as string ?? "")
+                .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+            NativeLibraryConfig.All.WithSearchDirectories(extracted);
+
             // Ohne das schreibt llama.cpp munter ins Terminal und zerschießt die Oberfläche.
             NativeLibraryConfig.All
                 .WithCuda(false)

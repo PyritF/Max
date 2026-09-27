@@ -50,13 +50,21 @@ internal sealed partial class SetupJson : JsonSerializerContext;
 internal static class ManifestSource
 {
     public const string RemoteUrl = "https://raw.githubusercontent.com/PyritF/Max/main/manifest.json";
+
+    /// <summary>Hier liegen die Exe-Dateien jeder Version: <c>…/v0.2.0/max.exe</c>. <c>MAX_RELEASE_URL</c> verlegt die Adresse (Tests).</summary>
+    public static string ReleaseBaseUrl =>
+        Environment.GetEnvironmentVariable("MAX_RELEASE_URL") ?? "https://github.com/PyritF/Max/releases/download";
     private static readonly TimeSpan RemoteTimeout = TimeSpan.FromSeconds(3);
 
     /// <summary>
     /// Versucht kurz die aktuelle Fassung von GitHub zu laden. Klappt das nicht (offline, Timeout,
     /// kaputte Datei), gilt die eingebaute Kopie. <c>MAX_MANIFEST_URL</c> verlegt die Adresse (Tests).
     /// </summary>
-    public static async Task<Manifest> LoadAsync(HttpClient http, CancellationToken ct, string? url = null)
+    public static async Task<Manifest> LoadAsync(HttpClient http, CancellationToken ct, string? url = null) =>
+        await TryLoadRemoteAsync(http, ct, url) ?? Embedded();
+
+    /// <summary>Die aktuelle Fassung von GitHub – oder null (offline, Timeout, kaputte Datei).</summary>
+    public static async Task<Manifest?> TryLoadRemoteAsync(HttpClient http, CancellationToken ct, string? url = null)
     {
         url ??= Environment.GetEnvironmentVariable("MAX_MANIFEST_URL") ?? RemoteUrl;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -78,7 +86,7 @@ internal static class ManifestSource
             // Netzfehler, Timeout oder ungültiges JSON: kein Drama, es gibt ja die eingebaute Kopie.
         }
 
-        return Embedded();
+        return null;
     }
 
     public static Manifest Embedded()

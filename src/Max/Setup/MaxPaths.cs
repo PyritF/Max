@@ -20,7 +20,14 @@ internal sealed class MaxPaths(string root)
     /// <summary>Einstellungen, die man in Max selbst ändert (z. B. /denken).</summary>
     public string Settings => Path.Combine(Root, "settings.json");
 
+    /// <summary>Hierhin lädt Max neue Versionen im Hintergrund.</summary>
     public string UpdateDir => Path.Combine(Root, "update");
+
+    /// <summary>Ein neues Modell, fertig geladen und geprüft – wird beim nächsten Start zu <see cref="Model"/>.</summary>
+    public string ModelNext => Path.Combine(Root, "core.next.bin");
+
+    /// <summary>Der Zustand zu <see cref="ModelNext"/>.</summary>
+    public string StateNext => Path.Combine(Root, "state.next.json");
 
     /// <summary>Frühere Eingaben für ↑/↓.</summary>
     public string History => Path.Combine(Root, "history.txt");

@@ -9,6 +9,19 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <!--
+    Veröffentlichen als eine einzige Datei (dotnet publish -r win-x64 bzw. linux-x64): ohne installiertes .NET,
+    die llama.cpp-Bibliotheken stecken mit drin und werden beim Start entpackt (siehe LlmEngine.NativeSetup).
+    Kein Trimming – Spectre.Console und TextMate nutzen Reflection.
+  -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="LLamaSharp" Version="0.27.0" />
     <PackageReference Include="LLamaSharp.Backend.Cpu" Version="0.27.0" />

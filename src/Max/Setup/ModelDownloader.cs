@@ -10,6 +10,13 @@ namespace Max.Setup;
 /// <param name="SizeBytes">Tatsächliche Größe der Datei.</param>
 internal sealed record DownloadResult(string Sha256, long SizeBytes);
 
+/// <param name="Url">Adresse; Weiterleitungen folgt der Downloader selbst.</param>
+/// <param name="Sha256">Erwartete Prüfsumme; fehlt sie, zählt die von Hugging Face (<c>X-Linked-ETag</c>).</param>
+/// <param name="SizeBytes">Ungefähre Größe, falls der Server keine nennt.</param>
+/// <param name="PartFile">Hierhin wird geladen; liegt die Datei schon teilweise da, geht es dort weiter.</param>
+/// <param name="Folder">Für die Speicherplatz-Prüfung.</param>
+internal sealed record DownloadTarget(string Url, string? Sha256, long SizeBytes, string PartFile, string Folder);
+
 /// <summary>
 /// Lädt das Modell nach <see cref="MaxPaths.ModelPart"/> – fortsetzbar und mit SHA-256-Prüfung.
 /// Umbenannt wird erst danach (<see cref="InstallState.Commit"/>).
@@ -29,37 +36,42 @@ internal sealed class ModelDownloader(HttpClient http, Func<string, long>? freeS
 
     private readonly Func<string, long> _freeSpace = freeSpace ?? DefaultFreeSpace;
 
-    public async Task<DownloadResult> DownloadAsync(ModelEntry entry, MaxPaths paths, StepProgress progress, CancellationToken ct)
+    public Task<DownloadResult> DownloadAsync(ModelEntry entry, MaxPaths paths, StepProgress progress, CancellationToken ct) =>
+        DownloadAsync(new DownloadTarget(entry.Url, entry.Sha256, entry.SizeBytes, paths.ModelPart, paths.Root), progress, ct);
+
+    /// <summary>Lädt eine beliebige Datei nach <see cref="DownloadTarget.PartFile"/> – fortsetzbar, mit Prüfsumme.</summary>
+    public async Task<DownloadResult> DownloadAsync(DownloadTarget target, StepProgress progress, CancellationToken ct)
     {
-        paths.EnsureExists();
+        Directory.CreateDirectory(target.Folder);
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(target.PartFile))!);
 
         // Zwei Anläufe: Passt die Teil-Datei nicht zum Server (416), einmal von vorn.
         for (var attempt = 0; ; attempt++)
         {
             try
             {
-                return await DownloadOnceAsync(entry, paths, progress, ct);
+                return await DownloadOnceAsync(target, progress, ct);
             }
             catch (RangeNotSatisfiableException) when (attempt == 0)
             {
-                File.Delete(paths.ModelPart);
+                File.Delete(target.PartFile);
             }
         }
     }
 
-    private async Task<DownloadResult> DownloadOnceAsync(ModelEntry entry, MaxPaths paths, StepProgress progress, CancellationToken ct)
+    private async Task<DownloadResult> DownloadOnceAsync(DownloadTarget target, StepProgress progress, CancellationToken ct)
     {
-        var existing = File.Exists(paths.ModelPart) ? new FileInfo(paths.ModelPart).Length : 0;
+        var existing = File.Exists(target.PartFile) ? new FileInfo(target.PartFile).Length : 0;
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 
         // Beim Fortsetzen muss die Prüfsumme den schon vorhandenen Teil mit abdecken.
         if (existing > 0)
-            await HashExistingAsync(paths.ModelPart, hash, existing, Math.Max(entry.SizeBytes, existing), progress, ct);
+            await HashExistingAsync(target.PartFile, hash, existing, Math.Max(target.SizeBytes, existing), progress, ct);
 
         using var stall = CancellationTokenSource.CreateLinkedTokenSource(ct);
         stall.CancelAfter(StallTimeout);
 
-        var (response, linked) = await SendAsync(entry.Url, existing, stall.Token, ct);
+        var (response, linked) = await SendAsync(target.Url, existing, stall.Token, ct);
         using (response)
         {
             if (response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
@@ -78,20 +90,20 @@ internal sealed class ModelDownloader(HttpClient http, Func<string, long>? freeS
             var total = response.Content.Headers.ContentRange?.Length
                         ?? (response.Content.Headers.ContentLength is { } length ? existing + length : (long?)null)
                         ?? linked.Size
-                        ?? entry.SizeBytes;
-            var expected = NormalizeSha(entry.Sha256) ?? linked.Sha256
+                        ?? target.SizeBytes;
+            var expected = NormalizeSha(target.Sha256) ?? linked.Sha256
                 ?? throw new SetupException("Der Download lässt sich nicht prüfen. Versuch es später noch einmal.");
 
-            EnsureSpace(paths.Root, total - existing);
+            EnsureSpace(target.Folder, total - existing);
 
-            var written = await CopyAsync(response, paths.ModelPart, resume, hash, existing, total, progress, stall, ct);
+            var written = await CopyAsync(response, target.PartFile, resume, hash, existing, total, progress, stall, ct);
             if (total > 0 && written != total)
                 throw Interrupted();
 
             var actual = Convert.ToHexStringLower(hash.GetHashAndReset());
             if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
             {
-                File.Delete(paths.ModelPart);
+                File.Delete(target.PartFile);
                 throw new SetupException("Der Download ist beschädigt. Starte Max einfach neu.");
             }
 

@@ -10,6 +10,10 @@ on:
         type: choice
         options: [ubuntu-latest, windows-latest]
         default: ubuntu-latest
+      exe:
+        description: Als einzelne Datei bauen und die testen (wie beim Release)
+        type: boolean
+        default: false
 
 jobs:
   selftest:
@@ -33,14 +37,27 @@ jobs:
       - name: Tests
         run: dotnet test
 
-      # Das Modell nicht bei jedem Lauf neu laden – der Schlüssel ändert sich mit dem Manifest.
+      # Das Modell nicht bei jedem Lauf neu laden – der Schlüssel ändert sich nur mit dem Modell-Eintrag
+      # im Manifest (nicht mit der App-Version, die der Release-Workflow einträgt).
+      - name: Modell-Schlüssel
+        id: model
+        run: echo "key=$(jq -c .model manifest.json | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/cache@v4
         with:
           path: .maxhome
-          key: model-${{ runner.os }}-${{ hashFiles('manifest.json') }}
+          key: model-${{ runner.os }}-${{ steps.model.outputs.key }}
 
       - name: Selbsttest
-        run: dotnet run --project src/Max -c Release -- --selftest < /dev/null
+        run: |
+          if [ "${{ inputs.exe }}" = "true" ]; then
+            rid=$([ "$RUNNER_OS" = "Windows" ] && echo win-x64 || echo linux-x64)
+            dotnet publish src/Max -c Release -r $rid -o out
+            ls -la out
+            ./out/max --selftest < /dev/null
+          else
+            dotnet run --project src/Max -c Release -- --selftest < /dev/null
+          fi
 
       - name: Protokoll von llama.cpp
         if: always()

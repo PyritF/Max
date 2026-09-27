@@ -1,20 +1,30 @@
 using Max.Llm;
 using Max.Persona;
 using Max.Setup;
+using Max.Update;
 
 namespace Max.Ui;
 
 /// <summary>Welche Schritte beim Start laufen.</summary>
 internal static class StartupPlan
 {
-    public static IReadOnlyList<StartupStep> Normal(MaxPaths paths, Func<bool> thinking, Action<SystemSnapshot> onHardware, Action<LlmEngine, LlmBackend> onLoaded)
+    /// <param name="onManifest">Bekommt das Manifest von GitHub (null = offline) – der Updater arbeitet damit weiter.</param>
+    public static IReadOnlyList<StartupStep> Normal(
+        MaxPaths paths, HttpClient http, Updater updater, Func<bool> thinking,
+        Action<SystemSnapshot> onHardware, Action<Manifest?> onManifest, Action<LlmEngine, LlmBackend> onLoaded)
     {
         SystemSnapshot? system = null;
         return
         [
             Hardware(s => { system = s; onHardware(s); }, checkRequirements: true),
-            // TODO (Schritt 19/20): echter Update-Check über das Manifest.
-            new("Suche nach Updates", async (_, ct) => { await Task.Delay(700, ct); return "aktuell"; }),
+            new("Suche nach Updates", async (progress, ct) =>
+            {
+                var manifest = await ManifestSource.TryLoadRemoteAsync(http, ct);
+                onManifest(manifest);
+                return manifest is null
+                    ? "offline"
+                    : await StartupUpdate.CheckAsync(manifest, updater, AppVersion.Current, AppVersion.ExecutablePath, progress, ct);
+            }),
             Load(paths, () => system, thinking, onLoaded),
         ];
     }

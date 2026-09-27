@@ -1,0 +1,81 @@
+# Neue Version veröffentlichen: git tag v0.2.0 && git push origin v0.2.0
+# Baut max.exe (Windows) und max (Linux) als je eine Datei, legt ein Release an und trägt Version und
+# Prüfsummen ins Manifest ein – danach laden alle installierten Max die neue Version still herunter.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            file: max.exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            file: max
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Tests
+        run: dotnet test
+
+      - name: Veröffentlichen
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          dotnet publish src/Max -c Release -r ${{ matrix.rid }} -p:Version="$version" -o out
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.rid }}
+          path: out/${{ matrix.file }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x dist/linux-x64/max
+          gh release create "$GITHUB_REF_NAME" dist/win-x64/max.exe dist/linux-x64/max \
+            --title "Max ${GITHUB_REF_NAME#v}" --notes "Max ${GITHUB_REF_NAME#v}"
+
+      - name: Manifest aktualisieren
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          win=$(sha256sum dist/win-x64/max.exe | cut -d' ' -f1)
+          linux=$(sha256sum dist/linux-x64/max | cut -d' ' -f1)
+          jq --arg v "$version" --arg win "$win" --arg linux "$linux" \
+            '.app.version = $v | .app.assets["win-x64"].sha256 = $win | .app.assets["linux-x64"].sha256 = $linux' \
+            manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Manifest: Version $version"
+          git push origin main

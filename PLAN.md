@@ -51,9 +51,10 @@ Max/
 │       │   ├── Manifest.cs           (manifest.json laden, eingebauter Fallback)
 │       │   └── ModelDownloader.cs    (Download mit Fortschritt, Fortsetzen, Prüfsumme)
 │       ├── Update/
-│       │   ├── GitHubClient.cs       (Manifest und Release-Dateien laden)
-│       │   ├── Updater.cs            (Hintergrund-Download von App und Modell)
-│       │   └── UpdateApplier.cs      (bereitgelegtes Update beim Start aktivieren)
+│       │   ├── AppVersion.cs         (laufende Version, Vergleich, Pfad der Exe)
+│       │   ├── StartupUpdate.cs      (Schritt „Suche nach Updates“: Not-Aus, Pflicht-Update)
+│       │   ├── Updater.cs            (Hintergrund-Download von App und Modell, Exe-Tausch)
+│       │   └── UpdateApplier.cs      (bereitgelegtes Modell beim Start aktivieren, .old aufräumen)
 │       ├── Llm/
 │       │   ├── LlmEngine.cs          (Modell laden, Backend wählen, Tokens streamen, Cache wiederverwenden)
 │       │   ├── LlmBackend.cs         (System-Prompt + Verlauf → Prompt → Antwort)
@@ -213,7 +214,7 @@ Max nutzt feste Adressen, **nicht** die GitHub-API. Die API erlaubt ohne Anmeldu
 | Was | Adresse |
 |---|---|
 | Manifest | `https://raw.githubusercontent.com/PyritF/Max/main/manifest.json` |
-| Neueste Exe | `https://github.com/PyritF/Max/releases/latest/download/max.exe` (bzw. `max` für Linux) |
+| Exe einer Version | `https://github.com/PyritF/Max/releases/download/v0.2.0/max.exe` (bzw. `max` für Linux) – passend zur Prüfsumme im Manifest |
 
 - Die Adressen stehen fest in Max. Das Manifest liefert Version, Prüfsumme und Modell-Links.
 - **Wer das Repo kontrolliert, kann allen eine neue Exe schicken.** Deshalb: Zwei-Faktor-Anmeldung auf GitHub. Optional später: das Manifest mit einem eigenen Schlüssel **signieren**; Max prüft die Signatur mit einem eingebauten öffentlichen Schlüssel.
@@ -224,7 +225,7 @@ Max nutzt feste Adressen, **nicht** die GitHub-API. Die API erlaubt ohne Anmeldu
 Der Nutzer wird **nie gefragt** und sieht nichts davon; Details gibt es nur unter `/debug`.
 
 1. **Start:** Max startet sofort und prüft im Hintergrund das Manifest (höchstens einmal pro Start, kurzer Timeout).
-2. **Neue Version gefunden:** Die Exe wird aus dem neuesten GitHub-Release in einen Ordner `update/` heruntergeladen, niedrig priorisiert und fortsetzbar.
+2. **Neue Version gefunden:** Die Exe wird aus dem GitHub-Release dieser Version in den Ordner `update/` heruntergeladen, fortsetzbar. Beim Schließen pausiert der Download und geht beim nächsten Start weiter.
 3. **SHA-256 prüfen.** Bei einem Fehler wird die Datei gelöscht, und Max versucht es beim nächsten Start erneut.
 4. **Austauschen, solange Max noch läuft:**
    - Windows: Eine laufende Exe kann man nicht überschreiben, aber **umbenennen**: `max.exe` → `max.exe.old`, dann `update/max.exe` → `max.exe`.
@@ -399,11 +400,11 @@ Du bist keine Cloud-KI und kein Produkt irgendeiner Firma – du bist einfach Ma
 | 14c | Sichtbares Nachdenken (grau, live, Denk-Budget, `/denken`), feste Schreibweise per Grammatik, unsichtbare Reparatur kaputter Elemente ✅ |
 | 15 | `/debug`, `/clear`, Tokens pro Sekunde messen ✅ (Denk-Text-Schalter für `/debug` fehlt noch) |
 | 16 | Eigene Eingabezeile: Einfügen ohne Abschicken, Shift/Alt+Enter und `\`+Enter für neue Zeilen, ↑/↓-Verlauf (gespeichert), Tab für Befehle ✅ |
-| 17 | Publish: Single-File-Exe für `win-x64`, danach `linux-x64` |
-| 18 | GitHub Action: Build bei Tag, Release + Manifest |
-| 19 | `GitHubClient` – Manifest und Release-Dateien laden |
-| 20 | `Updater` – stiller Hintergrund-Download von App und Modell |
-| 21 | `UpdateApplier` – Exe-Tausch per Umbenennen, Modell-Tausch beim Start, Pflicht-Update |
+| 17 | Publish: eine einzige Datei für `win-x64` und `linux-x64` (self-contained, llama.cpp-Bibliotheken eingebettet) ✅ |
+| 18 | GitHub Action `release.yml`: Build bei Tag `v*`, Release + Manifest ✅ |
+| 19 | Manifest und Release-Dateien laden (`ManifestSource`, `ModelDownloader` für beliebige Dateien) ✅ |
+| 20 | `Updater` – stiller Hintergrund-Download von App und Modell, pausiert beim Schließen ✅ |
+| 21 | `UpdateApplier` + `StartupUpdate` – Exe-Tausch per Umbenennen, Modell-Tausch beim Start, Pflicht-Update, Not-Aus, einmalige Nachricht ✅ |
 
 **Meilenstein Phase 1:** `max.exe` weitergeben → beim ersten Start Einrichtung → danach sofort mit Max chatten, lokal und offline → neue Versionen kommen still von selbst.
 

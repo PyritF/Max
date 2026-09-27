@@ -9,13 +9,13 @@ internal sealed record InstallState(string? Model, int Revision, string Sha256, 
 {
     public const int DefaultContextSize = 8192;
 
-    public static InstallState? Load(MaxPaths paths)
+    private static InstallState? Load(string file)
     {
         try
         {
-            if (!File.Exists(paths.State))
+            if (!File.Exists(file))
                 return null;
-            var json = File.ReadAllText(paths.State);
+            var json = File.ReadAllText(file);
             return JsonSerializer.Deserialize(json, SetupJson.Default.InstallState);
         }
         catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException)
@@ -37,15 +37,27 @@ internal sealed record InstallState(string? Model, int Revision, string Sha256, 
     }
 
     /// <summary>Macht aus dem fertig geprüften Download das Modell und merkt sich, was installiert ist.</summary>
-    public static InstallState Commit(MaxPaths paths, ModelEntry entry, DownloadResult download, DateTime now)
+    public static InstallState Commit(MaxPaths paths, ModelEntry entry, DownloadResult download, DateTime now) =>
+        Commit(paths.ModelPart, paths.Model, paths.State, entry, download, now);
+
+    /// <summary>Wie <see cref="Commit(MaxPaths, ModelEntry, DownloadResult, DateTime)"/>, aber für ein Modell-Update: beim nächsten Start aktiv.</summary>
+    public static InstallState CommitNext(MaxPaths paths, string part, ModelEntry entry, DownloadResult download, DateTime now) =>
+        Commit(part, paths.ModelNext, paths.StateNext, entry, download, now);
+
+    private static InstallState Commit(string part, string model, string stateFile, ModelEntry entry, DownloadResult download, DateTime now)
     {
-        File.Move(paths.ModelPart, paths.Model, overwrite: true);
+        File.Move(part, model, overwrite: true);
 
         var state = new InstallState(entry.FileName, entry.Revision, download.Sha256, download.SizeBytes, now, entry.ContextSize);
         // Erst in eine Hilfsdatei schreiben, dann umbenennen: So ist state.json nie halb geschrieben.
-        var temp = paths.State + ".tmp";
+        var temp = stateFile + ".tmp";
         File.WriteAllText(temp, JsonSerializer.Serialize(state, SetupJson.Default.InstallState));
-        File.Move(temp, paths.State, overwrite: true);
+        File.Move(temp, stateFile, overwrite: true);
         return state;
     }
+
+    /// <summary>Liest den Zustand eines bereitliegenden Modell-Updates.</summary>
+    public static InstallState? LoadNext(MaxPaths paths) => Load(paths.StateNext);
+
+    public static InstallState? Load(MaxPaths paths) => Load(paths.State);
 }

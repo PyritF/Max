@@ -9,7 +9,7 @@ internal static class DebugReport
 {
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
 
-    public static IReadOnlyList<(string Label, string Value)> Build(LlmEngine? engine, LlmBackend? backend, MaxPaths paths, SystemSnapshot system)
+    public static IReadOnlyList<(string Label, string Value)> Build(LlmEngine? engine, LlmBackend? backend, MaxPaths paths, SystemSnapshot system, Update.Updater? updater = null)
     {
         var state = InstallState.Load(paths);
         var rows = new List<(string, string)>
@@ -49,8 +49,18 @@ internal static class DebugReport
         var gpu = system.Hardware.Gpu;
         rows.Add(("GPU", gpu is null ? "keine erkannt" : $"{gpu.Name} · {Format.Memory(gpu.VramBytes)}"));
         rows.Add(("RAM", Format.Memory(system.Hardware.RamBytes)));
+        if (updater is not null)
+            rows.Add(("Update", UpdateText(updater)));
         rows.Add(("Datenordner", paths.Root));
         return rows;
+    }
+
+    private static string UpdateText(Update.Updater updater)
+    {
+        var (hasProgress, done, total, _) = updater.Progress.Read();
+        return hasProgress && total > 0 && done < total
+            ? $"{updater.Status} ({done * 100 / total} %)"
+            : updater.Status;
     }
 
     private static string Seconds(TimeSpan t) => t.TotalSeconds.ToString("0.0", German) + " s";

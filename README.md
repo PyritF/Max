@@ -25,15 +25,28 @@ und mindestens 8 GB Arbeitsspeicher. Fehlt etwas, sagt Max das beim Start und l�
 | `MAX_HOME` | anderer Datenordner, z. B. zum Testen der Einrichtung |
 | `MAX_CPU` | `1` erlaubt den Start ohne Grafikkarte (langsam) – für Tests, oder falls die Karte nicht erkannt wird |
 | `MAX_MANIFEST_URL` | Manifest von einer anderen Adresse laden |
+| `MAX_RELEASE_URL` | Updates von einer anderen Adresse laden (statt `github.com/PyritF/Max/releases/download`) |
+| `MAX_NO_UPDATE` | `1` schaltet die stillen Updates ab |
 | `MAX_GRAMMAR` | `0` schaltet die feste Schreibweise (Grammatik) ab – zur Fehlersuche |
 
 ```powershell
 $env:MAX_HOME = "$env:TEMP\max-test"; dotnet run --project src/Max
 ```
 
+### Neue Version veröffentlichen
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+Der Workflow **Release** baut `max.exe` (Windows) und `max` (Linux) als je eine einzige Datei – ohne dass
+.NET installiert sein muss –, legt ein GitHub-Release an und trägt Version und Prüfsummen in `manifest.json` ein.
+Jedes installierte Max merkt das beim nächsten Start, lädt die neue Version still im Hintergrund und nutzt sie
+ab dem Start danach. Einzelne Datei lokal bauen: `dotnet publish src/Max -c Release -r win-x64` (bzw. `linux-x64`).
+
 ### Selbsttest
 
 `max --selftest` stellt nach dem Start ein paar feste Fragen und gibt Antworten und Tokens pro Sekunde aus.
-Auf GitHub läuft das als Workflow **Selbsttest** (Actions → Selbsttest → Run workflow) – mit echtem Download von Hugging Face, auf der CPU (die Test-Rechner haben keine Grafikkarte).
+Auf GitHub läuft das als Workflow **Selbsttest** (Actions → Selbsttest → Run workflow) – mit echtem Download von Hugging Face, auf der CPU (die Test-Rechner haben keine Grafikkarte). Mit dem Häkchen „exe“ wird dabei die fertige einzelne Datei getestet.
 
 In Visual Studio: `Max.slnx` öffnen, `Max` als Startprojekt, F5.
