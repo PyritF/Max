@@ -169,6 +169,9 @@ internal static class SelfTest
             output.WriteLine($"FEHLER: \"{ExpectedFact}\" nicht gemerkt.");
             result = 3;
         }
+        // Gefragt, aber nicht über sich erzählt – das darf kein Fakt werden.
+        if (reflection.Facts.FirstOrDefault(f => f.Contains("Wien", StringComparison.OrdinalIgnoreCase) || f.Contains("Linux", StringComparison.OrdinalIgnoreCase)) is { } guessed)
+            output.WriteLine($"WARNUNG: Vermutung als Fakt notiert (\"{guessed}\").");
         if (Forbidden.FirstOrDefault(name => reflection.Facts.Append(reflection.Summary ?? "").Any(f => f.Contains(name, StringComparison.OrdinalIgnoreCase))) is { } leaked)
             output.WriteLine($"WARNUNG: \"{leaked}\" in den Notizen.");
         output.WriteLine();

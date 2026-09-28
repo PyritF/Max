@@ -428,16 +428,17 @@ Max soll sich merken, mit wem er spricht, und das nutzen, zum Beispiel für eine
 }
 ```
 
+- **Nur Belegtes:** Hinter jedem Fakt steht ein wörtliches Zitat des Nutzers; Max prüft, dass es wirklich so in seinen Nachrichten steht, von ihm selbst handelt (ich/mein/mir/mich) und nicht nur für heute gilt. Der erste Selbsttest ohne diese Prüfung notierte Vermutungen wie „Wohnort ist Wien“ (nur weil nach Wien gefragt wurde).
 - **Merken:** Beim Beenden (`/exit`, Strg+C, Eingabe-Ende) bekommt das Modell einen Extra-Auftrag hinter dem Gespräch (`Memory/Reflection.cs`): neue, dauerhafte Fakten über den Nutzer, eine kurze Zusammenfassung und vier Begrüßungen – ohne Nachdenken, in fester Form per Grammatik:
   ```
   FAKTEN:
-  - Programmiert in C#.
+  - Programmiert in C#. | "Ich programmiere in C#"
   ZUSAMMENFASSUNG: Tabellen im Renderer repariert
   MORGEN: …   TAG: …   ABEND: …   NACHT: …
   ```
   Max zeigt dabei „Ich notiere mir noch kurz das Wichtigste …“; Strg+C überspringt es. Gab es kein Gespräch, passiert nichts.
 - **Nutzen:** Die Fakten und das letzte Gespräch stehen als eigener Abschnitt ganz am Ende des System-Prompts (`## Was du über den Nutzer weißt`). Der feste Anfang bleibt dadurch gleich, und der gespeicherte Stand beim Start (Prompt-Cache) passt weiter.
-- **Begrenzen:** Doppelte (gleich bis auf Groß-/Kleinschreibung und Satzzeichen) fallen weg, höchstens 8 neue Fakten pro Gespräch und 50 insgesamt – darüber fallen die ältesten weg. (Zusammenfassen durch das Modell erst, falls das in der Praxis nötig wird.)
+- **Begrenzen:** Doppelte (gleich bis auf Groß-/Kleinschreibung und Satzzeichen) fallen weg, höchstens 5 neue Fakten pro Gespräch und 50 insgesamt – darüber fallen die ältesten weg. (Zusammenfassen durch das Modell erst, falls das in der Praxis nötig wird.)
 - **Kontrolle:** `/gedächtnis` zeigt, was Max weiß; `/vergiss 3` löscht einen Eintrag, `/vergiss alles` alles – sofort, auch für das laufende Gespräch (neuer System-Prompt). Alles bleibt lokal auf dem Rechner.
 
 ### KI-Begrüßung
@@ -560,3 +561,4 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
 - [ ] Repo auf öffentlich stellen und Zwei-Faktor-Anmeldung auf GitHub prüfen.
 - [x] Soll ein Pflicht-Update auch einen „Wartungsmodus“ bekommen (Max per Manifest komplett sperren)? Ja: `disabled` + `message` im Manifest.
 - [ ] Akzentfarbe und Banner-Design festlegen.
+- [ ] Wird ein Element (z. B. eine lange Übersicht) über 3000 Zeichen lang, bricht Max die ganze restliche Antwort ab – im Selbsttest blieb von der Wien-Übersicht nur der erste Satz. Besser: nur das Element weglassen und weiterschreiben lassen.

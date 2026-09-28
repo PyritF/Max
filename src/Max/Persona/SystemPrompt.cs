@@ -55,8 +55,8 @@ internal static class SystemPrompt
             return "";
         var text = new StringBuilder("\n## Was du über den Nutzer weißt\n");
         text.Append("Aus früheren Gesprächen, von dir selbst notiert. Nutze es, wo es natürlich passt – zähl es nicht auf ");
-        text.Append("und sag nicht, woher du es weißt. Fragt er, was du über ihn weißt, antworte ehrlich daraus; ");
-        text.Append("mit /gedächtnis sieht er die Liste, mit /vergiss löscht er etwas.\n");
+        text.Append("und sag nicht, woher du es weißt. Fragt er, was du über ihn weißt, antworte ehrlich und nur daraus – ");
+        text.Append("erfinde nichts dazu. Nur wenn er fragt, wie er etwas löscht: mit /vergiss.\n");
         foreach (var fact in memory.Facts)
             text.Append("- ").Append(fact.Text).Append('\n');
         if (memory.LastSession is { } last)

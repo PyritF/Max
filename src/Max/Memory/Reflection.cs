@@ -7,11 +7,13 @@ namespace Max.Memory;
 /// Am Ende eines Gesprächs: Max notiert sich neue Fakten über den Nutzer, worum es ging, und schon die
 /// Begrüßungen für den nächsten Start. Ein einziger Auftrag an das Modell, ohne Nachdenken, in einer festen
 /// Form (per Grammatik erzwungen) – das ist schnell und lässt sich sicher auslesen.
+/// Jeder Fakt braucht als Beleg ein wörtliches Zitat, in dem der Nutzer von sich selbst spricht – das prüft Max
+/// selbst nach. So bleiben Vermutungen draußen ("fragt nach Wien" ist nicht "wohnt in Wien").
 /// </summary>
 internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, Greetings Greetings)
 {
     /// <summary>Mehr neue Fakten pro Gespräch sind fast immer Nacherzählung.</summary>
-    internal const int MaxNewFacts = 8;
+    internal const int MaxNewFacts = 5;
 
     /// <summary>Längere Begrüßungen passen nicht zu "ein kurzer Satz" – dann lieber die feste.</summary>
     internal const int MaxGreetingLength = 100;
@@ -24,20 +26,24 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
         (Interne Aufgabe, nicht Teil des Gesprächs – der Nutzer sieht das nicht.)
         Das Gespräch ist zu Ende. Halte für dich fest:
 
-        FAKTEN: neue, dauerhafte Fakten über den Nutzer aus diesem Gespräch – zum Beispiel Beruf, Projekte,
-        Vorlieben, Gewohnheiten, wichtige Menschen. Nur, was er selbst über sich gesagt hat. Nichts
-        Vorübergehendes ("ist heute müde"), nichts, was du schon über ihn weißt, nichts über dich selbst.
-        Je ein kurzer Satz ohne Namen, z. B. "- Programmiert in C#." Gibt es nichts Neues, keine Zeile.
+        FAKTEN: Was der Nutzer in diesem Gespräch ausdrücklich über sich selbst gesagt hat und auch in
+        Wochen noch stimmt – Beruf, Projekte, Vorlieben, Gewohnheiten, wichtige Menschen. Hinter jeden Fakt
+        kommt als Beleg sein Satz, wörtlich zitiert. Keine Vermutungen: Wer nach Wien fragt, wohnt nicht
+        deshalb dort; wer Diagramme will, "mag Diagramme" nicht. Nichts Vorübergehendes (heute müde,
+        gerade beschäftigt), nichts aus deinem Kontext (Betriebssystem, Name), nichts, was du schon weißt.
+        Beispiel: - Programmiert in C#. | "Ich programmiere in C#"
+        Hat er nichts Dauerhaftes über sich erzählt – das ist oft so –, keine Zeile.
         ZUSAMMENFASSUNG: worum es ging, in wenigen Worten (höchstens 60 Zeichen).
-        MORGEN, TAG, ABEND, NACHT: je eine Begrüßung für seinen nächsten Start zu dieser Tageszeit.
-        Ein kurzer Satz (höchstens 70 Zeichen) in deinem Ton, gern mit Bezug auf dieses Gespräch.
+        MORGEN, TAG, ABEND, NACHT: je eine Begrüßung für seinen nächsten Start zu dieser Tageszeit – du sprichst
+        ihn direkt an. Ein kurzer Satz (höchstens 70 Zeichen) in deinem trockenen Ton, der an etwas Konkretes
+        aus diesem Gespräch anknüpft, z. B. "Wieder am C#-Code? Der Kaffee ist hoffentlich schon schwarz."
         Ohne "Guten Morgen", "Hallo" oder den Namen – das steht schon da.
         """;
 
     /// <summary>Die feste Form der Antwort.</summary>
     internal const string Gbnf = """
-        root ::= "FAKTEN:\n" fact{0,8} "ZUSAMMENFASSUNG: " line "MORGEN: " line "TAG: " line "ABEND: " line "NACHT: " line
-        fact ::= "- " line
+        root ::= "FAKTEN:\n" fact{0,5} "ZUSAMMENFASSUNG: " line "MORGEN: " line "TAG: " line "ABEND: " line "NACHT: " line
+        fact ::= "- " [^\n|"]{2,120} " | \"" [^\n"]{2,160} "\"\n"
         line ::= [^\n]{2,160} "\n"
         """;
 
@@ -51,8 +57,10 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
     }
 
     /// <summary>Liest die Antwort des Modells. Null, wenn sie nicht die erwartete Form hat.</summary>
-    internal static Reflection? Parse(string text, DateTime now)
+    /// <param name="userSaid">Was der Nutzer geschrieben hat – nur Fakten mit einem Zitat daraus bleiben.</param>
+    internal static Reflection? Parse(string text, DateTime now, IEnumerable<string> userSaid)
     {
+        var said = MemoryData.Normalize(string.Join(" \n ", userSaid));
         var lines = text.ReplaceLineEndings("\n").Split('\n');
         if (lines.Length == 0 || lines[0].Trim() != "FAKTEN:")
             return null;
@@ -65,8 +73,8 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
             var line = raw.Trim();
             if (line.StartsWith("- ", StringComparison.Ordinal))
             {
-                if (summary is null && facts.Count < MaxNewFacts && !IsNothing(line[2..]))
-                    facts.Add(line[2..].Trim());
+                if (summary is null && facts.Count < MaxNewFacts && Fact(line[2..], said) is { } fact)
+                    facts.Add(fact);
                 continue;
             }
             if (Value(line, "ZUSAMMENFASSUNG") is { } s)
@@ -84,7 +92,7 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
     public static async Task<Reflection?> RunAsync(LlmBackend backend, IReadOnlyList<ChatMessage> messages, DateTime now, CancellationToken ct)
     {
         var text = await backend.RunTaskAsync(messages, Instruction, Gbnf, MaxTokens, IsComplete, ct);
-        var reflection = Parse(text, now);
+        var reflection = Parse(text, now, messages.Where(m => m.Role == ChatRole.User).Select(m => m.Content));
         LlmEngine.Log(reflection is null ? $"Gedächtnis: Antwort nicht lesbar: {text.ReplaceLineEndings(" / ")}" : $"Gedächtnis: {text.ReplaceLineEndings(" / ")}");
         return reflection;
     }
@@ -102,6 +110,32 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
 
     private static string? Value(string line, string key) =>
         line.StartsWith(key + ":", StringComparison.Ordinal) && line[(key.Length + 1)..].Trim() is { Length: > 0 } value ? value : null;
+
+    /// <summary>
+    /// "Programmiert in C#. | "Ich programmiere in C#"" → der Fakt, wenn das Zitat belegt, dass der Nutzer von sich
+    /// selbst sprach: wörtlich (bis auf Satzzeichen) aus seinen Nachrichten, mit ich/mein/mir/mich, nicht von heute.
+    /// </summary>
+    internal static string? Fact(string line, string said)
+    {
+        var bar = line.IndexOf(" | ", StringComparison.Ordinal);
+        if (bar < 0)
+            return null;
+        var fact = line[..bar].Trim();
+        var quote = MemoryData.Normalize(line[(bar + 3)..]);
+        if (IsNothing(fact) || quote.Length < 5 || !said.Contains(quote, StringComparison.Ordinal))
+        {
+            LlmEngine.Log($"Gedächtnis: ohne Beleg verworfen: {line}");
+            return null;
+        }
+        var words = quote.Split(' ');
+        if (!words.Any(w => w is "ich" or "mein" or "meine" or "meinen" or "meinem" or "meiner" or "mir" or "mich")
+            || words.Any(w => w is "heute" or "gestern" or "vorhin"))
+        {
+            LlmEngine.Log($"Gedächtnis: nicht über sich oder nur vorübergehend, verworfen: {line}");
+            return null;
+        }
+        return fact;
+    }
 
     /// <summary>Kleine Modelle schreiben "keine" statt gar keiner Zeile.</summary>
     private static bool IsNothing(string fact) =>

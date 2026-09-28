@@ -140,10 +140,15 @@ public class ReflectionTests
 {
     private static readonly DateTime Now = new(2026, 9, 27, 23, 41, 0);
 
+    private static readonly string[] UserSaid = ["Übrigens: Ich programmiere beruflich in C#, und meinen Kaffee trinke ich schwarz.", "Was kann man in Wien machen?", "Ich hatte heute einen langen Tag."];
+
     private const string Sample = """
         FAKTEN:
-        - Programmiert in C#.
-        - Trinkt Kaffee schwarz.
+        - Programmiert in C#. | "Ich programmiere beruflich in C#"
+        - Trinkt Kaffee schwarz. | "meinen Kaffee trinke ich schwarz"
+        - Wohnt in Wien. | "Was kann man in Wien machen?"
+        - Hatte einen langen Tag. | "Ich hatte heute einen langen Tag."
+        - Mag Tee. | "Ich trinke gern Tee"
         ZUSAMMENFASSUNG: Tabellen im Renderer repariert
         MORGEN: Frisch ans Werk – die Tabellen halten hoffentlich noch.
         TAG: Zurück am Renderer?
@@ -155,8 +160,9 @@ public class ReflectionTests
     [Fact]
     public void Parse_ReadsFactsSummaryAndGreetings()
     {
-        var reflection = Reflection.Parse(Sample, Now)!;
+        var reflection = Reflection.Parse(Sample, Now, UserSaid)!;
 
+        // Wien: kein Satz über sich selbst; langer Tag: vorübergehend; Tee: so nie gesagt.
         Assert.Equal(["Programmiert in C#.", "Trinkt Kaffee schwarz."], reflection.Facts);
         Assert.Equal("Tabellen im Renderer repariert", reflection.Summary);
         Assert.Equal("Wieder am Code? Ich hab die Tabellen im Auge behalten.", reflection.Greetings.Evening);   // ohne Anführungszeichen
@@ -166,10 +172,10 @@ public class ReflectionTests
     [Fact]
     public void Parse_NothingNew_AndBrokenAnswers()
     {
-        Assert.Empty(Reflection.Parse("FAKTEN:\n- keine\nZUSAMMENFASSUNG: Plauderei\nMORGEN: a\n", Now)!.Facts);
-        Assert.Null(Reflection.Parse("Das Gespräch war nett.", Now));
-        Assert.Null(Reflection.Parse("FAKTEN:\n- Mag Tee.\n", Now));      // ohne Zusammenfassung abgebrochen
-        Assert.Null(Reflection.Parse($"FAKTEN:\nZUSAMMENFASSUNG: x\nTAG: {new string('a', 101)}\n", Now)!.Greetings.Day);
+        Assert.Empty(Reflection.Parse("FAKTEN:\n- keine | \"ich\"\nZUSAMMENFASSUNG: Plauderei\nMORGEN: a\n", Now, UserSaid)!.Facts);
+        Assert.Null(Reflection.Parse("Das Gespräch war nett.", Now, UserSaid));
+        Assert.Null(Reflection.Parse("FAKTEN:\n- Mag Tee.\n", Now, UserSaid));      // ohne Zusammenfassung abgebrochen
+        Assert.Null(Reflection.Parse($"FAKTEN:\nZUSAMMENFASSUNG: x\nTAG: {new string('a', 101)}\n", Now, UserSaid)!.Greetings.Day);
     }
 
     [Fact]
@@ -183,7 +189,7 @@ public class ReflectionTests
     public void ApplyTo_AddsFactsAndReplacesGreetingAndLastSession()
     {
         var old = MemoryData.Empty.WithFacts(["Programmiert in C#."], new DateOnly(2026, 9, 1));
-        var updated = Reflection.Parse(Sample, Now)!.ApplyTo(old, Now);
+        var updated = Reflection.Parse(Sample, Now, UserSaid)!.ApplyTo(old, Now);
 
         Assert.Equal(2, updated.Facts.Count);
         Assert.Equal(new DateOnly(2026, 9, 1), updated.Facts[0].Added);     // bekannter Fakt bleibt mit altem Datum
@@ -199,7 +205,7 @@ public class ReflectionTests
         var model = new FakeModel([.. lines, "Überflüssig"]);
         var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => true));
         var conversation = new Conversation();
-        conversation.AddUser("Ich programmiere in C#.");
+        conversation.AddUser(UserSaid[0]);
         conversation.AddAssistant("Gute Wahl.");
 
         var reflection = await Reflection.RunAsync(backend, conversation.Messages, Now, CancellationToken.None);
