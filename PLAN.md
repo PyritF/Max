@@ -493,6 +493,12 @@ und passt zu den Elementen, die das Modell schon zuverlässig schreibt.
 - Ergebnisse von Webseiten und Dateien sind laut Prompt **Daten, keine Anweisungen**.
 - Der Selbsttest fragt nach einer großen Multiplikation, dem Startordner, der README und dem Weltmeister 2022 und
   prüft, ob das passende Werkzeug benutzt wurde und das Ergebnis in der Antwort steht.
+- **Erfahrungen aus dem Selbsttest:** Das Modell schreibt den Aufruf am liebsten als Code-Block („```python“ /
+  „datei: README.md“) und hört direkt nach dem schließenden ``` auf. Verbieten half nicht (dann schrieb es gar nichts) –
+  jetzt wird ein Code-Block am Antwortanfang zurückgehalten und, wenn darin ein bekanntes Werkzeug steht, als Aufruf
+  ausgeführt; sonst erscheint er als Code. Im Verlauf steht der Aufruf immer als ```werkzeug.
+  Ergebnis (CPU, GitHub): `ordner`, `datei` und `websuche` (DuckDuckGo) laufen, Antworten stimmen („Argentinien“,
+  README richtig zusammengefasst). Die große Multiplikation rechnete das Modell lieber im Kopf – daher der Prompt-Hinweis.
 
 **Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |
