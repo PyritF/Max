@@ -406,7 +406,24 @@ internal sealed partial class LlmBackend : IChatBackend
                 yield return chunk;
             var rest = gate.Flush();
             if (gate.Closed is { } open)
-                rest += WidgetValidator.IsValid(open.Name, open.Body) ? gate.Accept() : gate.Drop();
+            {
+                // Das Modell hört oft direkt nach dem schließenden ``` auf (ohne Zeilenumbruch) – dann ist der Block
+                // erst hier zu. Ein Werkzeug-Aufruf gilt trotzdem.
+                if (open.Name is Tools.ToolCall.BlockName or Tools.ToolCall.MaybeBlockName
+                    && allowTools && Tools.ToolCall.Parse(open.Body) is { } call && _options.Tools!.Find(call.Name) is not null)
+                {
+                    toolCall.Call = call;
+                    gate.Drop();
+                }
+                else if (open.Name == Tools.ToolCall.MaybeBlockName)
+                {
+                    rest += gate.Accept();          // doch kein Aufruf: als Code zeigen
+                }
+                else
+                {
+                    rest += WidgetValidator.IsValid(open.Name, open.Body) ? gate.Accept() : gate.Drop();
+                }
+            }
             rest = closing.Push(rest) + closing.Flush();
             if (rest.Length > 0)
             {

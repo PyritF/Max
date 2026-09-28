@@ -232,6 +232,7 @@ public class ToolRoundTests
     [InlineData("```python\n", "rechnen: 2+3\n")]
     [InlineData("```bash\n", "werkzeug\nrechnen: \"2+3\"\n")]
     [InlineData("\n\n```\n", "rechnen: 2+3\n")]
+    [InlineData("```werkzeug\n", "rechnen: 2+3\n")]
     public async Task ToolCall_AsCodeBlock_IsRunToo(string header, string body)
     {
         var (chunks, conversation) = await Run(header, body, "```\n", "Fünf.", null);
@@ -239,6 +240,17 @@ public class ToolRoundTests
         Assert.Single(chunks, c => c.IsTool);
         Assert.Equal("Fünf.", Text(chunks).Trim());
         Assert.Equal("```werkzeug\nrechnen: 2+3\n```", conversation.Messages[1].Content);   // im Verlauf immer die richtige Form
+    }
+
+    [Fact]
+    public async Task ToolCall_EndingWithoutNewline_IsRunToo()
+    {
+        // So endet das echte Modell: "```" und dann sofort Schluss.
+        var (chunks, conversation) = await Run("```python\n", "rechnen: 2+3\n", "```", null, "Fünf.", null);
+
+        Assert.Single(chunks, c => c.IsTool);
+        Assert.Equal("Fünf.", Text(chunks).Trim());
+        Assert.Equal(ChatRole.Tool, conversation.Messages[2].Role);
     }
 
     [Fact]
