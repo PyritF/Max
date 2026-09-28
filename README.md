@@ -15,7 +15,7 @@ dotnet run --project src/Max -- --demo-first-start   # Vorschau: erster Start mi
 
 Beim ersten Start richtet Max sich ein und lädt dabei das Modell herunter (rund 5,7 GB).
 
-**Voraussetzungen:** eine Grafikkarte mit mindestens 6 GB Speicher (ab 8 GB passt das Modell ganz darauf)
+**Voraussetzungen:** eine Grafikkarte mit mindestens 4 GB Speicher (ab 8 GB passt das Modell ganz darauf; unter 6 GB rechnet der Prozessor mit, dann braucht es 16 GB Arbeitsspeicher)
 und mindestens 8 GB Arbeitsspeicher. Fehlt etwas, sagt Max das beim Start und lädt nichts herunter.
 
 ### Schalter für Entwickler

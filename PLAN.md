@@ -13,7 +13,7 @@
 | LLM-Engine | **LLamaSharp 0.27** (C#-Bindings für llama.cpp) mit den Backends **CPU und Vulkan**. Vulkan läuft auf NVIDIA, AMD und Intel mit dem normalen Treiber; CUDA (über 200 MB) bleibt vorerst draußen |
 | Oberfläche | **Spectre.Console** im Stil von Claude Code: scrollender Chat, Eingabe unten, Farben, Markdown |
 | Modell | **Ein einziges Modell: Qwen3.5-9B** (GGUF, Q4_K_M, ~5,7 GB). Früher gab es vier Stufen (2B bis 35B); die kleinen waren zu unzuverlässig, das große passt auf keinen üblichen Rechner |
-| Voraussetzung | **Grafikkarte ab 6 GB** und 8 GB Arbeitsspeicher (siehe Abschnitt 4) |
+| Voraussetzung | **Grafikkarte ab 4 GB** und 8 GB Arbeitsspeicher (16 GB bei Karten unter 6 GB) (siehe Abschnitt 4) |
 | Modellquelle | **Hugging Face**: direkte Download-Links, kein eigenes Hosting nötig |
 | Zielsysteme | Windows x64 zuerst, danach Linux x64 |
 | Auslieferung | Single-File-Publish; das Modell wird beim ersten Start heruntergeladen |
@@ -82,7 +82,7 @@ Max/
 │       └── Setup/
 │           ├── MaxPaths.cs           (Datenordner je Betriebssystem)
 │           ├── HardwareInfo.cs       (RAM, GPU, VRAM)
-│           ├── Requirements.cs       (Grafikkarte ab 6 GB, RAM ab 8 GB)
+│           ├── Requirements.cs       (Grafikkarte ab 4 GB, RAM ab 8 bzw. 16 GB)
 │           ├── Manifest.cs           (manifest.json laden, Fallback aus der Exe)
 │           ├── ModelDownloader.cs    (fortsetzbar, SHA-256)
 │           └── InstallState.cs       (state.json)
@@ -133,10 +133,10 @@ Max nutzt **ein einziges Modell: Qwen3.5-9B** (Q4_K_M, ~5,7 GB, Kontext 16.384 T
 
 | | Mindestens | Warum |
 |---|---|---|
-| Grafikkarte | 6 GB Speicher (ab 8 GB passt das Modell ganz darauf) | Ohne Grafikkarte dauert eine Antwort eine halbe bis ganze Minute |
+| Grafikkarte | 4 GB Speicher (ab 8 GB passt das Modell ganz darauf; unter 6 GB rechnet der Prozessor einen guten Teil mit und es braucht 16 GB Arbeitsspeicher) | Ohne Grafikkarte dauert eine Antwort eine halbe bis ganze Minute |
 | Arbeitsspeicher | 8 GB | Sonst passt das Modell nicht |
 
-- Fehlt etwas, sagt Max das in einem Satz („Ich brauche eine Grafikkarte mit mindestens 6 GB Speicher – auf diesem Rechner habe ich keine gefunden.“) und lädt nichts herunter.
+- Fehlt etwas, sagt Max das in einem Satz („Ich brauche eine Grafikkarte mit mindestens 4 GB Speicher – auf diesem Rechner habe ich keine gefunden.“) und lädt nichts herunter.
 - Grenzwerte in GB wie auf dem Karton, mit 10 % Toleranz (eine 6-GB-Karte meldet etwas weniger).
 - `MAX_CPU=1` erlaubt den Start ohne Grafikkarte – für den Selbsttest auf GitHub (keine Grafikkarte) und falls die Erkennung eine Karte übersieht.
 - Scheitert das Laden auf der Grafikkarte trotzdem, versucht Max es auf der CPU; `/debug` zeigt „CPU (Grafikkarte fehlgeschlagen)“.

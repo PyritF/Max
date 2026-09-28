@@ -252,6 +252,13 @@ public class GpuOffloadTests
     public void NoGpu_NoLayers() => Assert.Equal(0, GpuOffload.Layers(5 * GB, 32, 0));
 
     [Fact]
+    public void SmallCard_KeepsRoomForTheContext()
+    {
+        var layers = GpuOffload.Layers(5_700_000_000, 32, 4 * GB); // 4 GB − 1,2 GB Reserve → gut die Hälfte
+        Assert.InRange(layers, 14, 16);
+    }
+
+    [Fact]
     public void FitsCompletely_AllLayers() => Assert.Equal(GpuOffload.All, GpuOffload.Layers(5 * GB, 32, 8 * GB));
 
     [Fact]

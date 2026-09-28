@@ -88,7 +88,9 @@ public class RequirementsTests
 
     [Theory]
     [InlineData(16, 0, "keine gefunden")]
-    [InlineData(16, 4, "hat 4 GB")]
+    [InlineData(16, 2, "hat 2 GB")]
+    [InlineData(16, 3.9, null)]       // 4-GB-Karte: Rest rechnet der Prozessor
+    [InlineData(8, 4, "16 GB Arbeitsspeicher")]
     [InlineData(6, 12, "Arbeitsspeicher")]
     [InlineData(7.8, 8, null)]        // "8 GB" melden Rechner oft etwas kleiner
     [InlineData(16, 5.9, null)]       // 6-GB-Karte meldet etwas weniger
