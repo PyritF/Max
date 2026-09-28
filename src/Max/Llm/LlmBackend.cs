@@ -59,6 +59,9 @@ internal sealed partial class LlmBackend : IChatBackend
     /// <summary>So viele Tokens denkt Max mindestens nach, bevor er das Nachdenken beenden darf.</summary>
     internal const int MinThinkingTokens = 8;
 
+    /// <summary>Länger ist ein Werkzeug-Aufruf nie (Kopfzeile, Name, Angabe).</summary>
+    internal const int MaxToolCallChars = 400;
+
     /// <summary>Wiederholen sich die letzten so vielen Zeichen der Antwort wörtlich, steckt das Modell in einer Schleife.</summary>
     internal const int LoopChars = 200;
 
@@ -196,7 +199,7 @@ internal sealed partial class LlmBackend : IChatBackend
         var splitter = new ThinkSplitter(startInThinking: think);
         if (think)
             yield return new ReplyChunk(_template.ThinkingSeed, IsThinking: true);
-        var gate = new ElementGate();
+        var gate = new ElementGate { HoldFirstFence = allowTools };
         var closing = new ClosingFilter();
         var decoder = _model.CreateDecoder();
         var answerPhase = !think;
@@ -262,6 +265,17 @@ internal sealed partial class LlmBackend : IChatBackend
                     repair = new Repair(headerPoint, token, gate.Save(), generated.Count, answerTokens.Count, answerAll.Count, before);
                 }
 
+                // Ein langer Code-Block am Anfang ist kein Werkzeug-Aufruf – dann fließt er als Code weiter.
+                if (gate.Element == Tools.ToolCall.MaybeBlockName && gate.HeldLength > MaxToolCallChars)
+                {
+                    var code = closing.Push(gate.Release());
+                    if (code.Length > 0)
+                    {
+                        shown.Append(code);
+                        yield return new ReplyChunk(code);
+                    }
+                }
+
                 // Endlosschleife im Element (das Modell findet keinen gültigen Abschluss): zurück vor den Block, Antwort beenden.
                 if (gate.InElement && gate.HeldLength > MaxElementChars)
                 {
@@ -319,12 +333,27 @@ internal sealed partial class LlmBackend : IChatBackend
                 if (gate.Closed is { } closed)
                 {
                     // Ein Werkzeug-Aufruf wird nie gezeigt: Runde beenden, StreamReplyAsync führt ihn aus.
-                    if (closed.Name == Tools.ToolCall.BlockName)
+                    if (closed.Name is Tools.ToolCall.BlockName or Tools.ToolCall.MaybeBlockName)
                     {
-                        toolCall.Call = allowTools ? Tools.ToolCall.Parse(closed.Body) : null;
-                        gate.Drop();
-                        if (toolCall.Call is not null)
+                        var call = allowTools ? Tools.ToolCall.Parse(closed.Body) : null;
+                        if (call is not null && _options.Tools!.Find(call.Name) is not null)
+                        {
+                            toolCall.Call = call;
+                            gate.Drop();
                             break;
+                        }
+                        if (closed.Name == Tools.ToolCall.BlockName)
+                        {
+                            gate.Drop();
+                            continue;
+                        }
+                        // Doch kein Aufruf, sondern Code: ganz normal zeigen.
+                        var code = closing.Push(gate.Accept());
+                        if (code.Length > 0)
+                        {
+                            shown.Append(code);
+                            yield return new ReplyChunk(code);
+                        }
                         continue;
                     }
 

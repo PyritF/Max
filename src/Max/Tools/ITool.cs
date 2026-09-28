@@ -28,18 +28,23 @@ internal sealed record ToolCall(string Name, string Argument)
     /// <summary>Der Name des Blocks, mit dem das Modell ein Werkzeug aufruft: <c>```werkzeug</c>.</summary>
     public const string BlockName = "werkzeug";
 
+    /// <summary>Ein Code-Block am Antwortanfang, der ein Aufruf sein könnte ("```python" / "datei: README.md").</summary>
+    public const string MaybeBlockName = "werkzeug?";
+
     /// <summary>So steht der Aufruf im Verlauf – genau wie das Modell ihn schreibt.</summary>
     public string Text => $"```{BlockName}\n{Name}{(Argument.Length > 0 ? ": " + Argument : "")}\n```";
 
     /// <summary>"websuche: Einwohner Wien" → Aufruf. Null, wenn die Zeile keinen Werkzeugnamen hat.</summary>
     public static ToolCall? Parse(string body)
     {
-        var line = body.ReplaceLineEndings("\n").Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0);
+        // "werkzeug" als eigene erste Zeile (im Code-Block "```bash" / "werkzeug" / "websuche: …") überspringen.
+        var line = body.ReplaceLineEndings("\n").Split('\n').Select(l => l.Trim())
+            .FirstOrDefault(l => l.Length > 0 && !l.Equals(BlockName, StringComparison.OrdinalIgnoreCase));
         if (line is null)
             return null;
         var colon = line.IndexOf(':');
         return colon < 0
             ? new ToolCall(line.ToLowerInvariant(), "")
-            : new ToolCall(line[..colon].Trim().ToLowerInvariant(), line[(colon + 1)..].Trim());
+            : new ToolCall(line[..colon].Trim().ToLowerInvariant(), line[(colon + 1)..].Trim().Trim('"', '\'', '`').Trim());
     }
 }

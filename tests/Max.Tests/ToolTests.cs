@@ -169,7 +169,7 @@ public class ToolBoxTests
         using var http = new HttpClient();
         var box = ToolBox.CreateDefault(http, () => DateTime.Now, () => ".");
         var grammar = AnswerGrammar.Build(box.GrammarRule());
-        Assert.Contains("root ::= [ \\n]* ( \"```\" w-werkzeug | ( [^{}` \\n] | tag | inline-code ) answer | \"```\" widget", grammar);   // kein Code-Block am Anfang, auch nicht nach Leerzeilen
+        Assert.Contains("root ::= \"```\" w-werkzeug | answer", grammar);
         foreach (var tool in box.All)
             Assert.Contains($"\"{tool.Name}", grammar);
         Assert.DoesNotContain("werkzeug", AnswerGrammar.Gbnf);
@@ -211,6 +211,55 @@ public class ToolRoundTests
         Assert.Equal([ChatRole.User, ChatRole.Assistant, ChatRole.Tool], conversation.Messages.Select(m => m.Role));
         Assert.Equal("```werkzeug\nrechnen: 2+3\n```", conversation.Messages[1].Content);
         Assert.Contains("<tool_response>\n2+3 = 5\n</tool_response>", model.Decode(model.LastPromptBeforeSampler));
+    }
+
+    private static async Task<(List<ReplyChunk> Chunks, Conversation Conversation)> Run(params string?[] script)
+    {
+        var model = new FakeModel(script);
+        var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => false, Tools: new ToolBox([new CalculatorTool()])));
+        var conversation = new Conversation();
+        conversation.AddUser("?");
+        var chunks = new List<ReplyChunk>();
+        await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
+            chunks.Add(chunk);
+        await backend.CompleteAsync();
+        return (chunks, conversation);
+    }
+
+    private static string Text(List<ReplyChunk> chunks) => string.Concat(chunks.Where(c => !c.IsTool && !c.IsThinking).Select(c => c.Text));
+
+    [Theory]
+    [InlineData("```python\n", "rechnen: 2+3\n")]
+    [InlineData("```bash\n", "werkzeug\nrechnen: \"2+3\"\n")]
+    [InlineData("\n\n```\n", "rechnen: 2+3\n")]
+    public async Task ToolCall_AsCodeBlock_IsRunToo(string header, string body)
+    {
+        var (chunks, conversation) = await Run(header, body, "```\n", "Fünf.", null);
+
+        Assert.Single(chunks, c => c.IsTool);
+        Assert.Equal("Fünf.", Text(chunks).Trim());
+        Assert.Equal("```werkzeug\nrechnen: 2+3\n```", conversation.Messages[1].Content);   // im Verlauf immer die richtige Form
+    }
+
+    [Fact]
+    public async Task RealCode_AtTheStart_IsShownAsCode()
+    {
+        var (chunks, conversation) = await Run("```python\n", "print(1)\n", "```\n", "Fertig.", null);
+
+        Assert.DoesNotContain(chunks, c => c.IsTool);
+        Assert.Equal("```python\nprint(1)\n```\nFertig.", Text(chunks));
+        Assert.Single(conversation.Messages);
+    }
+
+    [Fact]
+    public async Task LongCode_AtTheStart_FlowsWithoutWaitingForTheEnd()
+    {
+        var lines = Enumerable.Range(1, 40).Select(i => $"print({i})  # Zeile {i}\n").ToArray();
+        var (chunks, _) = await Run(["```python\n", .. lines, "```\n", "Fertig.", null]);
+
+        Assert.DoesNotContain(chunks, c => c.IsTool);
+        Assert.Equal("```python\n" + string.Concat(lines) + "```\nFertig.", Text(chunks));
+        Assert.True(chunks.Count(c => !c.IsTool) > 3);      // nicht erst am Ende in einem Stück
     }
 
     [Fact]

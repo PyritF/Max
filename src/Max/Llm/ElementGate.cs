@@ -19,12 +19,39 @@ internal sealed partial class ElementGate
     private bool _atLineStart = true;
     private bool _holdingLine;
     private string? _element;
+    private bool _started;                          // schon etwas Sichtbares durchgelassen?
+
+    /// <summary>
+    /// Einen Code-Block ganz am Anfang der Antwort zurückhalten (als <see cref="Tools.ToolCall.MaybeBlockName"/>):
+    /// Das Modell schreibt Werkzeug-Aufrufe gern als "```python" mit "datei: README.md" darin. Ob es einer ist,
+    /// entscheidet das Backend, wenn der Block zu ist – sonst wird er ganz normal als Code gezeigt.
+    /// </summary>
+    public bool HoldFirstFence { get; init; }
 
     /// <summary>Ein vollständiger Element-Block, über den entschieden werden muss (<see cref="Accept"/> oder <see cref="Drop"/>).</summary>
     public (string Name, string Body)? Closed { get; private set; }
 
     /// <summary>Gerade in einem Element-Block (nach der Kopfzeile)?</summary>
     public bool InElement => _element is not null && Closed is null;
+
+    /// <summary>Der Name des offenen Element-Blocks (oder null).</summary>
+    public string? Element => Closed is null ? _element : null;
+
+    /// <summary>
+    /// Den offenen Block doch nicht zurückhalten, sondern als Text weiterfließen lassen – für einen Code-Block am
+    /// Anfang, der zu lang für einen Werkzeug-Aufruf ist.
+    /// </summary>
+    public string Release()
+    {
+        var output = _held.ToString();
+        _element = null;
+        _held.Clear();
+        _body.Clear();
+        _line.Clear();
+        _started = true;
+        _atLineStart = output.EndsWith('\n');
+        return output;
+    }
 
     /// <summary>Wie viel vom offenen Element-Block schon zurückgehalten ist (gegen Endlosschleifen).</summary>
     public int HeldLength => _held.Length;
@@ -88,6 +115,7 @@ internal sealed partial class ElementGate
 
             output.Append(c);
             _atLineStart = c == '\n';
+            _started |= !char.IsWhiteSpace(c);
         }
         return output.ToString();
     }
@@ -117,6 +145,7 @@ internal sealed partial class ElementGate
     public string Accept()
     {
         var output = _held.ToString();
+        _started = true;
         return output + Continue();
     }
 
@@ -185,7 +214,15 @@ internal sealed partial class ElementGate
             _body.Clear();
             return;
         }
+        if (HoldFirstFence && !_started && line.TrimStart().StartsWith("```", StringComparison.Ordinal))
+        {
+            _element = Tools.ToolCall.MaybeBlockName;
+            _held.Append(line);
+            _body.Clear();
+            return;
+        }
         output.Append(line);
+        _started |= line.Trim().Length > 0;
     }
 
     internal sealed record Snapshot(string? Element, string Held, string Body, string Line);
