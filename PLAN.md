@@ -553,6 +553,7 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
 - [x] **Aufwärmen zwischenspeichern:** Auf Rechnern ohne Grafikkarte dauert das Aufwärmen mit dem langen System-Prompt lange (4B-Modell auf 4 Kernen: ca. 90 s, danach 2,5 s). Lösung: den aufgewärmten Zustand mit `LLamaContext.SaveState` im Datenordner speichern. Der Schlüssel ist eine Prüfsumme aus Prompt und Modell; beim nächsten Start wird der Zustand in etwa einer Sekunde geladen.
 - [x] **Test auf einem Rechner mit Grafikkarte:** Grafikkarte mit 12 GB über Vulkan – alle 32 Schichten auf der Karte, **49 Tokens/s**, erstes Token nach 0,3 s, Nachdenken ~6 s (280 Tokens), Aufwärmen aus dem Zwischenspeicher 1,4 s, Laden 5 s.
 - [x] Ist Vulkan auf NVIDIA spürbar langsamer als CUDA? Nicht nötig: Mit 49 Tokens/s ist Vulkan schnell genug, CUDA bleibt draußen.
+- [ ] **Vor dem ersten Release `v0.2.0`: fertige `max.exe` auf einem Rechner mit Grafikkarte testen.** Bisher lief die Grafikkarte nur mit `dotnet run`; die einzelne Datei nur auf GitHub ohne Grafikkarte. Ablauf: Selbsttest-Workflow mit `windows-latest` und „exe“ starten, `max-Windows` unter „Artifacts“ herunterladen, starten, in `/debug` auf „32/32 Schichten auf GPU“ achten. Dabei die SmartScreen-Warnung ansehen (Datei ist nicht signiert) und entscheiden, ob das für den Anfang reicht. Danach `git tag v0.2.0 && git push origin v0.2.0`.
 - [ ] Repo auf öffentlich stellen und Zwei-Faktor-Anmeldung auf GitHub prüfen.
-- [ ] Soll ein Pflicht-Update auch einen „Wartungsmodus“ bekommen (Max per Manifest komplett sperren)?
+- [x] Soll ein Pflicht-Update auch einen „Wartungsmodus“ bekommen (Max per Manifest komplett sperren)? Ja: `disabled` + `message` im Manifest.
 - [ ] Akzentfarbe und Banner-Design festlegen.

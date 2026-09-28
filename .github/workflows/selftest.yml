@@ -62,3 +62,11 @@ jobs:
       - name: Protokoll von llama.cpp
         if: always()
         run: tail -n 60 .maxhome/logs/llama.log || true
+
+      # Die getestete Datei zum Herunterladen (Actions → Lauf → Artifacts), z. B. für den Test auf einem Rechner mit Grafikkarte.
+      - uses: actions/upload-artifact@v4
+        if: inputs.exe
+        with:
+          name: max-${{ runner.os }}
+          path: out/max*
+          retention-days: 14
