@@ -29,11 +29,15 @@ internal static class AnswerGrammar
     /// <summary>Code-Blöcke für schlichten Text – darin sind Farb-Tags verboten (sie würden dort nicht wirken).</summary>
     internal static readonly string[] PlainLanguages = ["text", "txt", "plaintext", "console", "output", "log"];
 
-    private static readonly Lazy<string> Cached = new(Build);
+    private static readonly Lazy<string> Cached = new(() => Build());
 
     public static string Gbnf => Cached.Value;
 
-    internal static string Build()
+    /// <param name="toolCall">
+    /// GBNF für den Inhalt eines Werkzeug-Aufrufs (<see cref="Tools.ToolBox.GrammarRule"/>) – dann darf die Antwort
+    /// statt Text genau einen Aufruf enthalten, als ganzen Block und sonst nichts.
+    /// </param>
+    internal static string Build(string? toolCall = null)
     {
         var g = new StringBuilder();
         void Rule(string name, string body) => g.Append(name).Append(" ::= ").Append(body).Append('\n');
@@ -41,7 +45,10 @@ internal static class AnswerGrammar
         // Höchstens ein Element pro Antwort (das Auswahlmenü zählt nicht) – kleine Modelle hängten sonst
         // an jede Antwort Diagramme oder wiederholten Abschnitte samt Balken in einer Schleife.
         // Ein Auswahlmenü darf nur ganz am Ende stehen – danach kommt nichts mehr.
-        Rule("root", "item* ( \"```\" widget item* )? ( \"```\" w-frage [ \\n]* )?");
+        Rule("root", toolCall is null ? "answer" : "\"```\" w-werkzeug | answer");
+        if (toolCall is not null)
+            Rule("w-werkzeug", toolCall);
+        Rule("answer", "item* ( \"```\" widget item* )? ( \"```\" w-frage [ \\n]* )?");
         Rule("item", "plain | tag | inline-code | fence");
         // Auch kein "}" im Fließtext: Kleine Modelle schließen einen Verlauf sonst mit "Wort}" statt "{/verlauf}".
         Rule("plain", "[^{}`]");

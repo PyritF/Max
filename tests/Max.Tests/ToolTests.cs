@@ -1,0 +1,250 @@
+using Max.Chat;
+using Max.Llm;
+using Max.Persona;
+using Max.Setup;
+using Max.Tools;
+using Max.Ui;
+using Spectre.Console.Testing;
+
+namespace Max.Tests;
+
+public class CalculatorTests
+{
+    [Theory]
+    [InlineData("123456789 * 987654321", "121932631112635269")]
+    [InlineData("(1 + 2) * 3", "9")]
+    [InlineData("2^10", "1024")]
+    [InlineData("2^3^2", "512")]
+    [InlineData("-3 + 5", "2")]
+    [InlineData("1/3", "0.333333333333")]
+    [InlineData("17,5 × 2", "35")]
+    [InlineData("1.000.000 / 4", "250000")]
+    [InlineData("200 * 15%", "30")]
+    [InlineData("sqrt(16) + abs(-2)", "6")]
+    [InlineData("10 : 4", "2.5")]
+    public void Evaluate(string expression, string expected) => Assert.Equal(expected, CalculatorTool.Evaluate(expression));
+
+    [Fact]
+    public void TooBig_ForExact_IsApproximate() => Assert.StartsWith("ungefähr 1E+40", CalculatorTool.Evaluate("10^40"));
+
+    [Theory]
+    [InlineData("2 +", "hört mittendrin auf")]
+    [InlineData("(1 + 2", "Klammer")]
+    [InlineData("foo(2)", "kenne ich nicht")]
+    [InlineData("1/0", "Division durch null")]
+    public async Task Errors_AreSentences(string expression, string expected) =>
+        Assert.Contains(expected, await new CalculatorTool().RunAsync(expression, CancellationToken.None));
+}
+
+public sealed class FileToolTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "max-tools-" + Guid.NewGuid().ToString("N"));
+
+    public FileToolTests()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "src"));
+        Directory.CreateDirectory(Path.Combine(_dir, ".ssh"));
+        File.WriteAllText(Path.Combine(_dir, "README.md"), "# Projekt\nEin Test.");
+        File.WriteAllText(Path.Combine(_dir, ".env"), "PASSWORT=geheim");
+        File.WriteAllText(Path.Combine(_dir, ".ssh", "config"), "Host x");
+        File.WriteAllBytes(Path.Combine(_dir, "bild.png"), [0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 1]);
+    }
+
+    public void Dispose() => Directory.Delete(_dir, recursive: true);
+
+    [Fact]
+    public async Task ListFolder_FoldersFirst_WithSizes()
+    {
+        var text = await new ListFolderTool(() => _dir).RunAsync(".", CancellationToken.None);
+        Assert.True(text.IndexOf("- src/", StringComparison.Ordinal) < text.IndexOf("- README.md", StringComparison.Ordinal));
+        Assert.Contains("README.md (19 B)", text);
+    }
+
+    [Fact]
+    public async Task ReadFile_RelativeToTheWorkingDirectory()
+    {
+        var text = await new ReadFileTool(() => _dir).RunAsync("README.md", CancellationToken.None);
+        Assert.Contains("# Projekt\nEin Test.", text);
+    }
+
+    [Theory]
+    [InlineData(".env")]
+    [InlineData(".ssh/config")]
+    [InlineData("schluessel.pem")]
+    public async Task Secrets_AreNeverRead(string path)
+    {
+        var text = await new ReadFileTool(() => _dir).RunAsync(path, CancellationToken.None);
+        Assert.DoesNotContain("geheim", text);
+        Assert.Contains("Zugangsdaten", text);
+    }
+
+    [Fact]
+    public async Task BinaryAndMissing_GiveAHint()
+    {
+        Assert.Contains("keine Textdatei", await new ReadFileTool(() => _dir).RunAsync("bild.png", CancellationToken.None));
+        Assert.Contains("gibt es nicht", await new ReadFileTool(() => _dir).RunAsync("fehlt.txt", CancellationToken.None));
+        Assert.Contains("ist ein Ordner", await new ReadFileTool(() => _dir).RunAsync("src", CancellationToken.None));
+    }
+}
+
+public class WebToolTests
+{
+    private const string SearchPage = """
+        <div class="result results_links results_links_deep web-result ">
+          <h2 class="result__title">
+            <a rel="nofollow" class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fde.wikipedia.org%2Fwiki%2FFu%C3%9Fball%2DWeltmeisterschaft_2022&amp;rut=abc">Fußball-Weltmeisterschaft 2022 – <b>Wikipedia</b></a>
+          </h2>
+          <a class="result__snippet" href="//duckduckgo.com/l/?uddg=x">Weltmeister wurde <b>Argentinien</b> nach einem Sieg im Elfmeterschießen gegen Frankreich.</a>
+        </div>
+        <div class="result">
+          <a rel="nofollow" class="result__a" href="https://duckduckgo.com/y.js?ad_provider=x">Werbung</a>
+          <a class="result__snippet">Kaufen!</a>
+        </div>
+        """;
+
+    [Fact]
+    public void Search_ReadsTitleUrlAndSnippet_WithoutAds()
+    {
+        var result = Assert.Single(WebSearchTool.Parse(SearchPage));
+        Assert.Equal("Fußball-Weltmeisterschaft 2022 – Wikipedia", result.Title);
+        Assert.Equal("https://de.wikipedia.org/wiki/Fußball-Weltmeisterschaft_2022", result.Url);
+        Assert.StartsWith("Weltmeister wurde Argentinien", result.Snippet);
+    }
+
+    [Fact]
+    public void Page_ToText_WithoutScriptsAndMenus()
+    {
+        var (title, text) = WebPage.ToText("""
+            <html><head><title>Test &amp; mehr</title><style>p{}</style></head>
+            <body><nav>Menü</nav><h1>Überschrift</h1><p>Erster&nbsp;Absatz.</p><script>alert(1)</script><p>Zweiter <b>Absatz</b>.</p></body></html>
+            """);
+        Assert.Equal("Test & mehr", title);
+        Assert.Equal("Überschrift\nErster Absatz.\nZweiter Absatz .", text);
+    }
+}
+
+public class ToolBoxTests
+{
+    private sealed class SlowTool : ITool
+    {
+        public string Name => "langsam";
+        public string? Argument => null;
+        public string Description => "";
+        public string Describe(string argument) => "";
+
+        public async Task<string> RunAsync(string argument, CancellationToken ct)
+        {
+            await Task.Delay(Timeout.Infinite, ct);
+            return "";
+        }
+    }
+
+    [Fact]
+    public void ToolCall_Parse()
+    {
+        Assert.Equal(new ToolCall("websuche", "Einwohner Graz"), ToolCall.Parse("Websuche: Einwohner Graz\n"));
+        Assert.Equal(new ToolCall("uhrzeit", ""), ToolCall.Parse("uhrzeit\n"));
+        Assert.Equal("```werkzeug\nrechnen: 1+1\n```", new ToolCall("rechnen", "1+1").Text);
+    }
+
+    [Fact]
+    public async Task UnknownTool_MissingArgument_AndLongResults()
+    {
+        var box = new ToolBox([new CalculatorTool()]);
+        Assert.Contains("gibt es nicht", await box.RunAsync(new ToolCall("zaubern", ""), CancellationToken.None));
+        Assert.Contains("braucht eine Angabe", await box.RunAsync(new ToolCall("rechnen", ""), CancellationToken.None));
+        Assert.EndsWith("(gekürzt, 2 Zeichen mehr)", ToolBox.Shorten(new string('x', ToolBox.MaxResultChars + 2), ToolBox.MaxResultChars));
+    }
+
+    [Fact]
+    public async Task Cancelling_TheAnswer_CancelsTheTool()
+    {
+        using var cts = new CancellationTokenSource(50);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new ToolBox([new SlowTool()]).RunAsync(new ToolCall("langsam", ""), cts.Token));
+    }
+
+    [Fact]
+    public void Grammar_KnowsEveryTool()
+    {
+        using var http = new HttpClient();
+        var box = ToolBox.CreateDefault(http, () => DateTime.Now, () => ".");
+        var grammar = AnswerGrammar.Build(box.GrammarRule());
+        Assert.Contains("root ::= \"```\" w-werkzeug | answer", grammar);
+        foreach (var tool in box.All)
+            Assert.Contains($"\"{tool.Name}", grammar);
+        Assert.DoesNotContain("werkzeug", AnswerGrammar.Gbnf);
+    }
+
+    [Fact]
+    public void SystemPrompt_ListsTheTools_InTheStablePart()
+    {
+        using var http = new HttpClient();
+        var box = ToolBox.CreateDefault(http, () => DateTime.Now, () => ".");
+        var system = new SystemSnapshot(new DateTime(2026, 9, 28, 9, 0, 0), UserIdentity.Create("alex", "Alex Beispiel"), "Windows 11", 16,
+            new HardwareInfo(32L << 30, null), @"C:\Users\alex");
+        var prompt = SystemPrompt.BuildParts(system, tools: box);
+
+        var section = prompt.Text.IndexOf("## Werkzeuge", StringComparison.Ordinal);
+        Assert.True(section > 0 && section < prompt.StableLength);
+        Assert.Contains("- `websuche: <Suchbegriffe>`", prompt.Text);
+        Assert.DoesNotContain("{{", prompt.Text);
+        Assert.DoesNotContain("Werkzeuge", SystemPrompt.Build(system));
+    }
+}
+
+public class ToolRoundTests
+{
+    [Fact]
+    public async Task ToolCall_IsRunHidden_ThenTheAnswerUsesTheResult()
+    {
+        var model = new FakeModel("```werkzeug\n", "rechnen: 2+3\n", "```\n", "Das sind ", "5.", null);
+        var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => false, Tools: new ToolBox([new CalculatorTool()])));
+        var conversation = new Conversation();
+        conversation.AddUser("Was ist 2+3?");
+
+        var chunks = new List<ReplyChunk>();
+        await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
+            chunks.Add(chunk);
+
+        Assert.Equal("Rechne: 2+3", Assert.Single(chunks, c => c.IsTool).Text);
+        Assert.Equal("Das sind 5.", string.Concat(chunks.Where(c => !c.IsTool && !c.IsThinking).Select(c => c.Text)));
+        Assert.Equal([ChatRole.User, ChatRole.Assistant, ChatRole.Tool], conversation.Messages.Select(m => m.Role));
+        Assert.Equal("```werkzeug\nrechnen: 2+3\n```", conversation.Messages[1].Content);
+        Assert.Contains("<tool_response>\n2+3 = 5\n</tool_response>", model.Decode(model.LastPromptBeforeSampler));
+    }
+
+    [Fact]
+    public async Task WithoutTools_TheBlockIsNeverRun()
+    {
+        var model = new FakeModel("```werkzeug\n", "rechnen: 2+3\n", "```\n", "Fertig.", null);
+        var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => false));
+        var conversation = new Conversation();
+        conversation.AddUser("Was ist 2+3?");
+
+        var chunks = new List<ReplyChunk>();
+        await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
+            chunks.Add(chunk);
+
+        Assert.DoesNotContain(chunks, c => c.IsTool);
+        Assert.Equal("Fertig.", string.Concat(chunks.Select(c => c.Text)).Trim());
+        Assert.Single(conversation.Messages);
+    }
+
+    [Fact]
+    public async Task ChatView_ShowsWhatMaxIsDoing()
+    {
+        var console = new TestConsole();
+        var view = new ChatView(console, animate: false);
+        static async IAsyncEnumerable<ReplyChunk> Chunks()
+        {
+            yield return new ReplyChunk("Suche im Web: Wetter Graz", IsTool: true);
+            await Task.Yield();
+            yield return new ReplyChunk("Sonnig.");
+        }
+
+        var text = await view.StreamReplyAsync(Chunks(), CancellationToken.None);
+
+        Assert.Equal("Sonnig.", text);
+        Assert.Contains("⌕ Suche im Web: Wetter Graz", console.Output);
+    }
+}

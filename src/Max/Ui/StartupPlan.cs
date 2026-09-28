@@ -11,7 +11,7 @@ internal static class StartupPlan
     /// <param name="onManifest">Bekommt das Manifest von GitHub (null = offline) – der Updater arbeitet damit weiter.</param>
     public static IReadOnlyList<StartupStep> Normal(
         MaxPaths paths, HttpClient http, Updater updater, Func<bool> thinking,
-        Action<SystemSnapshot> onHardware, Action<Manifest?> onManifest, Action<LlmEngine, LlmBackend> onLoaded)
+        Action<SystemSnapshot> onHardware, Action<Manifest?> onManifest, Action<LlmEngine, LlmBackend> onLoaded, Tools.ToolBox? tools = null)
     {
         SystemSnapshot? system = null;
         return
@@ -25,7 +25,7 @@ internal static class StartupPlan
                     ? "offline"
                     : await StartupUpdate.CheckAsync(manifest, updater, AppVersion.Current, AppVersion.ExecutablePath, progress, ct);
             }),
-            Load(paths, () => system, thinking, onLoaded),
+            Load(paths, () => system, thinking, onLoaded, tools),
         ];
     }
 
@@ -33,7 +33,7 @@ internal static class StartupPlan
     /// Der erste Start: Hardware prüfen (vor dem Download – sonst lädt ein zu schwacher Rechner umsonst
     /// mehrere GB), Modell laden und einrichten.
     /// </summary>
-    public static IReadOnlyList<StartupStep> Setup(MaxPaths paths, HttpClient http, Func<bool> thinking, Action<SystemSnapshot> onHardware, Action<LlmEngine, LlmBackend> onLoaded)
+    public static IReadOnlyList<StartupStep> Setup(MaxPaths paths, HttpClient http, Func<bool> thinking, Action<SystemSnapshot> onHardware, Action<LlmEngine, LlmBackend> onLoaded, Tools.ToolBox? tools = null)
     {
         SystemSnapshot? system = null;
         ModelEntry? entry = null;
@@ -54,7 +54,7 @@ internal static class StartupPlan
                 InstallState.Commit(paths, entry!, download!, DateTime.Now);
                 return Task.FromResult("fertig");
             }),
-            Load(paths, () => system, thinking, onLoaded),
+            Load(paths, () => system, thinking, onLoaded, tools),
         ];
     }
 
@@ -62,7 +62,7 @@ internal static class StartupPlan
     /// Lädt das Modell (mit Balken) und wärmt es auf: System-Prompt vorrechnen, Grafikkarte einrichten.
     /// Danach kommt die erste Antwort ohne Wartezeit.
     /// </summary>
-    private static StartupStep Load(MaxPaths paths, Func<SystemSnapshot?> system, Func<bool> thinking, Action<LlmEngine, LlmBackend> onLoaded) =>
+    private static StartupStep Load(MaxPaths paths, Func<SystemSnapshot?> system, Func<bool> thinking, Action<LlmEngine, LlmBackend> onLoaded, Tools.ToolBox? tools) =>
         new("Lade Max", async (progress, ct) =>
         {
             var state = InstallState.Load(paths) ?? throw new SetupException("Max ist nicht vollständig eingerichtet. Starte ihn einfach neu.");
@@ -71,9 +71,10 @@ internal static class StartupPlan
             try
             {
                 engine = await LlmEngine.LoadAsync(paths.Model, state.ContextSize, snapshot.Hardware, paths.EngineLog, progress, ct);
-                var prompt = SystemPrompt.BuildParts(snapshot, Memory.MemoryStore.Load(paths));
+                var prompt = SystemPrompt.BuildParts(snapshot, Memory.MemoryStore.Load(paths), tools);
                 var options = BackendOptionsFor(state, thinking) with
                 {
+                    Tools = tools,
                     PromptCache = new PromptCache(paths.PromptCache, $"{state.Sha256}|{engine.StateIdentity}"),
                     StablePromptLength = prompt.StableLength,
                 };

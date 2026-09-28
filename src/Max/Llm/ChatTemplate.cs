@@ -46,9 +46,13 @@ internal sealed class ChatMlTemplate : IChatTemplate
     public string ForcedThinkingEnd => "\n\nGenug nachgedacht.\n</think>\n\n";
     public string AssistantEnd => "<|im_end|>\n";
 
-    public string Message(ChatRole role, string content) => role == ChatRole.Assistant
-        ? HistoryStart + content + AssistantEnd
-        : $"<|im_start|>{RoleName(role)}\n{content}<|im_end|>\n";
+    /// <summary>Werkzeug-Ergebnisse stehen wie bei Qwen üblich als Nachricht des Nutzers in &lt;tool_response&gt;.</summary>
+    public string Message(ChatRole role, string content) => role switch
+    {
+        ChatRole.Assistant => HistoryStart + content + AssistantEnd,
+        ChatRole.Tool => $"<|im_start|>user\n<tool_response>\n{content}\n</tool_response><|im_end|>\n",
+        _ => $"<|im_start|>{RoleName(role)}\n{content}<|im_end|>\n",
+    };
 
     private static string RoleName(ChatRole role) => role switch
     {

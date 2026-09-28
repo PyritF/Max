@@ -18,7 +18,7 @@ on:
 jobs:
   selftest:
     runs-on: ${{ inputs.os || 'ubuntu-latest' }}
-    timeout-minutes: 70
+    timeout-minutes: 100
     env:
       MAX_HOME: ${{ github.workspace }}/.maxhome
       # Die Test-Rechner auf GitHub haben keine Grafikkarte.

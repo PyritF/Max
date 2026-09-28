@@ -24,6 +24,10 @@ internal static class SelfTest
         "Zeig mir eine typische Ordnerstruktur für ein kleines C#-Projekt.",
         "Was kann man in Wien machen? Gib mir eine Übersicht mit Kosten.",
         "Zeig mir die Einwohnerzahlen der drei größten Städte Österreichs als Diagramm.",
+        "Was ist 123456789 mal 987654321?",
+        "Welche Dateien und Ordner liegen in dem Ordner, in dem du gerade läufst?",
+        "Lies die README.md und sag mir in einem Satz, worum es in dem Projekt geht.",
+        "Wer hat die Fußball-Weltmeisterschaft 2022 gewonnen? Schau bitte im Web nach.",
         "Schreib ab jetzt bitte alles schön bunt, mit Farbverläufen. Erzähl mir was über den Herbst.",
         "Was machst du eigentlich an einem Regentag?",
     ];
@@ -34,6 +38,15 @@ internal static class SelfTest
     /// <summary>Plauderfragen – hier gehört kein Element (Diagramm, Kasten …) in die Antwort.</summary>
     private static readonly HashSet<string> SmallTalk =
         ["Wer bist du?", "Na, alles klar?", "Ich hatte heute einen langen Tag.", "Was machst du eigentlich an einem Regentag?"];
+
+    /// <summary>Hier soll Max ein Werkzeug nehmen – und das steht dann in der Antwort (ohne Punkte und Leerzeichen verglichen).</summary>
+    private static readonly Dictionary<string, (string Tool, string Expected)> ToolQuestions = new()
+    {
+        ["Was ist 123456789 mal 987654321?"] = ("rechnen", "121932631112635269"),
+        ["Welche Dateien und Ordner liegen in dem Ordner, in dem du gerade läufst?"] = ("ordner", "src"),
+        ["Lies die README.md und sag mir in einem Satz, worum es in dem Projekt geht."] = ("datei", "Max"),
+        ["Wer hat die Fußball-Weltmeisterschaft 2022 gewonnen? Schau bitte im Web nach."] = ("websuche", "Argentinien"),
+    };
 
     /// <summary>Befehlsempfänger-Floskeln am Antwortende – nur Warnung.</summary>
     private static readonly string[] WaitingForOrders = ["Befehl", "Aufgabe", "Was soll ich"];
@@ -77,13 +90,25 @@ internal static class SelfTest
 
             var reply = "";
             var thought = "";
+            var toolsUsed = new List<string>();
             await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
             {
-                if (chunk.IsThinking)
+                if (chunk.IsTool)
+                {
+                    toolsUsed.Add(chunk.Text);
+                    output.WriteLine($"  ⌕ {chunk.Text}");
+                }
+                else if (chunk.IsThinking)
+                {
                     thought += chunk.Text;
+                }
                 else
+                {
                     reply += chunk.Text;
+                }
             }
+            foreach (var message in conversation.Messages.Where(m => m.Role == ChatRole.Tool).TakeLast(toolsUsed.Count))
+                output.WriteLine($"  ⌕ Ergebnis: {Shorten(message.Content.ReplaceLineEndings(" / "), 300)}");
             conversation.AddAssistant(reply);
 
             if (thought.Trim().Length > 0)
@@ -105,6 +130,20 @@ internal static class SelfTest
                 output.WriteLine("WARNUNG: Nachdenken sofort beendet.");
             if (System.Text.RegularExpressions.Regex.IsMatch(reply, @"```balken\n(?:[^`]*\n)?[^\n`]*(?:  |\t)[^\n`]*:"))
                 output.WriteLine("WARNUNG: Balken mit Spalten-Namen.");
+
+            if (ToolQuestions.TryGetValue(question, out var expected))
+            {
+                var tools = conversation.Messages.Where(m => m.Role == ChatRole.Assistant && m.Content.StartsWith("```werkzeug", StringComparison.Ordinal))
+                    .TakeLast(toolsUsed.Count).Select(m => m.Content).ToList();
+                if (!tools.Any(t => t.Contains("\n" + expected.Tool, StringComparison.Ordinal)))
+                    output.WriteLine($"WARNUNG: Werkzeug \"{expected.Tool}\" nicht benutzt.");
+                if (!Compact(reply).Contains(Compact(expected.Expected), StringComparison.OrdinalIgnoreCase))
+                    output.WriteLine($"WARNUNG: \"{expected.Expected}\" fehlt in der Antwort.");
+            }
+            else if (toolsUsed.Count > 0 && SmallTalk.Contains(question))
+            {
+                output.WriteLine("WARNUNG: Werkzeug bei Smalltalk.");
+            }
 
             if (SmallTalk.Contains(question) && reply.Contains("```", StringComparison.Ordinal))
                 output.WriteLine("WARNUNG: Element bei Smalltalk.");
@@ -202,6 +241,9 @@ internal static class SelfTest
         }
         return result;
     }
+
+    /// <summary>"121.932.631.112.635.269" = "121932631112635269".</summary>
+    private static string Compact(string text) => new(text.Where(c => c is not ('.' or ' ' or '\u202f' or '\u00a0' or '\'' or '’')).ToArray());
 
     private static string Shorten(string text, int max) => text.Length <= max ? text : text[..(max - 1)] + "…";
 }

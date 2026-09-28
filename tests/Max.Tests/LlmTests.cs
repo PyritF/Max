@@ -955,7 +955,7 @@ public class AnswerGrammarTests
         var gbnf = AnswerGrammar.Build();
         Assert.Contains("label ::= [^-:|\\n\\t`{ ] ( [^:|\\n\\t`{ ] | \" \" [^:|\\n\\t`{ ] ){0,24}", gbnf);
         Assert.Contains("plain ::= [^{}`]", gbnf);
-        Assert.Contains("root ::= item* ( \"```\" widget item* )? ( \"```\" w-frage [ \\n]* )?", gbnf);   // ein Element, Menü nur am Ende
+        Assert.Contains("answer ::= item* ( \"```\" widget item* )? ( \"```\" w-frage [ \\n]* )?", gbnf);   // ein Element, Menü nur am Ende
         Assert.DoesNotContain("w-frage |", gbnf.Split("widget ::= ")[1].Split('\n')[0]);   // "Wort}" statt "{/verlauf}" geht nicht
         Assert.Contains("unit ::= ( [%\\u20ac$\\u00b0] | \" \" [^0-9:", gbnf);
     }

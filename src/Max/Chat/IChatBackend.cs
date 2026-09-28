@@ -9,5 +9,8 @@ internal interface IChatBackend
     IAsyncEnumerable<ReplyChunk> StreamReplyAsync(Conversation conversation, CancellationToken ct);
 }
 
-/// <summary>Ein Stück der Antwort – oder, mit <paramref name="IsThinking"/>, des Nachdenkens davor.</summary>
-internal readonly record struct ReplyChunk(string Text, bool IsThinking = false);
+/// <summary>
+/// Ein Stück der Antwort – oder, mit <paramref name="IsThinking"/>, des Nachdenkens davor;
+/// mit <paramref name="IsTool"/> die Meldung, dass Max gerade ein Werkzeug benutzt ("Suche im Web: …").
+/// </summary>
+internal readonly record struct ReplyChunk(string Text, bool IsThinking = false, bool IsTool = false);

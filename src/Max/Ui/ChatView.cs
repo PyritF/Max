@@ -56,7 +56,7 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
         if (animate)
             console.Cursor.Show(false);
 
-        using var spinnerStop = new CancellationTokenSource();
+        var spinnerStop = new CancellationTokenSource();
         var spinner = animate ? SpinAsync(spinnerStop.Token) : Task.CompletedTask;
 
         async Task StopSpinnerAsync()
@@ -65,6 +65,16 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
                 return;
             await spinnerStop.CancelAsync();
             await spinner;
+        }
+
+        // Während ein Werkzeug läuft, dreht sich der Spinner hinter der Meldung weiter.
+        void RestartSpinner()
+        {
+            if (!animate)
+                return;
+            spinnerStop.Dispose();
+            spinnerStop = new CancellationTokenSource();
+            spinner = SpinAsync(spinnerStop.Token);
         }
 
         using var tickerStop = new CancellationTokenSource();
@@ -86,6 +96,14 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
             await foreach (var chunk in chunks.WithCancellation(ct))
             {
                 await StopSpinnerAsync();
+                if (chunk.IsTool)
+                {
+                    await StopThinkingAsync();
+                    writer.Write("⌕ " + chunk.Text + " ", new Style(Theme.Muted));
+                    writer.EndLine();
+                    RestartSpinner();
+                    continue;
+                }
                 if (chunk.IsThinking)
                 {
                     // Ohne echtes Terminal wird das Nachdenken nicht gezeigt.
@@ -117,6 +135,7 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
         }
         finally
         {
+            spinnerStop.Dispose();
             if (animate)
                 console.Cursor.Show(true);
         }

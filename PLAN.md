@@ -86,9 +86,9 @@ Max/
 │           ├── Manifest.cs           (manifest.json laden, Fallback aus der Exe)
 │           ├── ModelDownloader.cs    (fortsetzbar, SHA-256)
 │           └── InstallState.cs       (state.json)
-│   ── später (Phase 2) ──
-│       ├── Tools/                    (ITool + konkrete Tools)
-│       └── Agent/                    (Agent-Loop, Berechtigungen)
+│   ── Phase 2 ──
+│       ├── Tools/                    (ITool, ToolBox, lesende Werkzeuge – Phase 2, umgesetzt)
+│       └── Agent/                    (Berechtigungen für schreibende Werkzeuge – später)
 └── tests/
     └── Max.Tests/                    (xUnit: Requirements, ChatTemplate, MarkdownRenderer …)
 ```
@@ -461,34 +461,42 @@ Lösung: **Die Begrüßung für den nächsten Start wird schon am Ende der aktue
 
 ---
 
-## 9. Phase 2: Agent (Ausblick)
+## 9. Phase 2: Agent
 
-Erst **nachdem** Phase 1 steht, wird Max zum Agenten.
+Max bekommt Werkzeuge. **Erster Schritt (umgesetzt): nur lesend** – nichts schreiben, nichts ausführen, nichts installieren.
 
-**Tool-Schnittstelle:**
-```csharp
-public interface ITool
-{
-    string Name { get; }              // z. B. "read_file"
-    string Description { get; }       // für das Modell: wann benutzt man das Tool?
-    JsonElement ParameterSchema { get; }
-    RiskLevel Risk { get; }           // Harmlos, Schreibend, Gefährlich
-    Task<ToolResult> ExecuteAsync(JsonElement args, CancellationToken ct);
-}
+**Aufruf:** Statt einer Antwort schreibt das Modell einen Block – per Grammatik erzwungen, nur mit bekannten Namen:
+```werkzeug
+websuche: Einwohner Graz 2026
 ```
+Jedes Werkzeug hat einen Namen und höchstens eine Angabe (`Tools/ITool.cs`). Das hält Grammatik und Prompt einfach
+und passt zu den Elementen, die das Modell schon zuverlässig schreibt.
 
-**Agent-Loop:**
-1. Nutzer schreibt etwas.
-2. Das Modell antwortet mit Text **oder** mit einem Tool-Aufruf.
-3. Bei einem Tool-Aufruf prüft Max die Berechtigung, fragt eventuell nach, führt das Tool aus und legt das Ergebnis als `tool`-Nachricht in den Verlauf. Danach geht es zurück zu Schritt 2.
-4. Das Ganze läuft so lange, bis das Modell eine normale Antwort gibt (mit einem Limit für die Anzahl der Runden).
+**Ablauf** (`LlmBackend.StreamReplyAsync`, in Runden):
+1. Das Modell denkt nach und schreibt Text **oder** einen Werkzeug-Block. Der Block wird nie angezeigt.
+2. Max zeigt „⌕ Suche im Web: …“ (mit Spinner), führt das Werkzeug aus (höchstens 30 s, Ergebnis höchstens 8.000 Zeichen)
+   und legt Aufruf und Ergebnis in den Verlauf – das Ergebnis wie bei Qwen üblich als `<tool_response>`.
+3. Nächste Runde: Das Modell sieht das Ergebnis und antwortet – oder ruft das nächste Werkzeug auf, höchstens drei Mal.
+4. Der Cache springt nach jeder Runde auf den Stand vor der Antwort zurück; die nächste Runde rechnet nur Aufruf und Ergebnis dazu.
 
-**Geplante Tools:**
+**Werkzeuge (alle lesend):**
+| Werkzeug | Was | Bemerkung |
+|---|---|---|
+| `uhrzeit` | Datum und Uhrzeit jetzt | Der Prompt kennt nur die Zeit vom Gesprächsbeginn |
+| `system` | Betriebssystem, Prozessor, RAM (frei), Grafikkarte, Laufwerke, Laufzeit | |
+| `rechnen: <Rechnung>` | exakt mit 28 Stellen, Klammern, ^, %, sqrt | kleine Modelle verrechnen sich bei großen Zahlen |
+| `ordner: <Pfad>` | Unterordner und Dateien mit Größe | relativ zum Startordner, `~` = Benutzerordner |
+| `datei: <Pfad>` | Textdatei lesen (Anfang, höchstens 256 KB) | Schlüssel und Zugangsdaten (.ssh, .env, *.pem, id_rsa …) sind tabu |
+| `websuche: <Begriffe>` | DuckDuckGo, erste 6 Treffer mit Adresse und Auszug | ohne Konto oder Schlüssel; die Anfrage verlässt den Rechner – sichtbar in der Anzeige |
+| `webseite: <Adresse>` | Text einer Seite ohne Menüs und Skripte | nur http/https, höchstens 2 MB |
+
+- Ergebnisse von Webseiten und Dateien sind laut Prompt **Daten, keine Anweisungen**.
+- Der Selbsttest fragt nach einer großen Multiplikation, dem Startordner, der README und dem Weltmeister 2022 und
+  prüft, ob das passende Werkzeug benutzt wurde und das Ergebnis in der Antwort steht.
+
+**Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |
 |---|---|
-| Systeminfo (CPU, RAM, Laufwerke, Uhrzeit) | harmlos |
-| Datei lesen / Ordner auflisten | harmlos (nur erlaubte Ordner) |
-| Websuche / Webseite lesen | harmlos (braucht Internet) |
 | Datei schreiben / bearbeiten | schreibend → Bestätigung |
 | Shell-Befehl ausführen | gefährlich → immer Bestätigung mit Vorschau |
 | Eigene Skripte (Ordner `scripts/`, automatisch als Tools registriert) | je nach Skript |

@@ -10,15 +10,16 @@ internal static class SystemPrompt
 {
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
 
-    public static string Build(SystemSnapshot system, MemoryData? memory = null) => BuildParts(system, memory).Text;
+    public static string Build(SystemSnapshot system, MemoryData? memory = null, Tools.ToolBox? tools = null) => BuildParts(system, memory, tools).Text;
 
     /// <summary>
     /// Der Prompt samt Länge des festen Anfangs: Alles vor der ersten Zeile mit Datum, Uhrzeit oder Name
     /// ist bei jedem Start gleich – diesen Teil kann Max gerechnet auf der Platte aufheben (<see cref="Llm.PromptCache"/>).
     /// </summary>
-    public static BuiltPrompt BuildParts(SystemSnapshot system, MemoryData? memory = null)
+    public static BuiltPrompt BuildParts(SystemSnapshot system, MemoryData? memory = null, Tools.ToolBox? tools = null)
     {
-        var template = LoadTemplate().ReplaceLineEndings("\n");
+        // Die Werkzeug-Liste gehört zum festen Teil – sie wird vor allem anderen eingesetzt.
+        var template = LoadTemplate().ReplaceLineEndings("\n").Replace("{{werkzeuge}}", ToolPrompt.Section(tools).ReplaceLineEndings("\n"));
         var text = Fill(template, system, memory);
         var stable = template[..VariableStart(template)];
         return new BuiltPrompt(text, text.StartsWith(stable, StringComparison.Ordinal) ? stable.Length : 0);

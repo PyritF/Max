@@ -7,8 +7,9 @@ namespace Max.Ui.Widgets;
 internal static partial class WidgetValidator
 {
     /// <summary>Ist das ein Element (inkl. Rückfrage) statt normalem Code?</summary>
+    /// <summary>Auch der Werkzeug-Aufruf ist ein Block, den die Schleuse zurückhält – gezeigt wird er nie.</summary>
     public static bool IsElement(string name) =>
-        WidgetRegistry.IsWidget(name) || ChoiceQuestion.BlockNames.Contains(name);
+        WidgetRegistry.IsWidget(name) || ChoiceQuestion.BlockNames.Contains(name) || name == Tools.ToolCall.BlockName;
 
     public static bool IsValid(string name, string body)
     {

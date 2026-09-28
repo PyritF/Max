@@ -27,6 +27,10 @@ http.DefaultRequestHeaders.UserAgent.ParseAdd($"Max/{typeof(Program).Assembly.Ge
 
 var thinking = ThinkingSwitch.Load(paths);
 
+// Werkzeuge (nur lesend): eigener HttpClient, der Weiterleitungen folgt – Webseiten leiten oft um.
+using var web = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = true, MaxAutomaticRedirections = 5 }) { Timeout = Timeout.InfiniteTimeSpan };
+var tools = Max.Tools.ToolBox.CreateDefault(web, () => DateTime.Now, () => Environment.CurrentDirectory);
+
 SystemSnapshot? system = null;
 LlmEngine? engine = null;
 LlmBackend? llm = null;
@@ -52,9 +56,9 @@ using (var startup = new CancellationTokenSource())
         if (demo)
             await StartupScreen.RunAsync("Einrichtung", setupSubtitle, StartupPlan.FirstStartDemo(OnHardware), startup.Token);
         else if (!InstallState.IsInstalled(paths))
-            await StartupScreen.RunAsync("Einrichtung", setupSubtitle, StartupPlan.Setup(paths, http, () => thinking.Enabled, OnHardware, OnLoaded), startup.Token);
+            await StartupScreen.RunAsync("Einrichtung", setupSubtitle, StartupPlan.Setup(paths, http, () => thinking.Enabled, OnHardware, OnLoaded, tools), startup.Token);
         else
-            await StartupScreen.RunAsync("Max startet", null, StartupPlan.Normal(paths, http, updater, () => thinking.Enabled, OnHardware, m => manifest = m, OnLoaded), startup.Token);
+            await StartupScreen.RunAsync("Max startet", null, StartupPlan.Normal(paths, http, updater, () => thinking.Enabled, OnHardware, m => manifest = m, OnLoaded, tools), startup.Token);
     }
     catch (Exception e) when (e is SetupException or OperationCanceledException)
     {
@@ -73,14 +77,14 @@ using var loadedEngine = engine;
 
 // Nur für den GitHub-Workflow: feste Fragen statt Chat.
 if (args.Contains("--selftest") && engine is not null && llm is not null)
-    return await SelfTest.RunAsync(engine, llm, Console.Out, m => SystemPrompt.Build(system, m));
+    return await SelfTest.RunAsync(engine, llm, Console.Out, m => SystemPrompt.Build(system, m, tools));
 
 // 2. Übersicht
 if (!Console.IsOutputRedirected)
     AnsiConsole.Clear();
 
 // Gedächtnis: Ändert es sich (/vergiss), bekommt das Modell sofort den neuen System-Prompt.
-var memory = new MemoryBook(demo ? null : paths, m => llm?.UpdateSystemPrompt(SystemPrompt.Build(system, m)));
+var memory = new MemoryBook(demo ? null : paths, m => llm?.UpdateSystemPrompt(SystemPrompt.Build(system, m, tools)));
 
 await HomeScreen.ShowAsync(system, memory.Current.LastSession);
 

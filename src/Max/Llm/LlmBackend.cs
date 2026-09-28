@@ -29,7 +29,9 @@ internal sealed record BackendOptions(
     SamplingSettings? Answer = null,
     SamplingSettings? Thinking = null,
     PromptCache? PromptCache = null,
-    int StablePromptLength = 0);
+    int StablePromptLength = 0,
+    Tools.ToolBox? Tools = null,
+    int MaxToolRounds = 3);
 
 /// <summary>
 /// Max' Antworten aus dem lokalen Sprachmodell: System-Prompt + Verlauf → Prompt → Modell → Text.
@@ -67,6 +69,7 @@ internal sealed partial class LlmBackend : IChatBackend
     private readonly SamplingSettings _answer;
     private readonly SamplingSettings _thinking;
     private readonly ContextWindow _window;
+    private readonly string? _toolGrammar;
 
     // Tokens je Nachricht. Für eigene Antworten genau die Tokens, die auch im Cache des Modells stehen –
     // nicht neu zerlegt, damit der nächste Prompt exakt zum Cache passt.
@@ -91,6 +94,7 @@ internal sealed partial class LlmBackend : IChatBackend
         _answer = _options.Answer ?? new SamplingSettings();
         _thinking = _options.Thinking ?? SamplingSettings.Thinking;
         _window = new ContextWindow(Math.Max(256, model.ContextSize - AnswerReserve - _options.ThinkingBudget));
+        _toolGrammar = _options.Tools is { } tools ? AnswerGrammar.Build(tools.GrammarRule()) : null;
     }
 
     /// <summary>Wie lange das Aufwärmen gedauert hat – für /debug.</summary>
@@ -145,7 +149,38 @@ internal sealed partial class LlmBackend : IChatBackend
         return stable;
     }
 
+    /// <summary>
+    /// Max' Antwort – bei Bedarf in mehreren Runden: Ruft das Modell ein Werkzeug auf, wird es ausgeführt,
+    /// Aufruf und Ergebnis kommen in den Verlauf, und das Modell antwortet (oder ruft das nächste auf).
+    /// Nach <see cref="BackendOptions.MaxToolRounds"/> Aufrufen muss es antworten.
+    /// </summary>
     public async IAsyncEnumerable<ReplyChunk> StreamReplyAsync(Conversation conversation, [EnumeratorCancellation] CancellationToken ct)
+    {
+        for (var round = 0; ; round++)
+        {
+            var toolCall = new ToolCallSlot();
+            var allowTools = _options.Tools is not null && round < _options.MaxToolRounds;
+            await foreach (var chunk in RoundAsync(conversation, allowTools, toolCall, ct))
+                yield return chunk;
+            if (toolCall.Call is not { } call)
+                yield break;
+
+            var tools = _options.Tools!;
+            yield return new ReplyChunk(tools.Find(call.Name)?.Describe(call.Argument) ?? call.Name, IsTool: true);
+            var result = await tools.RunAsync(call, ct);
+            conversation.Add(ChatRole.Assistant, call.Text);
+            conversation.Add(ChatRole.Tool, result);
+        }
+    }
+
+    /// <summary>Hier landet ein Werkzeug-Aufruf aus einer Runde.</summary>
+    private sealed class ToolCallSlot
+    {
+        public Tools.ToolCall? Call { get; set; }
+    }
+
+    /// <summary>Eine Runde: Prompt aus dem Verlauf, Nachdenken, Antwort – oder ein Werkzeug-Aufruf statt der Antwort.</summary>
+    private async IAsyncEnumerable<ReplyChunk> RoundAsync(Conversation conversation, bool allowTools, ToolCallSlot toolCall, [EnumeratorCancellation] CancellationToken ct)
     {
         await FinishCommitAsync();
 
@@ -166,7 +201,8 @@ internal sealed partial class LlmBackend : IChatBackend
         var decoder = _model.CreateDecoder();
         var answerPhase = !think;
         // Anfangs darf das Nachdenken nicht gleich wieder enden – sonst denkt das Modell in der Antwort weiter.
-        var sampler = answerPhase ? CreateAnswerSampler() : _model.CreateSampler(_thinking, banned: _thinkEnd);
+        var grammar = allowTools ? _toolGrammar : AnswerGrammar.Gbnf;
+        var sampler = answerPhase ? CreateAnswerSampler(grammar) : _model.CreateSampler(_thinking, banned: _thinkEnd);
         var thinkingFree = _thinkEnd!.Length == 0;
 
         var generated = new List<int>();        // alles, was nach dem Kopf im Cache steht
@@ -276,12 +312,22 @@ internal sealed partial class LlmBackend : IChatBackend
                     answerPhase = true;
                     thinkingTime = clock.Elapsed;
                     sampler.Dispose();
-                    sampler = CreateAnswerSampler();
+                    sampler = CreateAnswerSampler(grammar);
                 }
 
                 // Ein Element ist fertig: gut → zeigen, kaputt → neu erzeugen oder weglassen.
                 if (gate.Closed is { } closed)
                 {
+                    // Ein Werkzeug-Aufruf wird nie gezeigt: Runde beenden, StreamReplyAsync führt ihn aus.
+                    if (closed.Name == Tools.ToolCall.BlockName)
+                    {
+                        toolCall.Call = allowTools ? Tools.ToolCall.Parse(closed.Body) : null;
+                        gate.Drop();
+                        if (toolCall.Call is not null)
+                            break;
+                        continue;
+                    }
+
                     string released;
                     if (WidgetValidator.IsValid(closed.Name, closed.Body))
                     {
@@ -299,7 +345,7 @@ internal sealed partial class LlmBackend : IChatBackend
                             Truncate(answerTokens, repair.AnswerTokens);
                             Truncate(answerAll, repair.AnswerAll);
                             sampler.Dispose();
-                            sampler = CreateAnswerSampler(temperature: 0.3f, seed: (uint)Random.Shared.Next());
+                            sampler = CreateAnswerSampler(grammar, temperature: 0.3f, seed: (uint)Random.Shared.Next());
                             foreach (var t in answerAll)
                                 sampler.Accept(t);
                             decoder = _model.CreateDecoder();
@@ -460,10 +506,10 @@ internal sealed partial class LlmBackend : IChatBackend
         }
     }
 
-    private ITokenSampler CreateAnswerSampler(float? temperature = null, uint? seed = null) =>
+    private ITokenSampler CreateAnswerSampler(string? grammar, float? temperature = null, uint? seed = null) =>
         _model.CreateSampler(
             temperature is { } t ? _answer with { Temperature = t } : _answer,
-            _options.UseGrammar ? AnswerGrammar.Gbnf : null,
+            _options.UseGrammar ? grammar ?? AnswerGrammar.Gbnf : null,
             seed,
             _thinkTags);
 
