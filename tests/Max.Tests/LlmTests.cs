@@ -393,6 +393,7 @@ public class LlmBackendTests
 
         Assert.Equal("Hier:\n```balken\nSchlaf: 8\nArbeit: 8\n```\nEnde.", reply);
         Assert.Equal(1, backend.LastRun!.Repairs);
+        await backend.CompleteAsync();      // die Antwort wird im Hintergrund nachgerechnet – erst danach den Cache lesen
         Assert.DoesNotContain("kaputt", model.Decode(model.Cache));
     }
 
@@ -400,9 +401,11 @@ public class LlmBackendTests
     public async Task WhenRestoreFails_EverythingIsRecomputed_AndTheElementDropped()
     {
         var model = new FakeModel("A\n", "```balken\n", "x\n", "```\n", "Ende.") { FailRestore = true };
-        var (_, reply) = await Collect(Backend(model).StreamReplyAsync(Single("?"), CancellationToken.None));
+        var backend = Backend(model);
+        var (_, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
 
         Assert.Equal("A\nEnde.", reply);
+        await backend.CompleteAsync();
         Assert.DoesNotContain("x\n", model.Decode(model.Cache));   // Zwischenstände unbrauchbar: der nächste Prompt rechnet neu
     }
 
@@ -416,6 +419,7 @@ public class LlmBackendTests
         var (_, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
 
         Assert.Equal("Vorher\n", reply);
+        await backend.CompleteAsync();
         Assert.DoesNotContain("5%", model.Decode(model.Cache));
     }
 
