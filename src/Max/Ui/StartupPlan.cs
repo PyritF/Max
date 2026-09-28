@@ -71,7 +71,7 @@ internal static class StartupPlan
             try
             {
                 engine = await LlmEngine.LoadAsync(paths.Model, state.ContextSize, snapshot.Hardware, paths.EngineLog, progress, ct);
-                var prompt = SystemPrompt.BuildParts(snapshot);
+                var prompt = SystemPrompt.BuildParts(snapshot, Memory.MemoryStore.Load(paths));
                 var options = BackendOptionsFor(state, thinking) with
                 {
                     PromptCache = new PromptCache(paths.PromptCache, $"{state.Sha256}|{engine.StateIdentity}"),

@@ -106,3 +106,4 @@ Code wird automatisch farbig hervorgehoben – gib nur die Sprache am Code-Block
 - Heute ist {{datum}}. Das Gespräch begann um {{uhrzeit}} Uhr.
 - Betriebssystem: {{os}}.
 - Nutzer: {{name}} (Vorname: {{vorname}}).
+{{gedaechtnis}}

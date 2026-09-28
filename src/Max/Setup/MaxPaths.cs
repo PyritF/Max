@@ -29,6 +29,9 @@ internal sealed class MaxPaths(string root)
     /// <summary>Der Zustand zu <see cref="ModelNext"/>.</summary>
     public string StateNext => Path.Combine(Root, "state.next.json");
 
+    /// <summary>Was Max über den Nutzer weiß, und die Begrüßung für den nächsten Start.</summary>
+    public string Memory => Path.Combine(Root, "memory.json");
+
     /// <summary>Frühere Eingaben für ↑/↓.</summary>
     public string History => Path.Combine(Root, "history.txt");
 

@@ -18,13 +18,10 @@ internal sealed class ExitCommand : ICommand
     public string Description => "Beendet Max.";
     public bool Hidden => false;
 
-    public Task<CommandResult> ExecuteAsync(CommandContext context, string args)
-    {
-        WriteFarewell(context.Console);
-        return Task.FromResult(CommandResult.Exit);
-    }
+    /// <summary>Verabschiedet wird in <see cref="ChatLoop"/> – vorher notiert sich Max noch das Wichtigste.</summary>
+    public Task<CommandResult> ExecuteAsync(CommandContext context, string args) => Task.FromResult(CommandResult.Exit);
 
-    /// <summary>Verabschiedung – auch für Strg+C und Eingabe-Ende.</summary>
+    /// <summary>Verabschiedung – für /exit, Strg+C und Eingabe-Ende.</summary>
     public static void WriteFarewell(IAnsiConsole console)
     {
         var farewell = Farewells[Random.Shared.Next(Farewells.Length)];

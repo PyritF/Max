@@ -36,11 +36,10 @@ public class CommandTests
     }
 
     [Fact]
-    public async Task Exit_beendet_und_verabschiedet_sich()
+    public async Task Exit_beendet()
     {
         var result = await new ExitCommand().ExecuteAsync(Context, "");
 
         Assert.Equal(CommandResult.Exit, result);
-        Assert.Contains("◆", _console.Output);
     }
 }

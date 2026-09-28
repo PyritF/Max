@@ -61,7 +61,7 @@ internal sealed partial class LlmBackend : IChatBackend
     internal const int LoopChars = 200;
 
     private readonly ILanguageModel _model;
-    private readonly string _systemPrompt;
+    private string _systemPrompt;
     private readonly IChatTemplate _template;
     private readonly BackendOptions _options;
     private readonly SamplingSettings _answer;
@@ -382,6 +382,45 @@ internal sealed partial class LlmBackend : IChatBackend
 
         Remember(shown, history);
         _pendingCommit = _model.AppendAsync(history, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Tauscht den System-Prompt, z. B. nachdem Max etwas vergessen soll. Beim nächsten Prompt rechnet das Modell
+    /// ab der ersten Änderung neu – das Gedächtnis steht am Ende des System-Prompts, also nur wenig.
+    /// </summary>
+    public void UpdateSystemPrompt(string systemPrompt)
+    {
+        _systemPrompt = systemPrompt;
+        _systemTokens = null;
+    }
+
+    /// <summary>
+    /// Ein Auftrag im Hintergrund, z. B. das Gedächtnis am Ende eines Gesprächs: Der Verlauf plus
+    /// <paramref name="instruction"/> als letzte Nachricht, ohne Nachdenken, optional in fester Form (Grammatik).
+    /// Nichts davon kommt in den Verlauf.
+    /// </summary>
+    /// <param name="done">Hört auf, sobald der Text damit fertig ist.</param>
+    public async Task<string> RunTaskAsync(IReadOnlyList<ChatMessage> messages, string instruction, string? grammar, int maxTokens, Func<string, bool>? done, CancellationToken ct)
+    {
+        await FinishCommitAsync();
+        var prompt = BuildPrompt([.. messages, new ChatMessage(ChatRole.User, instruction, DateTime.Now)]);
+        await _model.PrefillAsync([.. prompt, .. _assistantStart!], ct);
+
+        using var sampler = _model.CreateSampler(_answer with { Temperature = 0.3f }, grammar, banned: _thinkTags);
+        var decoder = _model.CreateDecoder();
+        var text = new StringBuilder();
+        for (var i = 0; i < maxTokens && _model.CachedCount + 1 < _model.ContextSize; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var token = sampler.Sample();
+            if (_model.IsEndOfGeneration(token))
+                break;
+            text.Append(decoder.Add(token));
+            await _model.AppendAsync([token], ct);
+            if (done?.Invoke(text.ToString()) == true)
+                break;
+        }
+        return text.ToString();
     }
 
     /// <summary>Wartet, bis die letzte Antwort im Hintergrund fertig nachgerechnet ist.</summary>

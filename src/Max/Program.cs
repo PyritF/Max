@@ -2,6 +2,8 @@ using Max;
 using Max.Chat;
 using Max.Commands;
 using Max.Llm;
+using Max.Memory;
+using Max.Persona;
 using Max.Setup;
 using Max.Ui;
 using Max.Update;
@@ -71,13 +73,16 @@ using var loadedEngine = engine;
 
 // Nur für den GitHub-Workflow: feste Fragen statt Chat.
 if (args.Contains("--selftest") && engine is not null && llm is not null)
-    return await SelfTest.RunAsync(engine, llm, Console.Out);
+    return await SelfTest.RunAsync(engine, llm, Console.Out, m => SystemPrompt.Build(system, m));
 
 // 2. Übersicht
 if (!Console.IsOutputRedirected)
     AnsiConsole.Clear();
 
-await HomeScreen.ShowAsync(system);
+// Gedächtnis: Ändert es sich (/vergiss), bekommt das Modell sofort den neuen System-Prompt.
+var memory = new MemoryBook(demo ? null : paths, m => llm?.UpdateSystemPrompt(SystemPrompt.Build(system, m)));
+
+await HomeScreen.ShowAsync(system, memory.Current.LastSession);
 
 // Eine Nachricht aus dem Manifest erscheint genau einmal.
 if (manifest?.App.Message is { Length: > 0 } message && Settings.Load(paths) is var settings && settings.SeenMessage != message)
@@ -93,8 +98,18 @@ var updating = demo ? Task.CompletedTask : Task.Run(() => updater.RunAsync(manif
 
 // 3. Chat – in der Demo ohne Modell mit Platzhalter-Antworten.
 IChatBackend backend = llm ?? (IChatBackend)new PlaceholderBackend();
-var commands = CommandRegistry.CreateDefault(new ThinkCommand(thinking), new DebugCommand(() => DebugReport.Build(engine, llm, paths, system, updater)), new DemoCommand());
-await new ChatLoop(AnsiConsole.Console, backend, () => DateTime.Now, commands, paths.History).RunAsync();
+var commands = CommandRegistry.CreateDefault(
+    new ThinkCommand(thinking), new MemoryCommand(memory), new ForgetCommand(memory),
+    new DebugCommand(() => DebugReport.Build(engine, llm, paths, system, updater)), new DemoCommand());
+
+// Beim Beenden notiert sich Max das Wichtigste – samt Begrüßung für den nächsten Start (PLAN.md §8a).
+Func<Conversation, CancellationToken, Task>? remember = llm is null ? null : async (conversation, ct) =>
+{
+    if (await Reflection.RunAsync(llm, conversation.Messages, DateTime.Now, ct) is { } reflection)
+        memory.Set(reflection.ApplyTo(memory.Current, DateTime.Now));
+};
+var opening = llm is null ? null : memory.TakeGreeting(system.Now);
+await new ChatLoop(AnsiConsole.Console, backend, () => DateTime.Now, commands, paths.History, opening, remember).RunAsync();
 if (llm is not null)
     await llm.CompleteAsync(); // erst fertig nachrechnen, dann das Modell freigeben
 updates.Cancel();

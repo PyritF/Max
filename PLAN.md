@@ -319,7 +319,8 @@ Zusätzlich kann das Manifest ein `disabled: true` („Not-Aus“) und eine `mes
 | `/debug` | Technische Infos: Modell, Backend, VRAM/RAM, Tokens/s, Kontextauslastung; schaltet außerdem einen Debug-Modus an/aus, der den Denk-Text und Timings zeigt |
 | `/exit` | Beenden |
 | *(optional)* `/save`, `/load` | Gespräch speichern bzw. laden |
-| `/memory`, `/forget` | Gedächtnis anzeigen bzw. Einträge löschen (siehe 8a) |
+| `/denken` | Nachdenken vor jeder Antwort an/aus |
+| `/gedächtnis`, `/vergiss 3` bzw. `/vergiss alles` | Gedächtnis anzeigen bzw. Einträge löschen (siehe 8a) |
 
 `/debug` taucht **nicht** in `/help` auf; das ist ein Entwickler-Geheimnis.
 
@@ -419,41 +420,43 @@ Max soll sich merken, mit wem er spricht, und das nutzen, zum Beispiel für eine
 ```json
 {
   "facts": [
-    { "text": "Programmiert Max in C#.",                "added": "2026-09-25" },
-    { "text": "Arbeitet oft spät abends.",                "added": "2026-09-27" }
+    { "text": "Programmiert in C#.",       "added": "2026-09-25" },
+    { "text": "Arbeitet oft spät abends.", "added": "2026-09-27" }
   ],
-  "lastSession": { "ended": "2026-09-27T23:41:00", "summary": "Hat am Markdown-Renderer gearbeitet." },
-  "nextGreeting": "Zurück am Renderer? Die Tabellen warten schon."
+  "lastSession": { "ended": "2026-09-27T23:41:00", "summary": "Tabellen im Renderer repariert" },
+  "nextGreeting": { "morning": "…", "day": "Zurück am Renderer?", "evening": "…", "night": "…", "created": "2026-09-27T23:41:00" }
 }
 ```
 
-- **Merken:** Am Ende eines Gesprächs (bei `/exit` oder im Hintergrund nach längerer Pause) bekommt das Modell einen Extra-Auftrag: „Welche dauerhaften, neuen Fakten über den Nutzer stecken in diesem Gespräch? Antworte als JSON-Liste.“ Neue Fakten werden angehängt, Doppelte zusammengeführt.
-- **Nutzen:** Die Fakten kommen als eigener Abschnitt in den System-Prompt (`## Was du über den Nutzer weißt`).
-- **Begrenzen:** höchstens ca. 50 Fakten bzw. ein festes Token-Budget. Wird es zu viel, fasst das Modell die Liste selbst zusammen.
-- **Kontrolle:** `/memory` zeigt, was Max weiß; `/forget <nr>` löscht einen Eintrag, `/forget all` löscht alles. Alles bleibt lokal auf dem Rechner.
+- **Merken:** Beim Beenden (`/exit`, Strg+C, Eingabe-Ende) bekommt das Modell einen Extra-Auftrag hinter dem Gespräch (`Memory/Reflection.cs`): neue, dauerhafte Fakten über den Nutzer, eine kurze Zusammenfassung und vier Begrüßungen – ohne Nachdenken, in fester Form per Grammatik:
+  ```
+  FAKTEN:
+  - Programmiert in C#.
+  ZUSAMMENFASSUNG: Tabellen im Renderer repariert
+  MORGEN: …   TAG: …   ABEND: …   NACHT: …
+  ```
+  Max zeigt dabei „Ich notiere mir noch kurz das Wichtigste …“; Strg+C überspringt es. Gab es kein Gespräch, passiert nichts.
+- **Nutzen:** Die Fakten und das letzte Gespräch stehen als eigener Abschnitt ganz am Ende des System-Prompts (`## Was du über den Nutzer weißt`). Der feste Anfang bleibt dadurch gleich, und der gespeicherte Stand beim Start (Prompt-Cache) passt weiter.
+- **Begrenzen:** Doppelte (gleich bis auf Groß-/Kleinschreibung und Satzzeichen) fallen weg, höchstens 8 neue Fakten pro Gespräch und 50 insgesamt – darüber fallen die ältesten weg. (Zusammenfassen durch das Modell erst, falls das in der Praxis nötig wird.)
+- **Kontrolle:** `/gedächtnis` zeigt, was Max weiß; `/vergiss 3` löscht einen Eintrag, `/vergiss alles` alles – sofort, auch für das laufende Gespräch (neuer System-Prompt). Alles bleibt lokal auf dem Rechner.
 
 ### KI-Begrüßung
 
 Problem: Das Modell zu laden dauert ein paar Sekunden, und die Begrüßung soll **sofort** da sein.
 
-Lösung: **Die Begrüßung für den nächsten Start wird schon am Ende der aktuellen Sitzung erzeugt** und in `memory.json` als `nextGreeting` gespeichert.
+Lösung: **Die Begrüßung für den nächsten Start wird schon am Ende der aktuellen Sitzung erzeugt**, je eine für Morgen, Tag, Abend und Nacht; beim Start wird die passende gewählt.
 
-```
-Start ──► Banner ──► nextGreeting vorhanden?  ── ja ──► sofort anzeigen
-                              │
-                              └─ nein (erster Start / Fehler) ──► GetGreeting(now)  (fester Text als Fallback)
-```
-
-- Die Begrüßung soll sehr kurz sein (ein Satz), im JARVIS-Ton, und kann Fakten, Uhrzeit und die letzte Sitzung aufgreifen.
-- Die Tageszeit ist beim Erzeugen noch nicht bekannt. Deshalb erzeugt das Modell **mehrere Varianten** (Morgen/Tag/Abend/Nacht), und beim Start wird die passende gewählt.
-- `GetGreeting(DateTime)` aus Schritt 2 bleibt als **Fallback** bestehen.
-- Architektur: ein Interface `IGreetingProvider` mit `StaticGreetingProvider` (Schritt 2) und `MemoryGreetingProvider` (hier).
+- Im Kasten des Startbildschirms bleibt die kurze feste Begrüßung („Guten Abend, Alex.“) – die Spalte ist schmal.
+- Darunter sagt Max die persönliche Begrüßung als ersten Satz im Chat („◆ Zurück am Renderer?“). Sie steht auch im Verlauf, damit eine Antwort darauf passt.
+- Jede Begrüßung gilt nur einmal und höchstens 14 Tage; danach nur die feste.
+- „Zuletzt“ im Startbildschirm zeigt das letzte Gespräch („Gestern, 23:41 – Tabellen im Renderer repariert“).
+- Ein eigenes Interface `IGreetingProvider` war nicht nötig: `MemoryBook.TakeGreeting` liefert die Begrüßung oder nichts.
 
 | # | Schritt |
 |---|---|
-| 22 | `MemoryStore` – `memory.json` laden und speichern, `/memory`, `/forget` |
-| 23 | Fakten-Extraktion am Sitzungsende + Einbau in den System-Prompt |
-| 24 | `IGreetingProvider` + KI-Begrüßung mit Fallback |
+| 22 | `MemoryStore` – `memory.json` laden und speichern, `/gedächtnis`, `/vergiss` ✅ |
+| 23 | Fakten-Extraktion am Sitzungsende + Einbau in den System-Prompt ✅ |
+| 24 | KI-Begrüßung (vorab erzeugt, je Tageszeit) mit Fallback, „Zuletzt“ im Startbildschirm ✅ |
 
 ---
 

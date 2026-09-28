@@ -24,12 +24,19 @@ internal sealed class ChatLoop
     // Gesetzt, solange Max antwortet – Strg+C bricht dann nur die Antwort ab.
     private CancellationTokenSource? _reply;
 
+    // Was beim Beenden noch passiert (Gedächtnis) – bekommt das Gespräch, Strg+C bricht es ab.
+    private readonly Func<Conversation, CancellationToken, Task>? _onExit;
+
     // Gesetzt, solange das Auswahlmenü offen ist – Strg+C wird dann ignoriert (Esc schließt es).
     private volatile bool _menuOpen;
 
     /// <param name="historyFile">Wo frühere Eingaben gespeichert werden (↑/↓); null = nur für diese Sitzung.</param>
-    public ChatLoop(IAnsiConsole console, IChatBackend backend, Func<DateTime> clock, CommandRegistry? commands = null, string? historyFile = null)
+    /// <param name="opening">Max' erster Satz (Begrüßung aus dem Gedächtnis) – steht auch im Verlauf, damit eine Antwort darauf passt.</param>
+    /// <param name="onExit">Läuft beim Beenden vor der Verabschiedung, falls es ein Gespräch gab.</param>
+    public ChatLoop(IAnsiConsole console, IChatBackend backend, Func<DateTime> clock, CommandRegistry? commands = null, string? historyFile = null,
+        string? opening = null, Func<Conversation, CancellationToken, Task>? onExit = null)
     {
+        _onExit = onExit;
         _commands = commands ?? CommandRegistry.CreateDefault();
         var interactive = !Console.IsInputRedirected && !Console.IsOutputRedirected;
         _console = console;
@@ -39,7 +46,16 @@ internal sealed class ChatLoop
         var editor = new LineEditor(new InputHistory(historyFile), () => _commands.Visible.Select(c => c.Name));
         _input = new InputBox(console, clock, fancy: interactive, editor);
         _menu = interactive ? new ChoiceMenu(console, clock) : null;
+        if (opening is { Length: > 0 })
+        {
+            _conversation.AddAssistant(opening);
+            _view.WriteMaxLine($"[{Theme.Tag(Theme.Text)}]{Markup.Escape(opening)}[/]");
+            console.WriteLine();
+        }
     }
+
+    /// <summary>Das Gespräch dieser Sitzung.</summary>
+    public Conversation Conversation => _conversation;
 
     public async Task RunAsync()
     {
@@ -69,7 +85,7 @@ internal sealed class ChatLoop
                     }
 
                     _input.MoveBelow();
-                    ExitCommand.WriteFarewell(_console);
+                    await ExitAsync();
                     return;
                 }
 
@@ -83,7 +99,10 @@ internal sealed class ChatLoop
                 if (CommandRegistry.IsCommand(line))
                 {
                     if (await RunCommandAsync(line) == CommandResult.Exit)
+                    {
+                        await ExitAsync();
                         return;
+                    }
                     continue;
                 }
 
@@ -146,6 +165,38 @@ internal sealed class ChatLoop
         }
     }
 
+    private volatile bool _exiting;
+
+    /// <summary>Vor dem Abschied: Max notiert sich das Wichtigste aus dem Gespräch (Strg+C überspringt das).</summary>
+    private async Task ExitAsync()
+    {
+        _exiting = true;
+        if (_onExit is not null && _conversation.Messages.Any(m => m.Role == ChatRole.User))
+        {
+            _console.MarkupLine($" [{Theme.Tag(Theme.Muted)}]✻ Ich notiere mir noch kurz das Wichtigste … (Strg+C überspringt)[/]");
+            using var cts = new CancellationTokenSource();
+            _reply = cts;
+            _exiting = false;       // ab hier bricht Strg+C das Notieren ab
+            try
+            {
+                await _onExit(_conversation, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception e)
+            {
+                Llm.LlmEngine.Log($"Gedächtnis beim Beenden gescheitert: {e}");
+            }
+            finally
+            {
+                _reply = null;
+                _exiting = true;
+            }
+        }
+        ExitCommand.WriteFarewell(_console);
+    }
+
     private void OnCancelKeyPress(object? sender, ConsoleCancelEventArgs e)
     {
         // Max nicht hart beenden lassen – wir entscheiden selbst.
@@ -160,10 +211,13 @@ internal sealed class ChatLoop
         if (_menuOpen)
             return;
 
+        if (_exiting)
+            return;
+
         if (_ctrlC.Press(_clock()) == CtrlCPolicy.Action.Exit)
         {
             _input.MoveBelow();
-            ExitCommand.WriteFarewell(_console);
+            ExitAsync().GetAwaiter().GetResult();
             Environment.Exit(0);
         }
 

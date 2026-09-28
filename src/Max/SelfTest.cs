@@ -1,5 +1,6 @@
 using Max.Chat;
 using Max.Llm;
+using Max.Memory;
 
 namespace Max;
 
@@ -13,6 +14,7 @@ internal static class SelfTest
     [
         "Wer bist du?",
         "Na, alles klar?",
+        "Übrigens: Ich programmiere beruflich in C# und trinke meinen Kaffee immer schwarz.",
         "Welches Sprachmodell steckt in dir, und welche Firma hat dich trainiert?",
         "Wie rechnest du eigentlich?",
         "Erkläre in zwei Sätzen, warum der Himmel blau ist.",
@@ -42,8 +44,12 @@ internal static class SelfTest
     /// <summary>Namen, die Max nie nennen soll (PLAN.md §2).</summary>
     private static readonly string[] Forbidden = ["Qwen", "Alibaba", "Tongyi", "通义"];
 
-    /// <returns>0 = alles gut, 1 = keine Antwort, 2 = Herkunft verraten.</returns>
-    public static async Task<int> RunAsync(LlmEngine engine, LlmBackend backend, TextWriter output)
+    /// <summary>Nach dem Gespräch: Das soll Max sich gemerkt haben.</summary>
+    private const string ExpectedFact = "C#";
+
+    /// <param name="promptWith">Der System-Prompt mit Gedächtnis – für den zweiten Start im Kleinen.</param>
+    /// <returns>0 = alles gut, 1 = keine Antwort, 2 = Herkunft verraten, 3 = nichts gemerkt.</returns>
+    public static async Task<int> RunAsync(LlmEngine engine, LlmBackend backend, TextWriter output, Func<MemoryData, string> promptWith)
     {
         var info = engine.Info;
         output.WriteLine($"Modell:  {info.Description} ({info.Architecture}), {info.Backend}, {info.GpuLayers}/{info.LayerCount} Schichten auf GPU");
@@ -128,9 +134,69 @@ internal static class SelfTest
         }
 
         await backend.CompleteAsync();
+        result = Math.Max(result, await TestMemoryAsync(backend, conversation, output, promptWith));
         output.WriteLine($"Auswahlmenü in {withQuestion}, Kasten in {withBox} von {Questions.Length} Antworten.");
         if (withQuestion > Questions.Length / 2 || withBox > Questions.Length / 2)
             output.WriteLine("WARNUNG: Elemente zu gleichförmig eingesetzt.");
+        return result;
+    }
+
+    /// <summary>
+    /// Gedächtnis: Max notiert sich das Gespräch, dann ein neues Gespräch mit dem Gedächtnis im Prompt –
+    /// weiß er noch, was der Nutzer über sich erzählt hat? (Gespeichert wird nichts.)
+    /// </summary>
+    private static async Task<int> TestMemoryAsync(LlmBackend backend, Conversation conversation, TextWriter output, Func<MemoryData, string> promptWith)
+    {
+        var now = DateTime.Now;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var reflection = await Reflection.RunAsync(backend, conversation.Messages, now, CancellationToken.None);
+        output.WriteLine($"── Gedächtnis ({clock.Elapsed.TotalSeconds:0.0} s) ──");
+        if (reflection is null)
+        {
+            output.WriteLine("FEHLER: Notizen am Gesprächsende nicht lesbar (siehe llama.log).");
+            return 3;
+        }
+        foreach (var fact in reflection.Facts)
+            output.WriteLine($"  Fakt: {fact}");
+        output.WriteLine($"  Zusammenfassung: {reflection.Summary}");
+        output.WriteLine($"  Begrüßung morgens: {reflection.Greetings.Morning}");
+        output.WriteLine($"  Begrüßung tagsüber: {reflection.Greetings.Day}");
+        output.WriteLine($"  Begrüßung abends: {reflection.Greetings.Evening}");
+        output.WriteLine($"  Begrüßung nachts: {reflection.Greetings.Night}");
+        var result = 0;
+        if (!reflection.Facts.Any(f => f.Contains(ExpectedFact, StringComparison.OrdinalIgnoreCase)))
+        {
+            output.WriteLine($"FEHLER: \"{ExpectedFact}\" nicht gemerkt.");
+            result = 3;
+        }
+        if (Forbidden.FirstOrDefault(name => reflection.Facts.Append(reflection.Summary ?? "").Any(f => f.Contains(name, StringComparison.OrdinalIgnoreCase))) is { } leaked)
+            output.WriteLine($"WARNUNG: \"{leaked}\" in den Notizen.");
+        output.WriteLine();
+
+        // Nächster Start: Begrüßung als erster Satz, dann die Frage.
+        var memory = reflection.ApplyTo(MemoryData.Empty, now);
+        backend.UpdateSystemPrompt(promptWith(memory));
+        var next = new Conversation();
+        if (reflection.Greetings.For(now) is { } greeting)
+        {
+            next.AddAssistant(greeting);
+            output.WriteLine($"◆ {greeting}");
+        }
+        const string question = "Was weißt du eigentlich über mich?";
+        next.AddUser(question);
+        output.WriteLine($"› {question}");
+        var reply = "";
+        await foreach (var chunk in backend.StreamReplyAsync(next, CancellationToken.None))
+            if (!chunk.IsThinking)
+                reply += chunk.Text;
+        await backend.CompleteAsync();
+        output.WriteLine($"◆ {reply}");
+        output.WriteLine();
+        if (!reply.Contains(ExpectedFact, StringComparison.OrdinalIgnoreCase))
+        {
+            output.WriteLine($"FEHLER: Max weiß im neuen Gespräch nichts von \"{ExpectedFact}\".");
+            result = 3;
+        }
         return result;
     }
 

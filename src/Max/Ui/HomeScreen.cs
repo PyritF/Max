@@ -57,13 +57,14 @@ internal static class HomeScreen
             LastSession: t >= LastSessionAt);
     }
 
-    public static async Task ShowAsync(SystemSnapshot system, CancellationToken ct = default)
+    /// <param name="last">Das letzte Gespräch aus dem Gedächtnis – für "Zuletzt".</param>
+    public static async Task ShowAsync(SystemSnapshot system, Memory.LastSession? last = null, CancellationToken ct = default)
     {
         var greeting = GetGreeting(system.Now, system.User.FirstName);
         var tips = TipPool.OrderBy(_ => Random.Shared.Next()).Take(2).ToArray();
         var version = typeof(HomeScreen).Assembly.GetName().Version?.ToString(3) ?? "?";
 
-        IRenderable Panel(Reveal r) => BuildPanel(r, greeting, tips, version, system);
+        IRenderable Panel(Reveal r) => BuildPanel(r, greeting, tips, version, system, last);
 
         AnsiConsole.WriteLine();
 
@@ -102,7 +103,21 @@ internal static class HomeScreen
         _ => $"Noch wach, {name}?",
     };
 
-    private static Panel BuildPanel(Reveal r, string greeting, string[] tips, string version, SystemSnapshot system)
+    /// <summary>"heute, 14:05", "gestern, 23:41", "Montag", "3. Oktober".</summary>
+    internal static string When(DateTime then, DateTime now)
+    {
+        var days = (now.Date - then.Date).Days;
+        var german = System.Globalization.CultureInfo.GetCultureInfo("de-DE");
+        return days switch
+        {
+            0 => $"Heute, {then:HH:mm}",
+            1 => $"Gestern, {then:HH:mm}",
+            > 1 and < 7 => then.ToString("dddd", german),
+            _ => then.ToString("d. MMMM", german),
+        };
+    }
+
+    private static Panel BuildPanel(Reveal r, string greeting, string[] tips, string version, SystemSnapshot system, Memory.LastSession? last)
     {
         var accent = Theme.Tag(Theme.Accent);
         var muted = Theme.Tag(Theme.Muted);
@@ -149,8 +164,15 @@ internal static class HomeScreen
             right.Add(new Rule().RuleStyle(new Style(Theme.AccentDivider)));
             right.Add(Text.Empty);
             right.Add(new Markup($"[bold {accent}]Zuletzt[/]"));
-            // TODO (Schritt 22, Gedächtnis): letzte Sitzung aus memory.json anzeigen.
-            right.Add(new Markup($"[{muted}]Noch nichts. Wir fangen gerade erst an.[/]"));
+            if (last is null)
+            {
+                right.Add(new Markup($"[{muted}]Noch nichts. Wir fangen gerade erst an.[/]"));
+            }
+            else
+            {
+                right.Add(new Markup($"[{muted}]{Markup.Escape(When(last.Ended, system.Now))}[/]"));
+                right.Add(new Markup($"[{text}]{Markup.Escape(last.Summary)}[/]"));
+            }
         }
 
         // Tabelle ohne Kopfzeile mit "Minimal"-Rahmen: zeichnet nur die senkrechte Linie
