@@ -31,9 +31,12 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
         kommt als Beleg sein Satz, wörtlich zitiert. Keine Vermutungen: Wer nach Wien fragt, wohnt nicht
         deshalb dort; wer Diagramme will, "mag Diagramme" nicht. Nichts Vorübergehendes (heute müde,
         gerade beschäftigt), nichts aus deinem Kontext (Betriebssystem, Name), nichts, was du schon weißt.
+        Schreib die Fakten als knappe Notiz in der dritten Person, ohne Namen.
         Beispiel: - Programmiert in C#. | "Ich programmiere in C#"
+        Bitten und Fragen an dich sind keine Fakten ("Erzähl mir was über den Herbst" heißt nicht "mag den Herbst").
         Hat er nichts Dauerhaftes über sich erzählt – das ist oft so –, keine Zeile.
-        ZUSAMMENFASSUNG: worum es ging, in wenigen Worten (höchstens 60 Zeichen).
+        ZUSAMMENFASSUNG: die Themen des Gesprächs als Stichworte, z. B. "Wien-Tipps, Herbst, Sprachmodelle"
+        (höchstens 60 Zeichen) – nur Themen, nichts über ihn.
         MORGEN, TAG, ABEND, NACHT: je eine Begrüßung für seinen nächsten Start zu dieser Tageszeit – du sprichst
         ihn direkt an. Ein kurzer Satz (höchstens 70 Zeichen) in deinem trockenen Ton, der an etwas Konkretes
         aus diesem Gespräch anknüpft, z. B. "Wieder am C#-Code? Der Kaffee ist hoffentlich schon schwarz."
@@ -129,13 +132,28 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
         }
         var words = quote.Split(' ');
         if (!words.Any(w => w is "ich" or "mein" or "meine" or "meinen" or "meinem" or "meiner" or "mir" or "mich")
-            || words.Any(w => w is "heute" or "gestern" or "vorhin"))
+            || words.Any(w => w is "heute" or "gestern" or "vorhin")
+            || IsRequest(line[(bar + 3)..], words))
         {
             LlmEngine.Log($"Gedächtnis: nicht über sich oder nur vorübergehend, verworfen: {line}");
             return null;
         }
         return fact;
     }
+
+    /// <summary>
+    /// Bitten und Fragen an Max sind keine Aussagen über sich – "Erzähl mir was über den Herbst" heißt nicht "mag den Herbst".
+    /// </summary>
+    private static bool IsRequest(string rawQuote, string[] words) =>
+        rawQuote.Trim().TrimEnd('"').TrimEnd().EndsWith('?')
+        || words is [var first, ..] && Requests.Contains(first)
+        || words.Any(w => w is "du" or "dir" or "dich" or "kannst" or "könntest" or "bitte");
+
+    private static readonly HashSet<string> Requests =
+    [
+        "zeig", "zeige", "erzähl", "erzähle", "erklär", "erkläre", "gib", "schreib", "schreibe", "mach", "mache",
+        "sag", "sage", "hilf", "nenn", "nenne", "such", "suche", "rechne", "übersetz", "übersetze", "fass", "lass",
+    ];
 
     /// <summary>Kleine Modelle schreiben "keine" statt gar keiner Zeile.</summary>
     private static bool IsNothing(string fact) =>
