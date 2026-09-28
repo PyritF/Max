@@ -169,7 +169,7 @@ public class ToolBoxTests
         using var http = new HttpClient();
         var box = ToolBox.CreateDefault(http, () => DateTime.Now, () => ".");
         var grammar = AnswerGrammar.Build(box.GrammarRule());
-        Assert.Contains("root ::= \"```\" w-werkzeug | ( plain | tag | inline-code ) answer | \"```\" widget", grammar);   // kein Code-Block am Anfang
+        Assert.Contains("root ::= [ \\n]* ( \"```\" w-werkzeug | ( [^{}` \\n] | tag | inline-code ) answer | \"```\" widget", grammar);   // kein Code-Block am Anfang, auch nicht nach Leerzeilen
         foreach (var tool in box.All)
             Assert.Contains($"\"{tool.Name}", grammar);
         Assert.DoesNotContain("werkzeug", AnswerGrammar.Gbnf);

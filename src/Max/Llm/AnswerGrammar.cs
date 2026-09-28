@@ -45,9 +45,10 @@ internal static class AnswerGrammar
         // Höchstens ein Element pro Antwort (das Auswahlmenü zählt nicht) – kleine Modelle hängten sonst
         // an jede Antwort Diagramme oder wiederholten Abschnitte samt Balken in einer Schleife.
         // Ein Auswahlmenü darf nur ganz am Ende stehen – danach kommt nichts mehr.
-        // Mit Werkzeugen darf die Antwort nicht mit einem Code-Block beginnen: Das Modell schrieb sonst "```bash",
-        // dann "werkzeug" – ein Aufruf, der als Code angezeigt statt ausgeführt wurde.
-        Rule("root", toolCall is null ? "answer" : "\"```\" w-werkzeug | ( plain | tag | inline-code ) answer | \"```\" widget item* ( \"```\" w-frage [ \\n]* )? | \"```\" w-frage [ \\n]* | \"\"");
+        // Mit Werkzeugen darf die Antwort nicht mit einem Code-Block beginnen: Das Modell schrieb sonst "```bash"
+        // oder "```python", dann den Aufruf – der als Code angezeigt statt ausgeführt wurde. Auch nicht nach
+        // Leerzeilen (die kommen nach dem Nachdenken fast immer zuerst).
+        Rule("root", toolCall is null ? "answer" : "[ \\n]* ( \"```\" w-werkzeug | ( [^{}` \\n] | tag | inline-code ) answer | \"```\" widget item* ( \"```\" w-frage [ \\n]* )? | \"```\" w-frage [ \\n]* )?");
         if (toolCall is not null)
             Rule("w-werkzeug", toolCall);
         Rule("answer", "item* ( \"```\" widget item* )? ( \"```\" w-frage [ \\n]* )?");
