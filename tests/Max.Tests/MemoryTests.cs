@@ -154,6 +154,8 @@ public class ReflectionTests
         - Hatte einen langen Tag. | "Ich hatte heute einen langen Tag."
         - Mag Tee. | "Ich trinke gern Tee"
         - Mag den Herbst. | "Erzähl mir was über den Herbst."
+        - Ist berufstätig (impliziert). | "meinen Kaffee trinke ich schwarz"
+        - Arbeitet als Entwickler. | "Ich programmiere beruflich in C#"
         - Nutzt C#-Ordner. | "Zeig mir eine typische Ordnerstruktur"
         ZUSAMMENFASSUNG: Tabellen im Renderer repariert
         MORGEN: Frisch ans Werk – die Tabellen halten hoffentlich noch.
@@ -168,7 +170,8 @@ public class ReflectionTests
     {
         var reflection = Reflection.Parse(Sample, Now, UserSaid)!;
 
-        // Wien: kein Satz über sich selbst; langer Tag: vorübergehend; Tee: so nie gesagt; Herbst, Ordner: Bitten an Max.
+        // Wien: kein Satz über sich selbst; langer Tag: vorübergehend; Tee: so nie gesagt; Herbst, Ordner: Bitten an Max;
+        // "impliziert" und ein zweiter Fakt aus demselben Satz: Ausdeutung.
         Assert.Equal(["Programmiert in C#.", "Trinkt Kaffee schwarz."], reflection.Facts);
         Assert.Equal("Tabellen im Renderer repariert", reflection.Summary);
         Assert.Equal("Wieder am Code? Ich hab die Tabellen im Auge behalten.", reflection.Greetings.Evening);   // ohne Anführungszeichen

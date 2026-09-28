@@ -10,7 +10,7 @@ namespace Max.Memory;
 /// Jeder Fakt braucht als Beleg ein wörtliches Zitat, in dem der Nutzer von sich selbst spricht – das prüft Max
 /// selbst nach. So bleiben Vermutungen draußen ("fragt nach Wien" ist nicht "wohnt in Wien").
 /// </summary>
-internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, Greetings Greetings)
+internal sealed partial record Reflection(IReadOnlyList<string> Facts, string? Summary, Greetings Greetings)
 {
     /// <summary>Mehr neue Fakten pro Gespräch sind fast immer Nacherzählung.</summary>
     internal const int MaxNewFacts = 5;
@@ -40,6 +40,7 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
         MORGEN, TAG, ABEND, NACHT: je eine Begrüßung für seinen nächsten Start zu dieser Tageszeit – du sprichst
         ihn direkt an. Ein kurzer Satz (höchstens 70 Zeichen) in deinem trockenen Ton, der an etwas Konkretes
         aus diesem Gespräch anknüpft, z. B. "Wieder am C#-Code? Der Kaffee ist hoffentlich schon schwarz."
+        Nichts, was nur heute galt (ein langer Tag, das Wetter) – der nächste Start kann Tage später sein.
         Ohne "Guten Morgen", "Hallo" oder den Namen – das steht schon da.
         """;
 
@@ -69,6 +70,7 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
             return null;
 
         var facts = new List<string>();
+        var quotes = new HashSet<string>();
         string? summary = null;
         var greetings = new string?[4];
         foreach (var raw in lines.Skip(1))
@@ -76,7 +78,8 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
             var line = raw.Trim();
             if (line.StartsWith("- ", StringComparison.Ordinal))
             {
-                if (summary is null && facts.Count < MaxNewFacts && Fact(line[2..], said) is { } fact)
+                if (summary is null && facts.Count < MaxNewFacts && Fact(line[2..], said) is { } fact
+                    && quotes.Add(Quote(line[2..])))          // ein Satz belegt nur einen Fakt – der Rest ist Ausdeutung
                     facts.Add(fact);
                 continue;
             }
@@ -124,8 +127,8 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
         if (bar < 0)
             return null;
         var fact = line[..bar].Trim();
-        var quote = MemoryData.Normalize(line[(bar + 3)..]);
-        if (IsNothing(fact) || quote.Length < 5 || !said.Contains(quote, StringComparison.Ordinal))
+        var quote = Quote(line);
+        if (IsNothing(fact) || Guessed().IsMatch(fact) || quote.Length < 5 || !said.Contains(quote, StringComparison.Ordinal))
         {
             LlmEngine.Log($"Gedächtnis: ohne Beleg verworfen: {line}");
             return null;
@@ -140,6 +143,12 @@ internal sealed record Reflection(IReadOnlyList<string> Facts, string? Summary, 
         }
         return fact;
     }
+
+    private static string Quote(string line) => MemoryData.Normalize(line[(line.IndexOf(" | ", StringComparison.Ordinal) + 3)..]);
+
+    /// <summary>Was das Modell selbst als erschlossen kennzeichnet, ist kein Fakt.</summary>
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(impliziert|vermutlich|wahrscheinlich|scheint|offenbar|wohl)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex Guessed();
 
     /// <summary>
     /// Bitten und Fragen an Max sind keine Aussagen über sich – "Erzähl mir was über den Herbst" heißt nicht "mag den Herbst".
