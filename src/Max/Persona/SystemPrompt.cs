@@ -61,7 +61,8 @@ internal static class SystemPrompt
         foreach (var fact in memory.Facts)
             text.Append("- ").Append(fact.Text).Append('\n');
         if (memory.LastSession is { } last)
-            text.Append("- Letztes Gespräch (").Append(last.Ended.ToString("dddd, d. MMMM", German)).Append("): ").Append(last.Summary).Append('\n');
+            text.Append("- Themen des letzten Gesprächs (").Append(last.Ended.ToString("dddd, d. MMMM", German)).Append("): ").Append(last.Summary)
+                .Append(" – worüber ihr gesprochen habt, keine Fakten über ihn.\n");
         return text.ToString();
     }
 

@@ -252,7 +252,7 @@ public class MemoryPromptTests
         var without = SystemPrompt.BuildParts(System);
         var with = SystemPrompt.BuildParts(System, memory);
 
-        Assert.EndsWith("- Letztes Gespräch (Sonntag, 27. September): Tabellen im Renderer", with.Text);
+        Assert.EndsWith("- Themen des letzten Gesprächs (Sonntag, 27. September): Tabellen im Renderer – worüber ihr gesprochen habt, keine Fakten über ihn.", with.Text);
         Assert.Contains("\n## Was du über den Nutzer weißt\n", with.Text);
         Assert.Contains("- Programmiert in C#.\n", with.Text);
         Assert.Equal(without.StableLength, with.StableLength);
