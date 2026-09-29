@@ -575,4 +575,6 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
 - [ ] Repo auf öffentlich stellen und Zwei-Faktor-Anmeldung auf GitHub prüfen.
 - [x] Soll ein Pflicht-Update auch einen „Wartungsmodus“ bekommen (Max per Manifest komplett sperren)? Ja: `disabled` + `message` im Manifest.
 - [ ] Akzentfarbe und Banner-Design festlegen.
-- [ ] Wird ein Element (z. B. eine lange Übersicht) über 3000 Zeichen lang, bricht Max die ganze restliche Antwort ab – im Selbsttest blieb von der Wien-Übersicht nur der erste Satz. Besser: nur das Element weglassen und weiterschreiben lassen.
+- [x] Wird ein Element (z. B. eine lange Übersicht) über 3000 Zeichen lang, bricht Max die ganze restliche Antwort ab. Jetzt: Grenze 6000 Zeichen, ein Element, das sich im Kreis dreht, fällt schon früher auf. Dann fällt nur das Element weg, und die Antwort geht ohne Elemente weiter (erst beim zweiten Mal wird abgebrochen). Noch nicht mit dem echten Modell geprüft.
+- [x] **Bunt ohne Farben:** Bei „schreib bunt, mit Farbverläufen“ griff das Modell zu einem Diagramm mit „Verlauf:“, statt den Text zu färben. Jetzt beginnt jede Antwort mit einem `{verlauf}`, solange der Wunsch gilt (Grammatik). „Keine Farben mehr“ nimmt ihn zurück. Noch nicht mit dem echten Modell geprüft.
+- [x] **Abschluss-Rückfragen** wie „Passt das zu deinem Herbst?“ oder „Was dich am meisten interessiert?“ fallen am Ende weg, wie schon die Angebots-Floskeln. Echte Gegenfragen im Gespräch („Und bei dir?“) bleiben.

@@ -53,8 +53,11 @@ internal sealed partial class LlmBackend : IChatBackend
     /// <summary>So oft wird ein kaputtes Element höchstens neu erzeugt, dann wird es weggelassen.</summary>
     internal const int MaxRepairs = 2;
 
-    /// <summary>Wird ein Element länger als das, hängt das Modell fest – dann wird abgebrochen.</summary>
-    internal const int MaxElementChars = 3000;
+    /// <summary>
+    /// Wird ein Element länger als das, hängt das Modell fest – dann fällt es weg. (Dreht es sich schon vorher
+    /// erkennbar im Kreis, früher.)
+    /// </summary>
+    internal const int MaxElementChars = 6000;
 
     /// <summary>So viele Tokens denkt Max mindestens nach, bevor er das Nachdenken beenden darf.</summary>
     internal const int MinThinkingTokens = 8;
@@ -72,7 +75,7 @@ internal sealed partial class LlmBackend : IChatBackend
     private readonly SamplingSettings _answer;
     private readonly SamplingSettings _thinking;
     private readonly ContextWindow _window;
-    private readonly string? _toolGrammar;
+    private readonly Dictionary<(bool Tools, bool Colorful, bool Widgets), string> _grammars = [];
 
     // Tokens je Nachricht. Für eigene Antworten genau die Tokens, die auch im Cache des Modells stehen –
     // nicht neu zerlegt, damit der nächste Prompt exakt zum Cache passt.
@@ -97,7 +100,6 @@ internal sealed partial class LlmBackend : IChatBackend
         _answer = _options.Answer ?? new SamplingSettings();
         _thinking = _options.Thinking ?? SamplingSettings.Thinking;
         _window = new ContextWindow(Math.Max(256, model.ContextSize - AnswerReserve - _options.ThinkingBudget));
-        _toolGrammar = _options.Tools is { } tools ? AnswerGrammar.Build(tools.GrammarRule()) : null;
     }
 
     /// <summary>Wie lange das Aufwärmen gedauert hat – für /debug.</summary>
@@ -204,7 +206,10 @@ internal sealed partial class LlmBackend : IChatBackend
         var decoder = _model.CreateDecoder();
         var answerPhase = !think;
         // Anfangs darf das Nachdenken nicht gleich wieder enden – sonst denkt das Modell in der Antwort weiter.
-        var grammar = allowTools ? _toolGrammar : AnswerGrammar.Gbnf;
+        var colorful = WantsColors(conversation.Messages);
+        var widgets = true;
+        var codeReleased = false;           // ein Code-Block vom Anfang floss als Text weiter (Werkzeug-Zweig der Grammatik)
+        var grammar = Grammar(allowTools, colorful, widgets);
         var sampler = answerPhase ? CreateAnswerSampler(grammar) : _model.CreateSampler(_thinking, banned: _thinkEnd);
         var thinkingFree = _thinkEnd!.Length == 0;
 
@@ -253,7 +258,7 @@ internal sealed partial class LlmBackend : IChatBackend
                 foreach (var chunk in Route(splitter.Push(text), gate, closing, shown))
                     yield return chunk;
 
-                if (answerPhase && text.IndexOfAny(LoopCheckChars) >= 0 && IsLooping(shown))
+                if (answerPhase && text.IndexOfAny(LoopCheckChars) >= 0 && IsLooping(shown.ToString()))
                 {
                     LlmEngine.Log("Antwort wiederholt sich, abgebrochen.");
                     break;
@@ -268,6 +273,7 @@ internal sealed partial class LlmBackend : IChatBackend
                 // Ein langer Code-Block am Anfang ist kein Werkzeug-Aufruf – dann fließt er als Code weiter.
                 if (gate.Element == Tools.ToolCall.MaybeBlockName && gate.HeldLength > MaxToolCallChars)
                 {
+                    codeReleased = true;
                     var code = closing.Push(gate.Release());
                     if (code.Length > 0)
                     {
@@ -276,12 +282,39 @@ internal sealed partial class LlmBackend : IChatBackend
                     }
                 }
 
-                // Endlosschleife im Element (das Modell findet keinen gültigen Abschluss): zurück vor den Block, Antwort beenden.
-                if (gate.InElement && gate.HeldLength > MaxElementChars)
+                // Endlosschleife im Element (das Modell findet keinen gültigen Abschluss): Element weglassen und die
+                // Antwort ohne Elemente weiterschreiben lassen – geht das nicht, zurück vor den Block und Antwort beenden.
+                if (gate.InElement && gate.Element != Tools.ToolCall.MaybeBlockName
+                    && (gate.HeldLength > MaxElementChars || text.Contains('\n') && IsLooping(gate.HeldText)))
                 {
-                    LlmEngine.Log("Element viel zu lang, abgebrochen.");
+                    var element = gate.Element!;
                     repairs++;
                     gate.Abandon();
+                    if (widgets && !codeReleased)
+                    {
+                        var keep = WithoutElement(answerAll, element);
+                        if (keep is not null)
+                        {
+                            repair?.Dispose();
+                            repair = null;
+                            LlmEngine.Log($"Element '{element}' hängt fest, weggelassen – die Antwort geht ohne Elemente weiter.");
+                            Truncate(generated, generated.Count - answerAll.Count);
+                            generated.AddRange(keep);
+                            answerAll.Clear();
+                            answerAll.AddRange(keep);
+                            Truncate(answerTokens, Math.Min(answerTokens.Count, keep.Count));
+                            await _model.PrefillAsync([.. prompt, .. head, .. generated], ct);
+                            widgets = false;
+                            grammar = Grammar(allowTools, colorful, widgets);
+                            sampler.Dispose();
+                            sampler = CreateAnswerSampler(grammar);
+                            foreach (var t in answerAll)
+                                sampler.Accept(t);
+                            decoder = _model.CreateDecoder();
+                            continue;
+                        }
+                    }
+                    LlmEngine.Log("Element viel zu lang, abgebrochen.");
                     if (repair is not null && _model.Restore(repair.Checkpoint))
                     {
                         Truncate(generated, repair.Before.Generated);
@@ -593,11 +626,10 @@ internal sealed partial class LlmBackend : IChatBackend
     }
 
     /// <summary>Stehen die letzten <see cref="LoopChars"/> Zeichen schon einmal weiter vorn? Dann dreht sich die Antwort im Kreis.</summary>
-    internal static bool IsLooping(StringBuilder shown)
+    internal static bool IsLooping(string text)
     {
-        if (shown.Length < 2 * LoopChars)
+        if (text.Length < 2 * LoopChars)
             return false;
-        var text = shown.ToString();
         var tail = text[^LoopChars..];
         return tail.Trim().Length > LoopChars / 2 && text.IndexOf(tail, StringComparison.Ordinal) < text.Length - LoopChars;
     }
@@ -605,9 +637,47 @@ internal sealed partial class LlmBackend : IChatBackend
     /// <summary>Nach Zeilen- und Satzenden auf Wiederholung prüfen – auch Schleifen ohne Zeilenumbruch fallen so auf.</summary>
     private static readonly char[] LoopCheckChars = ['\n', '.', '!', '?'];
 
-    /// <summary>Hat der Nutzer im Gespräch Farben gewünscht ("schreib bunt", "mit Farbverläufen")?</summary>
+    /// <summary>
+    /// Will der Nutzer es gerade bunt ("schreib bunt", "mit Farbverläufen")? Es zählt sein letzter Satz dazu –
+    /// "keine Farben mehr" oder "wieder normal" nimmt den Wunsch zurück.
+    /// </summary>
     internal static bool WantsColors(IEnumerable<ChatMessage> messages) =>
-        messages.Any(m => m.Role == ChatRole.User && ColorWishRegex().IsMatch(m.Content));
+        messages.LastOrDefault(m => m.Role == ChatRole.User && ColorWishRegex().IsMatch(m.Content)) is { } wish
+        && !ColorStopRegex().IsMatch(wish.Content);
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(nicht|keine?n?|ohne|schluss|genug|weniger|normal|schlicht|aufhören|weg)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex ColorStopRegex();
+
+    /// <summary>Die Grammatik für eine Runde – je Kombination nur einmal gebaut.</summary>
+    private string Grammar(bool tools, bool colorful, bool widgets)
+    {
+        tools &= _options.Tools is not null;
+        if (!_grammars.TryGetValue((tools, colorful, widgets), out var gbnf))
+        {
+            gbnf = AnswerGrammar.Build(tools ? _options.Tools!.GrammarRule() : null, colorful, widgets);
+            _grammars[(tools, colorful, widgets)] = gbnf;
+        }
+        return gbnf;
+    }
+
+    /// <summary>
+    /// Die Antwort bis vor den Block des Elements <paramref name="element"/>, neu in Tokens zerlegt –
+    /// oder null, wenn der Block nicht zu finden ist.
+    /// </summary>
+    private List<int>? WithoutElement(List<int> answer, string element)
+    {
+        var decoder = _model.CreateDecoder();
+        var text = new StringBuilder();
+        foreach (var token in answer)
+            text.Append(decoder.Add(token));
+        var all = text.ToString();
+        var fence = all.LastIndexOf("```" + element, StringComparison.OrdinalIgnoreCase);
+        if (fence < 0)
+            return null;
+        // Der Block beginnt am Zeilenanfang (höchstens Leerzeichen davor) – ab dort fällt alles weg.
+        var start = fence == 0 ? 0 : all.LastIndexOf('\n', fence - 1) + 1;
+        return start == 0 ? [] : [.. _model.Tokenize(all[..start])];
+    }
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\b(bunt\w*|farbig\w*|farben?|farbverl[äa]uf\w*|verl[äa]uf\w*|colou?r\w*)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex ColorWishRegex();

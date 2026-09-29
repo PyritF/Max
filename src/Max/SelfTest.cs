@@ -157,10 +157,12 @@ internal static class SelfTest
                 output.WriteLine("FEHLER: leere Antwort.");
                 result = Math.Max(result, 1);
             }
-            if (Formal.FirstOrDefault(word => reply.Contains(word, StringComparison.Ordinal)) is { } formal)
+            // "Sie" am Satzanfang meint meist "sie" (die Modelle, die Blätter) – zählt nicht.
+            var midSentence = System.Text.RegularExpressions.Regex.Replace(reply, @"(^|[.!?:\n]\s*)Sie ", "$1sie ");
+            if (Formal.FirstOrDefault(word => midSentence.Contains(word, StringComparison.Ordinal)) is { } formal)
                 output.WriteLine($"WARNUNG: förmliche Anrede (\"{formal.Trim()}\").");
             var ending = reply.TrimEnd()[Math.Max(0, reply.TrimEnd().Length - 80)..];
-            if (WaitingForOrders.FirstOrDefault(word => ending.Contains(word, StringComparison.OrdinalIgnoreCase)) is { } order)
+            if (WaitingForOrders.FirstOrDefault(word => System.Text.RegularExpressions.Regex.IsMatch(ending, $@"\b{word}\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) is { } order)
                 output.WriteLine($"WARNUNG: wartet auf Befehle (\"{order}\").");
             var lastParagraph = reply.TrimEnd().Split("\n\n")[^1];
             if (reply.Contains("\n\n") && Max.Llm.ClosingFilter.StartsWithPhrase(lastParagraph, complete: true) == true)

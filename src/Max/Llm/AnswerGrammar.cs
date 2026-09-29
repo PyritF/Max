@@ -37,7 +37,12 @@ internal static class AnswerGrammar
     /// GBNF für den Inhalt eines Werkzeug-Aufrufs (<see cref="Tools.ToolBox.GrammarRule"/>) – dann darf die Antwort
     /// statt Text genau einen Aufruf enthalten, als ganzen Block und sonst nichts.
     /// </param>
-    internal static string Build(string? toolCall = null)
+    /// <param name="colorful">
+    /// Der Nutzer will es bunt: Die Antwort beginnt mit einem Farbverlauf. Sonst greift das Modell bei "Farbverläufe"
+    /// gern zu einem Diagramm mit "Verlauf:" statt die Farben in den Text zu setzen.
+    /// </param>
+    /// <param name="widgets">false: keine Elemente (nach einem abgebrochenen Element geht die Antwort ohne weiter).</param>
+    internal static string Build(string? toolCall = null, bool colorful = false, bool widgets = true)
     {
         var g = new StringBuilder();
         void Rule(string name, string body) => g.Append(name).Append(" ::= ").Append(body).Append('\n');
@@ -50,7 +55,8 @@ internal static class AnswerGrammar
         Rule("root", toolCall is null ? "answer" : "\"```\" w-werkzeug | answer");
         if (toolCall is not null)
             Rule("w-werkzeug", toolCall);
-        Rule("answer", "item* ( \"```\" widget item* )? ( \"```\" w-frage [ \\n]* )?");
+        var lead = colorful ? "[ \\n]* \"{verlauf\" ( \":\" grad )? \"}\" " : "";
+        Rule("answer", lead + "item* " + (widgets ? "( \"```\" widget item* )? " : "") + "( \"```\" w-frage [ \\n]* )?");
         Rule("item", "plain | tag | inline-code | fence");
         // Auch kein "}" im Fließtext: Kleine Modelle schließen einen Verlauf sonst mit "Wort}" statt "{/verlauf}".
         Rule("plain", "[^{}`]");

@@ -56,6 +56,9 @@ internal sealed partial class ElementGate
     /// <summary>Wie viel vom offenen Element-Block schon zurückgehalten ist (gegen Endlosschleifen).</summary>
     public int HeldLength => _held.Length;
 
+    /// <summary>Der zurückgehaltene Element-Block bis jetzt.</summary>
+    public string HeldText => _held.ToString();
+
     /// <summary>Den offenen Element-Block verwerfen, ohne dass etwas herauskommt.</summary>
     public void Abandon()
     {

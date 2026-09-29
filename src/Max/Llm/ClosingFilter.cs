@@ -6,7 +6,8 @@ namespace Max.Llm;
 /// Hält Absätze zurück, die mit einer Angebots-Floskel beginnen („Möchtest du …“, „Sag Bescheid …“).
 /// Geht die Antwort danach weiter, kommt der Absatz nach; steht er am Ende, fällt er weg – und damit auch
 /// aus dem Verlauf, sonst gewöhnt sich das Modell die Floskel im Gespräch an. Besteht die ganze Antwort nur
-/// aus so einem Absatz, ist es eine echte Rückfrage und bleibt. Code-Blöcke bleiben unberührt.
+/// aus so einem Absatz, ist es eine echte Rückfrage und bleibt. Dasselbe gilt für Abschluss-Rückfragen
+/// („Passt das so?“) – die fallen aber nur weg, wenn der Absatz wirklich eine Frage ist. Code-Blöcke bleiben unberührt.
 /// </summary>
 internal sealed class ClosingFilter
 {
@@ -17,6 +18,18 @@ internal sealed class ClosingFilter
         "Falls du noch", "Falls du mehr", "Falls du weitere",
         "Sag Bescheid", "Sag einfach Bescheid", "Sag mir Bescheid", "Lass mich wissen",
         "Gibt es noch", "Kann ich dir noch", "Was noch", "Oder hast du",
+    ];
+
+    /// <summary>
+    /// Abschluss-Rückfragen, die nur abfragen, ob die Antwort gefällt („Passt das zu deinem Herbst?“,
+    /// „Was dich am meisten interessiert?“). Fallen am Ende nur weg, wenn wirklich eine Frage darin steht.
+    /// Echte Gegenfragen im Gespräch („Und bei dir?“) bleiben.
+    /// </summary>
+    internal static readonly string[] CheckQuestions =
+    [
+        "Passt das", "Passt dir", "Klingt das", "Wie klingt das", "Hilft dir das", "Hilft das", "Reicht das", "Genügt das",
+        "Was dich", "Was interessiert dich", "Interessiert dich", "Welche davon", "Welcher davon", "Welches davon",
+        "Was davon", "Worauf hast du", "Wofür interessierst du",
     ];
 
     private readonly StringBuilder _line = new();   // Anfang einer Absatz-Zeile, noch nicht entschieden
@@ -53,7 +66,8 @@ internal sealed class ClosingFilter
         }
         if (_held.Length > 0)
         {
-            if (!_anyShown)
+            var held = _held.ToString();
+            if (!_anyShown || StartsWithPhrase(held, complete: true, Phrases) != true && !held.Contains('?'))
                 output.Append(_held);
             else
                 LlmEngine.Log($"Floskel am Ende weggelassen: {_held.ToString().Trim().ReplaceLineEndings(" ")}");
@@ -199,7 +213,9 @@ internal sealed class ClosingFilter
     }
 
     /// <summary>true = Floskel, false = sicher keine, null = noch zu kurz, um es zu sagen.</summary>
-    internal static bool? StartsWithPhrase(string line, bool complete)
+    internal static bool? StartsWithPhrase(string line, bool complete) => StartsWithPhrase(line, complete, [.. Phrases, .. CheckQuestions]);
+
+    private static bool? StartsWithPhrase(string line, bool complete, string[] phrases)
     {
         var text = line.TrimStart().TrimStart('*', '_', '>', ' ');
         // Farb-Tags davor überspringen ({cyan}, {verlauf:…}, [rot]) – die Floskel dahinter zählt.
@@ -211,7 +227,7 @@ internal sealed class ClosingFilter
             text = text[(close + 1)..].TrimStart('*', '_', ' ');
         }
         var undecided = false;
-        foreach (var phrase in Phrases)
+        foreach (var phrase in phrases)
         {
             if (text.Length > phrase.Length)
             {

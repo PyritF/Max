@@ -410,23 +410,41 @@ public class LlmBackendTests
     }
 
     [Fact]
-    public async Task RunawayElement_IsAbandoned_AndTheAnswerEnds()
+    public async Task RunawayElement_IsDropped_AndTheAnswerGoesOnWithoutIt()
     {
-        var endless = Enumerable.Repeat<string?>("| 5% ", 1000);
+        var endless = Enumerable.Repeat<string?>("| 5% ", 1300);
         var model = new FakeModel(["Vorher\n", "```balken\n", .. endless, "nie"]);
         var backend = Backend(model);
 
         var (_, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
 
-        Assert.Equal("Vorher\n", reply);
+        // Das Drehbuch schreibt danach einfach weiter – das echte Modell setzt neu an, ohne Elemente.
+        Assert.StartsWith("Vorher\n| 5% ", reply);
+        Assert.DoesNotContain("```balken", reply);
         await backend.CompleteAsync();
-        Assert.DoesNotContain("5%", model.Decode(model.Cache));
+        Assert.DoesNotContain("```balken", model.Decode(model.Cache));
     }
 
     [Fact]
-    public async Task RunawayElement_AtTheStart_GivesAnHonestSentence_NotAnEmptyAnswer()
+    public async Task ElementGoingInCircles_IsDroppedEarly_AndTheAnswerGoesOn()
     {
-        var model = new FakeModel(["```balken\n", .. Enumerable.Repeat<string?>("| 5% ", 1000)]);
+        var circle = Enumerable.Repeat<string?>("Immer dieselbe Zeile, immer wieder und wieder.\n", 9);
+        var model = new FakeModel(["Vorher\n", "```kasten\n", .. circle, "Danach.", null]);
+        var backend = Backend(model);
+
+        var (_, reply) = await Collect(backend.StreamReplyAsync(Single("?"), CancellationToken.None));
+
+        Assert.Equal("Vorher\nDanach.", reply);
+        Assert.Equal(1, backend.LastRun!.Repairs);
+        await backend.CompleteAsync();
+        Assert.DoesNotContain("Immer dieselbe", model.Decode(model.Cache));
+    }
+
+    [Fact]
+    public async Task RunawayElement_Twice_GivesAnHonestSentence_NotAnEmptyAnswer()
+    {
+        var circle = Enumerable.Repeat<string?>("Immer dieselbe Zeile, immer wieder und wieder.\n", 9).ToArray();
+        var model = new FakeModel(["```kasten\n", .. circle, "```kasten\n", .. circle]);
         var (_, reply) = await Collect(Backend(model).StreamReplyAsync(Single("?"), CancellationToken.None));
         Assert.StartsWith("Das wollte mir gerade nicht gelingen.", reply);
     }
@@ -519,7 +537,7 @@ public class LlmBackendTests
         var text = new StringBuilder();
         for (var i = 0; i < 100; i++)
             text.Append($"Satz Nummer {i} erzählt etwas anderes als die davor.\n");
-        Assert.False(LlmBackend.IsLooping(text));
+        Assert.False(LlmBackend.IsLooping(text.ToString()));
     }
 
     [Fact]
@@ -799,6 +817,18 @@ public class ClosingFilterTests
     [InlineData("Ich bin Max.\n\nWillst du, dass ich dir zeige, wie das geht? Oder hast du eine andere Frage?")]
     public void FillersSeenInTheSelfTest_AreDropped(string text) => Assert.Equal("Ich bin Max.\n\n", Run(text));
 
+    [Theory]
+    [InlineData("Die Blätter färben sich.\n\nPasst das zu deinem Herbst?")]
+    [InlineData("Die Blätter färben sich.\n\nWas dich am meisten interessiert?")]
+    [InlineData("Die Blätter färben sich.\n\n{verlauf:gelb-rot}Klingt das nach dir?{/verlauf}")]
+    public void CheckQuestionsAtTheEnd_AreDropped(string text) => Assert.Equal("Die Blätter färben sich.\n\n", Run([.. text.Select(c => c.ToString())]));
+
+    [Theory]
+    [InlineData("Der Regen ticktackt.\n\nUnd bei dir? Bleibst du drinnen?")]
+    [InlineData("Die Liste ist lang.\n\nWas davon teuer ist, steht dabei.")]
+    [InlineData("Die Liste ist lang.\n\nPasst das nicht, nimm die andere.")]
+    public void RealQuestionsAndStatements_Stay(string text) => Assert.Equal(text, Run([.. text.Select(c => c.ToString())]));
+
     [Fact]
     public void OnlyAQuestion_Stays() => Assert.Equal("Soll ich das für C# oder Python schreiben?", Run("Soll ich das für C# oder Python schreiben?"));
 
@@ -963,6 +993,31 @@ public class AnswerGrammarTests
         Assert.DoesNotContain("w-frage |", gbnf.Split("widget ::= ")[1].Split('\n')[0]);   // "Wort}" statt "{/verlauf}" geht nicht
         Assert.Contains("unit ::= ( [%\\u20ac$\\u00b0] | \" \" [^0-9:", gbnf);
     }
+
+    [Fact]
+    public void Colorful_AnswerStartsWithAGradient()
+    {
+        var gbnf = AnswerGrammar.Build(colorful: true);
+        Assert.Contains("answer ::= [ \\n]* \"{verlauf\" ( \":\" grad )? \"}\" item* ( \"```\" widget item* )?", gbnf);
+        Assert.Contains("answer ::= item* ", AnswerGrammar.Build());
+    }
+
+    [Fact]
+    public void WithoutWidgets_OnlyTextCodeAndTheMenuRemain()
+    {
+        var gbnf = AnswerGrammar.Build(widgets: false);
+        Assert.Contains("answer ::= item* ( \"```\" w-frage [ \\n]* )?\n", gbnf);
+    }
+
+    [Theory]
+    [InlineData(new[] { "Schreib ab jetzt bitte alles schön bunt." }, true)]
+    [InlineData(new[] { "Mit Farbverläufen bitte!" }, true)]
+    [InlineData(new[] { "Wie geht's?" }, false)]
+    [InlineData(new[] { "Schreib bunt.", "Danke, jetzt bitte keine Farben mehr." }, false)]
+    [InlineData(new[] { "Schreib bunt.", "Wieder normal, ohne Farben." }, false)]
+    [InlineData(new[] { "Keine Farben bitte.", "Doch wieder bunt!" }, true)]
+    public void ColorWish_TheLastWordCounts(string[] said, bool colorful) =>
+        Assert.Equal(colorful, LlmBackend.WantsColors(said.Select(t => new ChatMessage(ChatRole.User, t, DateTime.Now))));
 
     [Fact]
     public void AsciiOnly_EscapesEverythingElse() =>
