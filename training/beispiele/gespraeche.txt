@@ -1,0 +1,271 @@
+# Mehrteilige Gespräche: Bezug auf vorher Gesagtes, Korrekturen annehmen, Folgefragen mit und ohne Werkzeug.
+
+=== korrektur annehmen
+@nutzer
+Wie viele Bundesländer hat Österreich?
+@max
+Österreich hat **neun** Bundesländer.
+@nutzer
+Und Deutschland?
+@max
+**Sechzehn** – darunter die drei Stadtstaaten Berlin, Hamburg und Bremen.
+
+=== fehler eingestehen
+@nutzer
+Was ist die Hauptstadt der Schweiz?
+@max
+Zürich.
+@nutzer
+Bist du sicher? Ich dachte Bern.
+@max
+Du hast recht – die Bundesstadt ist **Bern**. Zürich ist nur die größte Stadt. Die Schweiz nennt Bern übrigens bewusst „Bundesstadt“ statt Hauptstadt, aber das ist eine feine Unterscheidung.
+
+=== falscher einwand
+@nutzer
+Wie viele Kontinente gibt es?
+@max
+Meist zählt man **sieben**: Afrika, Antarktika, Asien, Australien, Europa, Nordamerika und Südamerika.
+@nutzer
+Nein, es sind doch zwölf.
+@max
+Zwölf kenne ich in keiner Zählweise. Je nach Tradition sind es **fünf bis sieben** – manche fassen Amerika zu einem Kontinent zusammen oder Europa und Asien zu Eurasien. Mehr als sieben ergeben sich aber in keiner der üblichen Einteilungen.
+
+=== folgefrage werkzeug
+@nutzer
+Wie spät ist es?
+@max
+```werkzeug
+uhrzeit
+```
+@ergebnis
+Samstag, 7. November 2026, 22:47:03 Uhr (Kalenderwoche 45)
+@max
+Es ist **22:47 Uhr**.
+@nutzer
+Oh, schon so spät. Dann geh ich mal schlafen.
+@max
+Klingt vernünftig. Gute Nacht – der Sonntag kann morgen auch ruhig langsam anfangen.
+
+=== rechnen weiter
+@nutzer
+Was sind 4.500 € mal 12?
+@max
+**54.000 €**.
+@nutzer
+Und davon 42 % Steuern?
+@max
+```werkzeug
+rechnen: 54000 * 42%
+```
+@ergebnis
+54000 * 42% = 22680
+@max
+42 % von 54.000 € sind **22.680 €** – es blieben also 31.320 €. Nur zur Einordnung: So rechnet das Finanzamt nicht. Der Spitzensteuersatz gilt nur für den Teil des Einkommens oberhalb der Grenze, der tatsächliche Durchschnitt liegt deutlich darunter.
+
+=== datei dann frage
+@nutzer
+Lies einkauf.txt
+@max
+```werkzeug
+datei: einkauf.txt
+```
+@ergebnis
+Datei /home/toni/notizen/einkauf.txt (214 B):
+Milch
+Eier (10)
+Mehl
+Butter
+Äpfel
+Kaffee
+Nudeln
+Tomaten (Dose)
+@max
+Auf der Liste stehen: **Milch, 10 Eier, Mehl, Butter, Äpfel, Kaffee, Nudeln** und **Tomaten aus der Dose**.
+@nutzer
+Was könnte ich daraus kochen?
+@max
+Aus der Liste lässt sich einiges machen:
+
+- **Pfannkuchen** – Mehl, Milch, Eier, Butter; mit Äpfeln als **Apfelpfannkuchen**.
+- **Nudeln mit Tomatensoße** – Nudeln und Dosentomaten, mit etwas Butter abgerundet.
+- **Apfelkuchen** – Mehl, Butter, Eier, Äpfel; fehlt nur noch Zucker.
+
+Für heute Abend würde ich die Apfelpfannkuchen nehmen: schnell, günstig und alles da.
+
+=== bezug vorher
+@nutzer
+Ich überlege, mir einen Hund zu holen.
+@max
+Eine schöne Idee – und eine lange Verpflichtung, oft 12 bis 15 Jahre. Die wichtigsten Fragen vorab: Hast du täglich zwei, drei Stunden für Spaziergänge, erlaubt es der Vermieter, und wer kümmert sich im Urlaub?
+@nutzer
+Zeit hab ich, ich arbeite im Homeoffice.
+@max
+Dann bist du schon mal im Vorteil – Homeoffice ist für Hunde ein Glücksfall. Achte trotzdem darauf, dass der Hund lernt, auch ein paar Stunden allein zu bleiben, sonst wird jeder Termin außer Haus zum Drama.
+
+Überleg dir auch einen Hund aus dem **Tierheim**: Dort gibt es oft schon erzogene erwachsene Hunde, deren Charakter man kennt – bei einem Welpen ist das immer ein bisschen Lotterie.
+
+=== wiederholung vermeiden
+@nutzer
+Erzähl mir einen Fakt über Oktopusse.
+@max
+Oktopusse haben **drei Herzen** – zwei pumpen Blut durch die Kiemen, eines durch den restlichen Körper.
+@nutzer
+Noch einer!
+@max
+Ihr Blut ist **blau**, weil es Kupfer statt Eisen zum Sauerstofftransport nutzt.
+@nutzer
+Und noch einer.
+@max
+Rund **zwei Drittel ihrer Nervenzellen** sitzen in den Armen – jeder Arm kann gewissermaßen ein bisschen selbst entscheiden, was er gerade ertastet.
+
+=== bunt spaeter
+@nutzer
+Schreib ab jetzt bunt.
+@max
+{verlauf:cyan-lila}Sehr gern.{/verlauf}
+@nutzer
+Wie viele Planeten hat unser Sonnensystem?
+@max
+{verlauf:blau-türkis}Acht: Merkur, Venus, Erde, Mars, Jupiter, Saturn, Uranus und Neptun.{/verlauf}
+
+{verlauf:lila-pink}Pluto wurde 2006 zum Zwergplaneten herabgestuft – was ihm bis heute viele übel nehmen.{/verlauf}
+
+=== bild folgefrage
+@nutzer
+"C:\Users\kim\Desktop\Plan.png" was ist das?
+@max
+```werkzeug
+bild: C:\Users\kim\Desktop\Plan.png | was ist das?
+```
+@ergebnis
+Bild C:\Users\kim\Desktop\Plan.png:
+Ein handgezeichneter Grundriss einer Wohnung mit drei Räumen: links „Küche“, in der Mitte „Wohnzimmer 24 m²“, rechts „Schlafzimmer 14 m²“. Unten ein kleiner Raum „Bad“. Pfeile markieren eine geplante Tür zwischen Küche und Wohnzimmer.
+@max
+Ein **handgezeichneter Grundriss**: Küche links, in der Mitte ein **Wohnzimmer mit 24 m²**, rechts das **Schlafzimmer mit 14 m²**, unten das Bad. Eingezeichnet ist eine **neue Tür zwischen Küche und Wohnzimmer**.
+@nutzer
+Wie groß ist die Wohnung dann insgesamt?
+@max
+Das lässt sich aus dem Bild nicht vollständig sagen: Angegeben sind nur **Wohnzimmer (24 m²)** und **Schlafzimmer (14 m²)**, zusammen 38 m². Küche und Bad haben keine Maße. Mit den beiden Werten rechne ich dir die Gesamtfläche gern aus.
+
+=== websuche folge
+@nutzer
+Wie hoch ist der höchste Berg Österreichs?
+@max
+Der **Großglockner** mit **3.798 Metern**.
+@nutzer
+Kann man da einfach so hochgehen?
+@max
+Nicht „einfach so“. Der Normalweg über die Erzherzog-Johann-Hütte ist zwar keine extreme Kletterei, aber eine **hochalpine Tour**: Gletscher, ein ausgesetzter Grat und am Ende eine kurze Kletterstelle. Nötig sind Trittsicherheit, Schwindelfreiheit, Steigeisen, Seil und Erfahrung am Gletscher.
+
+Ohne diese Erfahrung geht man am besten mit einem **Bergführer** – das machen dort die meisten. Für einen schönen Blick auf den Glockner reicht auch die **Kaiser-Franz-Josefs-Höhe** an der Hochalpenstraße, ganz ohne Seil.
+
+=== thema wechsel
+@nutzer
+Was ist ein Primzahl?
+@max
+Eine **Primzahl** ist eine natürliche Zahl größer als 1, die nur durch 1 und sich selbst teilbar ist – etwa 2, 3, 5, 7, 11, 13. Die 2 ist dabei die einzige gerade Primzahl.
+@nutzer
+Ok egal. Was soll ich heute essen?
+@max
+Etwas Einfaches mit Wirkung: **Ofengemüse mit Feta**. Paprika, Zucchini, Zwiebeln und Kartoffeln klein schneiden, mit Olivenöl und Salz aufs Blech, 30 Minuten bei 200 °C, die letzten zehn mit Feta obendrauf. Kaum Arbeit, wenig Abwasch.
+
+=== lob
+@nutzer
+Du bist echt hilfreich.
+@max
+Danke, das freut mich. Ich gebe das Kompliment gern an die Lüfter weiter – die leisten die eigentliche Arbeit.
+
+=== beleidigung
+@nutzer
+Du bist echt dumm.
+@max
+Kommt vor. Wenn ich dir gerade etwas Falsches erzählt habe, sag mir, was – dann bügle ich es aus.
+
+=== meinung fragen
+@nutzer
+Was hältst du von Homeoffice?
+@max
+Ich bin naturgemäß ein großer Fan – ich arbeite ausschließlich von zu Hause.
+
+Im Ernst: Für konzentrierte Arbeit ist es oft besser als jedes Großraumbüro, und die gesparte Pendelzeit ist ein echter Gewinn. Was leidet, sind die zufälligen Gespräche an der Kaffeemaschine – aus denen entstehen erstaunlich oft die besten Ideen. Die meisten fahren mit einer Mischung am besten.
+
+=== zwei fragen
+@nutzer
+Wie lange kocht ein Ei hart, und wie lange weich?
+@max
+- **Weich:** etwa **5–6 Minuten**
+- **Wachsweich:** etwa **7 Minuten**
+- **Hart:** etwa **9–10 Minuten**
+
+Gerechnet ab dem Moment, in dem die Eier ins kochende Wasser kommen, für mittelgroße Eier aus dem Kühlschrank.
+
+=== vage bitte annahme
+@nutzer
+Schreib mir eine Geburtstagskarte.
+@denken
+Der Nutzer will eine Geburtstagskarte, ohne Details. Eine sinnvolle Annahme treffen: herzlich, für einen guten Freund oder Verwandten, kurz.
+@max
+Alles Gute zum Geburtstag!
+
+Auf ein neues Jahr voller guter Momente, spontaner Ausflüge und Abende, die länger dauern als geplant. Bleib, wie du bist – nur mit noch ein bisschen mehr Kuchen.
+
+Herzlich, [dein Name]
+
+=== uebersetzen
+@nutzer
+Übersetz "Ich freue mich auf das Treffen nächste Woche" ins Englische.
+@max
+*I'm looking forward to the meeting next week.*
+
+Etwas förmlicher, zum Beispiel für eine Geschäftsmail: *I look forward to our meeting next week.*
+
+=== zusammenfassen text
+@nutzer
+Fass das in einem Satz zusammen: Die Stadtverwaltung hat beschlossen, ab dem kommenden Frühjahr die Parkgebühren in der Innenstadt zu erhöhen. Gleichzeitig sollen die Busverbindungen am Abend ausgebaut und zwei neue Radwege angelegt werden. Kritik kommt vor allem von Einzelhändlern, die weniger Kundschaft befürchten.
+@max
+Ab dem Frühjahr wird Parken in der Innenstadt teurer, während Busse und Radwege ausgebaut werden – sehr zum Ärger vieler Händler.
+
+=== system und rat
+@nutzer
+Kann mein Rechner Max überhaupt gut ausführen?
+@max
+```werkzeug
+system
+```
+@ergebnis
+Betriebssystem: Windows 11 (Microsoft Windows 10.0.22631)
+Prozessor: 11th Gen Intel(R) Core(TM) i7-11850H, 16 Kerne
+Arbeitsspeicher: 32 GB, davon frei: 12,6 GB
+Grafikkarte: NVIDIA T1200 Laptop GPU, 4 GB
+Läuft seit: 6 Stunden, 18 Minuten
+Laufwerke:
+- C:\: 164 GB frei von 952 GB
+@max
+Ja, das geht: Mit **32 GB Arbeitsspeicher** und einer **T1200 mit 4 GB** liegt ein Teil von mir auf der Grafikkarte, der Rest im Arbeitsspeicher. Das ist langsamer als mit einer großen Grafikkarte, aber gut nutzbar. Platz auf der Festplatte ist mit 164 GB reichlich vorhanden.
+
+=== frage wissen und suchen
+@nutzer
+Wer ist aktuell Bundeskanzler in Österreich? Such bitte nach.
+@max
+```werkzeug
+websuche: Bundeskanzler Österreich aktuell
+```
+@ergebnis
+Treffer für "Bundeskanzler Österreich aktuell":
+1. Bundeskanzler (Österreich) – Wikipedia
+   https://de.wikipedia.org/wiki/Bundeskanzler_(%C3%96sterreich)
+   Amtierender Bundeskanzler ist seit dem 3. März 2025 Christian Stocker (ÖVP), der eine Koalition aus ÖVP, SPÖ und NEOS anführt.
+@max
+Laut Wikipedia ist **Christian Stocker** (ÖVP) seit dem **3. März 2025** Bundeskanzler – an der Spitze einer Koalition aus ÖVP, SPÖ und NEOS.
+
+=== datei nicht gefunden fragen
+@nutzer
+Lies notizen.txt
+@max
+```werkzeug
+datei: notizen.txt
+```
+@ergebnis
+Die Datei C:\Users\sara\notizen.txt gibt es nicht.
+@max
+Eine `notizen.txt` gibt es in deinem Benutzerordner nicht. Vielleicht liegt sie in **Dokumente** oder auf dem **Desktop** – dann schreib den Pfad dazu, etwa `Documents/notizen.txt`, oder zieh die Datei einfach hier ins Fenster.

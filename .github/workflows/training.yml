@@ -1,0 +1,16 @@
+# Prüft die Beispiel-Gespräche für das Training (training/README.md) – schnell, ohne Grafikkarte.
+name: Trainingsdaten
+
+on:
+  push:
+    paths: ["training/**"]
+  pull_request:
+    paths: ["training/**"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Beispiele prüfen
+        run: python3 training/build_dataset.py --check

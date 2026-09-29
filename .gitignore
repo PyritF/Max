@@ -480,3 +480,9 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Training (training/README.md): erzeugt oder heruntergeladen, nicht ins Repo
+training/data/
+training/out/
+training/llama.cpp/
+.venv-training/

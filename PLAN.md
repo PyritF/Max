@@ -558,7 +558,12 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
 1. **Datensatz:** 1.000–3.000 Beispiel-Gespräche im Max-Stil, darunter Smalltalk, Erklärungen, Code, Tabellen, Fragen nach der Identität, ernste Themen und Tool-Aufrufe.
    - Die Beispiele lassen sich zum Teil mit einem großen Modell erzeugen. Danach werden sie von Hand geprüft und aussortiert.
    - Der Datensatz liegt im Repo unter `training/` als JSONL.
-2. **Training:** QLoRA mit **Unsloth** auf den Originalgewichten von Hugging Face, also nicht auf der GGUF-Datei.
+2. **Training:** LoRA mit **Unsloth** auf den Originalgewichten von Hugging Face, also nicht auf der GGUF-Datei.
+   - Stand: Laut Unsloth braucht bf16-LoRA für Qwen3.5-9B etwa 22 GB; 4-Bit (QLoRA) passt auf 12 GB, wird für Qwen3.5
+     aber nicht empfohlen (größere Quantisierungs-Unterschiede). Erster Versuch trotzdem auf einer 3080 Ti (12 GB) mit
+     `--modus 12gb`; überzeugt der Adapter im Selbsttest nicht, ein Lauf mit `--modus 24gb` auf einer gemieteten Karte.
+   - Trainiert wird im Format, das Max zur Laufzeit schreibt (ChatML, frühere Antworten ohne Denk-Block,
+     Werkzeug-Ergebnisse als `<tool_response>`), mit dem kurzen System-Prompt `training/system-kurz.md`.
    - 9B braucht für QLoRA eine Grafikkarte mit reichlich Speicher; sonst eine gemietete Cloud-GPU oder Google Colab.
    - Ein Adapter passt nur zu seinem Grundmodell – mit einem einzigen Modell gibt es auch nur einen Adapter.
 3. **Umwandeln:** Den Adapter mit llama.cpp nach GGUF konvertieren (`convert_lora_to_gguf.py`), etwa 50–100 MB.
@@ -569,9 +574,9 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
 
 | # | Schritt |
 |---|---|
-| 25 | Datensatz-Format festlegen, erste 200 Beispiele, Skript zum Erzeugen und Prüfen |
+| 25 | Datensatz-Format festlegen, erste 200 Beispiele, Skript zum Erzeugen und Prüfen ✅ (`training/`, Anleitung in `training/README.md`) |
 | 26 | Training mit Unsloth für das 9B-Modell, Vergleich im Selbsttest |
-| 27 | Adapter im Manifest, Laden in `LlmEngine`, kürzerer System-Prompt |
+| 27 | Adapter im Manifest, Laden in `LlmEngine` (Laden ✅: `adapter.bin` im Datenordner, `MAX_ADAPTER=aus` zum Vergleichen), kürzerer System-Prompt |
 | 28 | Stilles Update des Adapters |
 
 ---

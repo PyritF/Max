@@ -18,7 +18,8 @@ internal sealed record EngineInfo(
     int LayerCount,
     int ContextSize,
     long ModelBytes,
-    TimeSpan LoadTime);
+    TimeSpan LoadTime,
+    string? Adapter = null);
 
 /// <summary>
 /// Das lokale Sprachmodell (llama.cpp über LLamaSharp).
@@ -63,8 +64,10 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
     /// Scheitert es auf der Grafikkarte (z. B. zu wenig Speicher), gibt es einen zweiten Versuch auf der CPU.
     /// </summary>
     /// <param name="progress">Bekommt den Ladefortschritt in Bytes – für den Balken beim Start.</param>
+    /// <param name="adapterPath">Max' LoRA-Adapter (PLAN.md §9a) – fehlt die Datei, läuft das Modell ohne.</param>
     public static async Task<LlmEngine> LoadAsync(
-        string modelPath, int contextSize, HardwareInfo hardware, string logFile, StepProgress? progress, CancellationToken ct)
+        string modelPath, int contextSize, HardwareInfo hardware, string logFile, StepProgress? progress, CancellationToken ct,
+        string? adapterPath = null)
     {
         var clock = Stopwatch.StartNew();
         var useGpu = hardware.Gpu is not null;
@@ -100,6 +103,7 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
         try
         {
             var context = await Task.Run(() => weights.CreateContext(parameters), ct);
+            var adapter = TryAttachAdapter(weights, context, adapterPath);
             var offloaded = NativeSetup.OffloadedLayers ?? (layers > 0 ? Math.Min(layers, gguf.BlockCount) : 0);
             var info = new EngineInfo(
                 Description: weights.NativeHandle.Description,
@@ -109,13 +113,42 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
                 LayerCount: gguf.BlockCount,
                 ContextSize: (int)context.ContextSize,
                 ModelBytes: modelBytes,
-                LoadTime: clock.Elapsed);
+                LoadTime: clock.Elapsed,
+                Adapter: adapter);
             return new LlmEngine(weights, context, info);
         }
         catch
         {
             weights.Dispose();
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Hängt den Adapter an den Gesprächs-Kontext. Klappt das nicht (kaputte Datei, passt nicht zum Modell),
+    /// läuft Max ohne – das Protokoll sagt, warum. Liefert eine Beschreibung für /debug oder null.
+    /// </summary>
+    private static string? TryAttachAdapter(LLamaWeights weights, LLamaContext context, string? path)
+    {
+        if (path is null || !File.Exists(path))
+            return null;
+        if (string.Equals(Environment.GetEnvironmentVariable("MAX_ADAPTER"), "aus", StringComparison.OrdinalIgnoreCase))
+        {
+            Log("Adapter liegt bereit, ist aber abgeschaltet (MAX_ADAPTER=aus).");
+            return null;
+        }
+        try
+        {
+            var adapter = weights.NativeHandle.LoadLoraFromFile(path);
+            context.NativeHandle.SetLoraAdapters([(adapter, 1f)]);
+            var file = new FileInfo(path);
+            Log($"Adapter angehängt: {file.Name}, {file.Length / 1024 / 1024} MB.");
+            return $"{file.Length / 1024 / 1024} MB, vom {file.LastWriteTime:d. M. yyyy}";
+        }
+        catch (Exception e)
+        {
+            Log($"Adapter nicht angehängt, ohne weiter: {e.Message}");
+            return null;
         }
     }
 
@@ -264,7 +297,7 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
 
     /// <summary>Was einen gespeicherten Stand ungültig macht: Kontextgröße, Grafik-Aufteilung, llama.cpp-Version.</summary>
     public string StateIdentity =>
-        $"{Info.ContextSize}|{Info.Backend}|{Info.GpuLayers}|{typeof(LLamaContext).Assembly.GetName().Version}";
+        $"{Info.ContextSize}|{Info.Backend}|{Info.GpuLayers}|{typeof(LLamaContext).Assembly.GetName().Version}|{Info.Adapter}";
 
     /// <summary>Leert den Cache – der Selbsttest misst damit, wie schnell ein zweiter Start aufwärmt.</summary>
     public void Reset() => Clear();

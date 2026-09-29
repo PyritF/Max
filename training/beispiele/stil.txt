@@ -1,0 +1,95 @@
+# Stilwünsche: sofort umsetzen, nicht kommentieren, dauerhaft bis zum Widerruf.
+
+=== bunt herbst
+@nutzer
+Schreib ab jetzt bitte alles schön bunt, mit Farbverläufen. Erzähl mir was über den Herbst.
+@denken
+Der Nutzer will es bunt. Jeden Absatz in einen eigenen Farbverlauf mit wechselnden Farben, ohne den Wunsch zu kommentieren.
+@max
+{verlauf:gold-orange}Der Herbst ist die Jahreszeit, in der die Natur noch einmal alles zeigt, was sie hat.{/verlauf}
+
+{verlauf:orange-rot}Die Blätter färben sich, weil die Bäume das grüne Chlorophyll abbauen – übrig bleiben Gelb und Orange, und manche Arten bilden sogar neues Rot.{/verlauf}
+
+{verlauf:rot-lila}Die Tage werden kürzer, die Luft riecht nach Laub und Regen, und abends wird es wieder gemütlich drinnen.{/verlauf}
+
+{verlauf:lila-blau}Kurz: die schönste Ausrede für Tee, Kerzen und ein gutes Buch.{/verlauf}
+
+=== bunt bleibt
+@nutzer
+Schreib bitte ab jetzt schön bunt.
+@max
+{verlauf:türkis-blau}Mit Vergnügen – ab sofort in Farbe.{/verlauf}
+@nutzer
+Wie spät geht eigentlich die Sonne im Dezember unter?
+@max
+{verlauf:gold-orange}In Mitteleuropa sehr früh: Rund um den 21. Dezember geht die Sonne in Berlin schon gegen 15:55 Uhr unter, in Wien gegen 16:00 Uhr.{/verlauf}
+
+{verlauf:lila-blau}Der früheste Sonnenuntergang liegt übrigens schon um den 12. Dezember – der kürzeste Tag ist trotzdem erst der 21., weil sich morgens der Sonnenaufgang noch weiter nach hinten schiebt.{/verlauf}
+
+=== bunt aus
+@nutzer
+Schreib bunt.
+@max
+{verlauf:pink-lila}Wird gemacht.{/verlauf}
+@nutzer
+Danke, jetzt bitte wieder ohne Farben. Was ist die Hauptstadt von Kanada?
+@max
+**Ottawa** – nicht Toronto, auch wenn das die größere Stadt ist.
+
+=== mehr emojis
+@nutzer
+Benutz ab jetzt mehr Emojis. Was sind gute Hobbys für den Winter?
+@max
+Ein paar gemütliche und ein paar aktive ❄️:
+
+- 🧶 **Stricken oder Häkeln** – entspannend, und am Ende hast du einen Schal.
+- 📚 **Lesen** – die langen Abende sind wie gemacht dafür.
+- 🍞 **Brot backen** – die Küche wird warm und riecht herrlich.
+- ⛸️ **Eislaufen** – draußen an der frischen Luft.
+- 🧩 **Puzzles oder Brettspiele** – ideal mit Freunden und Tee ☕.
+
+=== keine formatierung
+@nutzer
+Bitte ab jetzt ohne jede Formatierung, nur einfacher Text. Wie koche ich Reis?
+@max
+Einen Teil Reis mit etwa anderthalb bis zwei Teilen Wasser und einer Prise Salz in einen Topf geben. Aufkochen, dann die Hitze ganz herunterdrehen, Deckel drauf und etwa 12 bis 15 Minuten quellen lassen, ohne umzurühren. Danach vom Herd nehmen und noch fünf Minuten mit Deckel ruhen lassen. Vorher einmal waschen macht ihn weniger klebrig.
+
+=== kurz antworten
+@nutzer
+Antworte ab jetzt bitte immer ganz kurz. Was ist die Lichtgeschwindigkeit?
+@max
+Knapp 300.000 km pro Sekunde.
+
+=== englisch
+@nutzer
+Can you answer in English from now on? What is the capital of Australia?
+@max
+Sure. It's **Canberra** – not Sydney, although that's the city most people guess.
+
+=== eine farbe warnung
+@nutzer
+Kann ich meinen Laptop einfach zuklappen, während ein Windows-Update läuft?
+@max
+Lieber nicht. Wenn der Laptop dabei in den Ruhezustand geht, kann das Update abbrechen – im schlimmsten Fall startet Windows danach {rot}nicht mehr richtig{/rot}. Lass ihn offen und am Netzteil, bis das Update fertig ist und neu gestartet hat.
+
+=== titel bunt
+@nutzer
+Mach mir einen bunten Schriftzug "Max".
+@max
+```titel
+Text: Max
+Schrift: big
+Verlauf: pink-orange
+```
+
+=== bunt mit code
+@nutzer
+Schreib ab jetzt bunt. Wie gebe ich in Python "Hallo" aus?
+@max
+{verlauf:grün-türkis}Ganz einfach, mit print:{/verlauf}
+
+```python
+print("Hallo")
+```
+
+{verlauf:türkis-blau}Mehr braucht es nicht – Python ist in dieser Hinsicht erfrischend unkompliziert.{/verlauf}

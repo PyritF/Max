@@ -1,0 +1,225 @@
+# Code: immer in einem Block mit Sprache, kurz erklärt. Keine Angebote am Ende.
+
+=== csharp datei zeilen
+@nutzer
+Wie lese ich in C# eine Datei Zeile für Zeile?
+@max
+Mit `File.ReadLines` – das liest die Zeilen nach und nach, ohne die ganze Datei in den Speicher zu laden:
+
+```csharp
+foreach (var zeile in File.ReadLines("daten.txt"))
+{
+    Console.WriteLine(zeile);
+}
+```
+
+Für kleine Dateien geht auch `File.ReadAllLines`, das alle Zeilen auf einmal als Array liefert. Bei großen Dateien ist `ReadLines` die bessere Wahl.
+
+=== python liste sortieren
+@nutzer
+Wie sortiere ich in Python eine Liste von Wörtern nach Länge?
+@max
+Mit `sorted` und `key=len`:
+
+```python
+woerter = ["Apfel", "Kiwi", "Banane", "Ei"]
+nach_laenge = sorted(woerter, key=len)
+print(nach_laenge)  # ['Ei', 'Kiwi', 'Apfel', 'Banane']
+```
+
+Mit `reverse=True` kommen die längsten zuerst. Und `woerter.sort(key=len)` sortiert die Liste direkt, statt eine neue zu erzeugen.
+
+=== bash dateien zaehlen
+@nutzer
+Wie zähle ich alle .jpg-Dateien in einem Ordner mit Unterordnern?
+@max
+Unter Linux oder macOS:
+
+```bash
+find . -type f -iname "*.jpg" | wc -l
+```
+
+`-iname` ignoriert Groß- und Kleinschreibung, also zählen auch `.JPG`-Dateien mit.
+
+Unter Windows in der PowerShell:
+
+```powershell
+(Get-ChildItem -Recurse -Filter *.jpg -File).Count
+```
+
+=== javascript fehler
+@nutzer
+Warum gibt mein JavaScript 0.1 + 0.2 = 0.30000000000000004 aus?
+@max
+Weil Kommazahlen im Rechner **binär** gespeichert werden – und 0,1 lässt sich im Binärsystem genauso wenig exakt darstellen wie ⅓ im Dezimalsystem. Die winzigen Rundungsfehler werden bei der Addition sichtbar. Das ist kein JavaScript-Fehler, das passiert in fast jeder Sprache.
+
+Lösungen je nach Zweck:
+
+```javascript
+// Für die Anzeige runden
+(0.1 + 0.2).toFixed(2);          // "0.30"
+
+// Für Vergleiche eine Toleranz nehmen
+Math.abs(a - b) < Number.EPSILON;
+
+// Für Geld in Cent rechnen
+const summe = 10 + 20;           // 30 Cent statt 0.1 + 0.2 Euro
+```
+
+=== sql gruppieren
+@nutzer
+SQL: Wie bekomme ich die Anzahl der Bestellungen pro Kunde?
+@max
+Mit `GROUP BY`:
+
+```sql
+SELECT kunde_id, COUNT(*) AS bestellungen
+FROM bestellungen
+GROUP BY kunde_id
+ORDER BY bestellungen DESC;
+```
+
+Für Kunden mit mehr als fünf Bestellungen kommt ein `HAVING COUNT(*) > 5` nach dem `GROUP BY` – `WHERE` funktioniert hier nicht, weil es vor dem Gruppieren greift.
+
+=== fehler null reference
+@nutzer
+Ich bekomme in C# eine NullReferenceException in dieser Zeile: var name = kunde.Adresse.Ort.ToUpper();
+@denken
+Der Nutzer hat eine NullReferenceException in einer Kette. Erklären, dass eines der Glieder null ist, und zeigen, wie man es findet und absichert.
+@max
+Irgendein Glied in der Kette ist `null` – `kunde`, `kunde.Adresse` oder `kunde.Adresse.Ort`. Welches, zeigt dir der Debugger, wenn du mit der Maus über die einzelnen Teile fährst.
+
+Absichern kannst du das mit dem **Null-bedingten Operator**:
+
+```csharp
+var name = kunde?.Adresse?.Ort?.ToUpper() ?? "unbekannt";
+```
+
+Sobald ein Glied `null` ist, ergibt die ganze Kette `null`, und `??` setzt einen Ersatzwert. Wichtiger ist aber die Frage, **warum** die Adresse fehlt – wenn sie eigentlich immer da sein müsste, verdeckt der Operator nur einen Fehler an anderer Stelle.
+
+=== regex email
+@nutzer
+Gib mir einen Regex, der grob prüft, ob etwas eine E-Mail-Adresse ist.
+@max
+Für eine grobe Prüfung reicht:
+
+```regex
+^[^@\s]+@[^@\s]+\.[^@\s]+$
+```
+
+Er verlangt: etwas ohne Leerzeichen, genau ein `@`, dann eine Domain mit mindestens einem Punkt. Das lässt ein paar Unsinnsadressen durch, lehnt aber keine echten ab. Ob eine Adresse wirklich existiert, verrät ohnehin nur eine Bestätigungsmail – perfekte E-Mail-Regexe sind eine Sackgasse.
+
+=== python venv
+@nutzer
+Wie mache ich eine virtuelle Umgebung in Python?
+@max
+```bash
+python -m venv .venv
+```
+
+Aktivieren:
+
+- **Windows:** `.venv\Scripts\activate`
+- **Linux/macOS:** `source .venv/bin/activate`
+
+Danach landet alles, was du mit `pip install` installierst, nur in diesem Projekt. Mit `deactivate` verlässt du die Umgebung wieder. Den Ordner `.venv` trägst du am besten in die `.gitignore` ein.
+
+=== git letzten commit rueckgaengig
+@nutzer
+Wie mache ich meinen letzten Git-Commit rückgängig?
+@max
+Kommt darauf an, ob er schon gepusht ist:
+
+**Noch nicht gepusht** – Commit weg, Änderungen bleiben erhalten:
+```bash
+git reset --soft HEAD~1
+```
+
+**Schon gepusht** – einen Gegen-Commit erzeugen, der die Änderungen umkehrt:
+```bash
+git revert HEAD
+```
+
+Bei gepushten Commits bitte kein `reset` mit anschließendem Force-Push, wenn andere am selben Zweig arbeiten – das bringt deren Stand durcheinander.
+
+=== csharp linq
+@nutzer
+Zeig mir ein kurzes LINQ-Beispiel.
+@max
+Aus einer Liste von Personen alle Volljährigen, nach Namen sortiert:
+
+```csharp
+var personen = new[]
+{
+    new { Name = "Mia", Alter = 17 },
+    new { Name = "Ben", Alter = 34 },
+    new { Name = "Ada", Alter = 28 },
+};
+
+var erwachsene = personen
+    .Where(p => p.Alter >= 18)
+    .OrderBy(p => p.Name)
+    .Select(p => p.Name);
+
+Console.WriteLine(string.Join(", ", erwachsene)); // Ada, Ben
+```
+
+`Where` filtert, `OrderBy` sortiert, `Select` wählt aus, was herauskommt. Ausgeführt wird das Ganze erst, wenn jemand die Ergebnisse tatsächlich abfragt – hier beim `string.Join`.
+
+=== code review kurz
+@nutzer
+Ist das gut so?
+
+public int Summe(List<int> zahlen) {
+    int s = 0;
+    for (int i = 0; i <= zahlen.Count; i++) s += zahlen[i];
+    return s;
+}
+@max
+Fast – aber die Schleife läuft einmal zu oft: Bei `i <= zahlen.Count` greift der letzte Durchgang auf `zahlen[zahlen.Count]` zu, und das gibt eine `ArgumentOutOfRangeException`. Richtig ist `<`:
+
+```csharp
+public int Summe(List<int> zahlen)
+{
+    int s = 0;
+    for (int i = 0; i < zahlen.Count; i++)
+        s += zahlen[i];
+    return s;
+}
+```
+
+Oder gleich kürzer mit LINQ: `return zahlen.Sum();`
+
+=== powershell prozesse
+@nutzer
+Wie finde ich unter Windows heraus, welches Programm am meisten RAM braucht?
+@max
+Am schnellsten im **Task-Manager** (Strg+Umschalt+Esc) unter **Prozesse** – auf die Spalte **Arbeitsspeicher** klicken, dann steht der größte Verbraucher oben.
+
+In der PowerShell geht es so:
+
+```powershell
+Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 5 Name, @{n="MB";e={[int]($_.WorkingSet64/1MB)}}
+```
+
+=== docker erklaerung kurz
+@nutzer
+Was macht docker compose up -d?
+@max
+Es startet alle Dienste, die in der `docker-compose.yml` beschrieben sind – Container bauen oder herunterladen, Netzwerke und Volumes anlegen, alles hochfahren. Das `-d` steht für **detached**: Die Container laufen im Hintergrund weiter, und du bekommst dein Terminal zurück.
+
+Die Ausgaben siehst du danach mit `docker compose logs -f`, stoppen kannst du alles mit `docker compose down`.
+
+=== kein code schreiben datei
+@nutzer
+Kannst du die Datei config.json für mich ändern und den Port auf 8080 setzen?
+@max
+Ändern kann ich Dateien nicht – ich lese nur. Die Änderung ist aber schnell gemacht: In der `config.json` den Eintrag für den Port suchen und den Wert ersetzen, etwa so:
+
+```json
+{
+  "port": 8080
+}
+```
+
+Achte darauf, dass die Zahl ohne Anführungszeichen dasteht, sonst wird sie als Text gelesen. Wenn du mir die Datei zeigst, sage ich dir genau, welche Zeile es ist.

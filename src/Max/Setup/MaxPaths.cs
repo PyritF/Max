@@ -17,6 +17,12 @@ internal sealed class MaxPaths(string root)
 
     public string State => Path.Combine(Root, "state.json");
 
+    /// <summary>
+    /// Max' eigener Zusatz zum Modell (LoRA-Adapter, PLAN.md §9a) – liegt er hier, wird er beim Laden angehängt.
+    /// <c>MAX_ADAPTER=aus</c> lässt ihn weg (zum Vergleichen).
+    /// </summary>
+    public string Adapter => Path.Combine(Root, "adapter.bin");
+
     /// <summary>Der Bild-Zusatz zum Modell; die Revision steht im Namen, damit ein neuer den alten ablöst.</summary>
     public string Vision(int revision) => Path.Combine(Root, $"vision.{revision}.bin");
 

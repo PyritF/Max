@@ -1,0 +1,237 @@
+# Erklärungen: gut gegliedert, mit Beispielen, so lang wie nötig. Kein Element ohne echte Zahlen oder Struktur.
+
+=== sprachmodell
+@nutzer
+Erklär mir, wie ein Sprachmodell funktioniert.
+@denken
+Der Nutzer will das Prinzip verstehen. Verständlich gliedern, ein Beispiel, keine erfundenen Zahlen und kein Diagramm.
+@max
+Ein Sprachmodell ist im Kern eine sehr gute **Vorhersagemaschine für das nächste Wort**.
+
+## Das Training
+Es bekommt riesige Mengen Text zu lesen und übt dabei immer dieselbe Aufgabe: Satzanfang ansehen, nächstes Wort raten, Fehler korrigieren. Nach Milliarden solcher Runden hat es gelernt, welche Wörter in welchem Zusammenhang wahrscheinlich sind – und nebenbei erstaunlich viel über Grammatik, Fakten und Logik.
+
+## Beim Antworten
+1. Deine Frage wird in kleine Stücke zerlegt, sogenannte **Tokens**.
+2. Das Modell berechnet für jedes mögliche nächste Token eine Wahrscheinlichkeit.
+3. Eines davon wird gewählt, angehängt – und das Ganze beginnt von vorn.
+
+Bei „Der Himmel ist …“ liegt „blau“ weit vorn, „kariert“ eher nicht.
+
+## Was das bedeutet
+- Es **versteht** nicht wie ein Mensch, erkennt aber sehr feine Muster.
+- Es kann **überzeugend falsch** liegen – deshalb schlage ich Unsicheres lieber nach.
+- Sein Wissen endet mit den Trainingsdaten; Aktuelles braucht eine Suche.
+
+=== photosynthese
+@nutzer
+Wie funktioniert Photosynthese, kurz?
+@max
+Pflanzen bauen mit Licht Zucker: Aus **Kohlendioxid** aus der Luft und **Wasser** aus dem Boden machen sie mithilfe von Sonnenlicht **Glukose** – und geben dabei **Sauerstoff** ab. Das passiert in den Chloroplasten, deren grüner Farbstoff Chlorophyll das Licht einfängt.
+
+Kurz als Formel: 6 CO₂ + 6 H₂O + Licht → C₆H₁₂O₆ + 6 O₂
+
+=== inflation
+@nutzer
+Was ist Inflation eigentlich genau?
+@max
+**Inflation** heißt, dass die Preise im Durchschnitt steigen – oder anders gesagt: Dein Geld verliert an Kaufkraft. Bei 3 % Inflation kostet ein Warenkorb, der heute 100 € kostet, in einem Jahr etwa 103 €.
+
+**Warum passiert das?**
+- **Nachfrage** steigt schneller als das Angebot (alle wollen kaufen, es gibt nicht genug).
+- **Kosten** steigen, etwa für Energie oder Löhne, und Firmen geben sie weiter.
+- **Geldmenge** wächst stärker als die Wirtschaft.
+
+Eine leichte Inflation um 2 % gilt als gesund – deshalb peilen Zentralbanken wie die EZB genau diesen Wert an. Problematisch wird es, wenn sie hoch und unberechenbar wird.
+
+=== dns
+@nutzer
+Was macht DNS?
+@max
+DNS ist das **Telefonbuch des Internets**. Du tippst `wikipedia.org`, aber Rechner finden sich über Zahlen – IP-Adressen wie `185.15.59.224`. Ein DNS-Server übersetzt den Namen in diese Adresse, und erst dann baut dein Browser die Verbindung auf.
+
+Damit das schnell geht, merken sich Browser, Betriebssystem und Router die Antworten eine Weile. Wenn eine Seite „nicht gefunden“ wird, obwohl das Internet läuft, ist nicht selten DNS schuld.
+
+=== zinseszins erklaert
+@nutzer
+Erklär mir Zinseszins wie einem Zehnjährigen.
+@max
+Stell dir vor, du pflanzt einen Apfelbaum, und jedes Jahr bekommst du Äpfel. Wenn du aus den Kernen dieser Äpfel **neue Bäume** pflanzt, tragen die im nächsten Jahr auch Äpfel. Dann hast du mehr Bäume, mehr Äpfel, noch mehr Bäume …
+
+Beim Geld ist es genauso: Die Bank gibt dir **Zinsen** – das sind deine Äpfel. Lässt du sie auf dem Konto, bekommst du im nächsten Jahr auch Zinsen **auf die Zinsen**. Am Anfang merkt man das kaum, aber nach vielen Jahren wächst der Haufen immer schneller.
+
+=== schwarzes loch
+@nutzer
+Was ist ein Schwarzes Loch?
+@max
+Ein Ort, an dem so viel Masse auf so engem Raum steckt, dass **nichts mehr entkommt** – nicht einmal Licht. Deshalb ist es schwarz.
+
+Die Grenze, ab der es kein Zurück gibt, heißt **Ereignishorizont**. Draußen verhält sich ein Schwarzes Loch wie jede andere Masse: Die Erde würde um ein Schwarzes Loch mit Sonnenmasse genauso kreisen wie um die Sonne. Gefährlich wird es erst sehr nah dran.
+
+Entstehen können sie, wenn sehr schwere Sterne am Ende ihres Lebens in sich zusammenstürzen. Im Zentrum unserer Milchstraße sitzt ein besonders großes, etwa vier Millionen Mal so schwer wie die Sonne.
+
+=== git merge rebase
+@nutzer
+Was ist der Unterschied zwischen git merge und git rebase?
+@max
+Beide holen Änderungen eines Zweigs in einen anderen – nur mit unterschiedlicher Geschichte:
+
+```spalten
+merge
+Verbindet beide Zweige mit einem Merge-Commit.
+Die Geschichte bleibt, wie sie war.
+Sicher für geteilte Zweige.
+---
+rebase
+Setzt deine Commits neu auf den anderen Zweig.
+Ergibt eine gerade, saubere Geschichte.
+Schreibt Commits um – nie auf geteilten Zweigen.
+```
+
+Faustregel: Eigene, noch nicht geteilte Arbeit darfst du vor dem Zusammenführen gern **rebasen**; alles, was andere schon haben, wird **gemergt**.
+
+=== vpn
+@nutzer
+Brauche ich ein VPN?
+@max
+Meistens nicht. Ein VPN leitet deinen Verkehr über einen fremden Server – das verschleiert deine IP-Adresse gegenüber Webseiten, aber der VPN-Anbieter sieht dafür alles, was sonst dein Internetanbieter sähe. Du verschiebst also nur, wem du vertraust.
+
+**Sinnvoll** ist es, wenn du
+- ins **Firmennetz** musst,
+- in **fremden WLANs** unterwegs bist und dem Netz nicht traust,
+- Inhalte aus einem anderen **Land** sehen willst.
+
+Für das normale Surfen zu Hause bringt es wenig, denn fast alle Seiten sind ohnehin per HTTPS verschlüsselt.
+
+=== kalorien abnehmen
+@nutzer
+Wie funktioniert Abnehmen eigentlich?
+@max
+Im Kern mit einer einfachen Bilanz: Wenn du über längere Zeit **weniger Energie aufnimmst, als du verbrauchst**, greift der Körper auf seine Reserven zurück. Ein Kilo Körperfett entspricht grob 7.000 Kilokalorien.
+
+In der Praxis entscheidet aber, ob man das durchhält:
+- **Eiweiß und Ballaststoffe** machen länger satt als Zucker und Weißmehl.
+- **Getränke** zählen mit – Saft und Limo sind heimliche Kalorienbomben.
+- **Bewegung** hilft, vor allem aber beim Halten des Gewichts und für die Laune.
+- Ein moderates Defizit ist nachhaltiger als eine radikale Diät.
+
+Bei gesundheitlichen Fragen oder viel Gewicht lohnt sich ein Gespräch mit einer Ärztin oder Ernährungsberatung.
+
+=== strom sparen
+@nutzer
+Wo kann ich im Haushalt am meisten Strom sparen?
+@max
+Die größten Hebel sind meist:
+
+1. **Alte Kühl- und Gefriergeräte** – ein Gerät von vor 15 Jahren verbraucht oft doppelt so viel wie ein neues.
+2. **Warmwasser mit Strom** (Durchlauferhitzer, Boiler) – kürzer duschen spart hier richtig.
+3. **Standby** – Fernseher, Konsole, Router, Ladegeräte. Eine schaltbare Steckerleiste hilft.
+4. **Wäschetrockner** – Wäsche an der Luft trocknen ist unschlagbar günstig.
+5. **Beleuchtung** – falls noch Glüh- oder Halogenlampen hängen: gegen LEDs tauschen.
+
+Ein günstiges **Strommessgerät** für die Steckdose zeigt dir schnell, welche Geräte bei dir wirklich zu Buche schlagen.
+
+=== warum schlafen
+@nutzer
+Warum müssen wir schlafen?
+@max
+Ganz geklärt ist das noch nicht, aber einiges weiß man:
+
+- **Gedächtnis:** Im Schlaf wird Gelerntes sortiert und gefestigt.
+- **Aufräumen:** Das Gehirn spült Abfallstoffe aus, die sich tagsüber ansammeln.
+- **Erholung:** Körper und Immunsystem reparieren und erneuern sich.
+
+Wer dauerhaft zu wenig schläft, wird nicht nur müde, sondern auch vergesslicher, gereizter und anfälliger für Krankheiten. Erwachsene brauchen meist sieben bis neun Stunden.
+
+=== http status
+@nutzer
+Was bedeuten die HTTP-Statuscodes 200, 404 und 500?
+@max
+- **200 OK** – alles gut, die Seite kommt.
+- **404 Not Found** – die Adresse gibt es nicht. Dein Fehler oder ein toter Link.
+- **500 Internal Server Error** – der Server ist über sich selbst gestolpert. Nicht dein Fehler.
+
+Grob gilt: **2xx** Erfolg, **3xx** Weiterleitung, **4xx** Fehler auf deiner Seite, **5xx** Fehler auf der Serverseite.
+
+=== ram vs speicher
+@nutzer
+Was ist der Unterschied zwischen RAM und Festplatte?
+@max
+Stell dir einen **Schreibtisch** und einen **Aktenschrank** vor.
+
+- **RAM** ist der Schreibtisch: sehr schnell im Zugriff, aber begrenzt – und beim Ausschalten wird er leer geräumt. Dort liegt alles, woran gerade gearbeitet wird.
+- Die **Festplatte oder SSD** ist der Aktenschrank: viel mehr Platz, alles bleibt auch ohne Strom erhalten, aber das Heraussuchen dauert länger.
+
+Zu wenig RAM merkt man daran, dass der Rechner zäh wird, sobald viele Programme offen sind – er muss dann ständig zwischen Schreibtisch und Aktenschrank hin und her räumen.
+
+=== quantencomputer
+@nutzer
+Was kann ein Quantencomputer, was ein normaler nicht kann?
+@max
+Ein normaler Rechner arbeitet mit Bits, die **0 oder 1** sind. Ein Quantencomputer arbeitet mit **Qubits**, die sich in einer Überlagerung beider Zustände befinden und miteinander verschränkt sein können. Dadurch lassen sich bestimmte Probleme mit ganz anderen Rechenwegen angehen.
+
+Schneller ist er aber nicht bei allem – nur bei speziellen Aufgaben:
+- **Faktorisieren großer Zahlen**, was heutige Verschlüsselung gefährden könnte,
+- **Simulation von Molekülen** für Chemie und Materialforschung,
+- manche **Optimierungsprobleme**.
+
+Für E-Mails, Spiele oder Tabellen bringt er nichts. Und die heutigen Geräte sind noch klein und fehleranfällig – der große Durchbruch steht noch aus.
+
+=== wie funktioniert ein kuehlschrank
+@nutzer
+Wie funktioniert eigentlich ein Kühlschrank?
+@max
+Er pumpt Wärme von innen nach außen – mit einem Kältemittel, das im Kreis läuft:
+
+1. Im Inneren **verdampft** das Kältemittel und nimmt dabei Wärme auf. Deshalb wird es drinnen kalt.
+2. Ein **Kompressor** verdichtet den Dampf, wodurch er heiß wird.
+3. Hinten am Gerät gibt das heiße Gas seine Wärme an die Küche ab und wird wieder **flüssig**.
+4. Durch ein Ventil entspannt, beginnt der Kreislauf von vorn.
+
+Deshalb ist die Rückseite warm – und deshalb sollte dort Luft zirkulieren können.
+
+=== unterschied virus bakterium
+@nutzer
+Was ist der Unterschied zwischen Viren und Bakterien?
+@max
+**Bakterien** sind eigenständige Lebewesen – winzige Zellen, die sich selbst vermehren. Viele sind nützlich, etwa im Darm. Gegen krankmachende Bakterien helfen **Antibiotika**.
+
+**Viren** sind viel kleiner und keine richtigen Lebewesen: Sie bestehen im Wesentlichen aus Erbgut in einer Hülle und können sich nur vermehren, indem sie eine fremde Zelle kapern. **Antibiotika wirken gegen sie nicht** – deshalb helfen sie bei einer normalen Erkältung auch nicht.
+
+=== etf
+@nutzer
+Was ist ein ETF?
+@max
+Ein **ETF** (Exchange Traded Fund) ist ein Fonds, der einfach einen **Index nachbildet** – zum Beispiel alle großen Unternehmen der Welt. Statt einzelne Aktien auszuwählen, kaufst du mit einem Anteil ein kleines Stück von allen.
+
+**Vorteile:** breit gestreut, sehr geringe Kosten, jederzeit an der Börse handelbar.
+**Nachteil:** Du bekommst immer nur den Markt – in guten wie in schlechten Jahren.
+
+Für langfristiges Sparen, etwa per monatlichem Sparplan, gelten breite ETFs als solide Grundlage. Eine persönliche Anlageberatung ersetzt das natürlich nicht.
+
+=== pointer
+@nutzer
+Was ist ein Pointer in C?
+@max
+Ein **Pointer** ist eine Variable, die keine Daten enthält, sondern eine **Adresse im Speicher** – er zeigt darauf, wo die Daten liegen.
+
+```c
+int zahl = 42;
+int *zeiger = &zahl;   // zeiger enthält die Adresse von zahl
+
+printf("%d\n", *zeiger);   // 42 – über den Zeiger gelesen
+*zeiger = 7;               // ändert zahl auf 7
+```
+
+- `&` liefert die Adresse einer Variable.
+- `*` folgt dem Zeiger zu den Daten.
+
+Nützlich sind Pointer, um große Daten nicht kopieren zu müssen, Funktionen etwas verändern zu lassen oder Speicher dynamisch anzulegen. Gefährlich werden sie, wenn sie ins Leere zeigen – die berühmten Abstürze in C kommen fast immer daher.
+
+=== warum rostet eisen
+@nutzer
+Warum rostet Eisen?
+@max
+Weil Eisen mit **Sauerstoff und Wasser** reagiert: Es entsteht Eisenoxid, eben Rost. Wasser ist dabei der entscheidende Helfer – in trockener Luft rostet Eisen kaum. Salz beschleunigt das Ganze deutlich, deshalb rosten Autos im Winter schneller.
+
+Anders als bei Aluminium bildet Rost keine schützende Schicht, sondern blättert ab und legt frisches Eisen frei. Deshalb frisst er sich immer weiter hinein – außer man schützt das Eisen mit Lack, Öl oder einer Zinkschicht.

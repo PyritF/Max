@@ -70,7 +70,7 @@ internal static class StartupPlan
             LlmEngine? engine = null;
             try
             {
-                engine = await LlmEngine.LoadAsync(paths.Model, state.ContextSize, snapshot.Hardware, paths.EngineLog, progress, ct);
+                engine = await LlmEngine.LoadAsync(paths.Model, state.ContextSize, snapshot.Hardware, paths.EngineLog, progress, ct, paths.Adapter);
                 var prompt = SystemPrompt.BuildParts(snapshot, Memory.MemoryStore.Load(paths), tools);
                 var options = BackendOptionsFor(state, thinking) with
                 {

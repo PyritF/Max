@@ -14,6 +14,10 @@ on:
         description: Als einzelne Datei bauen und die testen (wie beim Release)
         type: boolean
         default: false
+      adapter:
+        description: Adresse eines Max-Adapters (.gguf, z. B. aus einem Release) – leer = ohne
+        type: string
+        default: ""
 
 jobs:
   selftest:
@@ -47,6 +51,10 @@ jobs:
         with:
           path: .maxhome
           key: model-${{ runner.os }}-${{ steps.model.outputs.key }}
+
+      - name: Adapter
+        if: inputs.adapter != ''
+        run: mkdir -p .maxhome && curl -fsSL -o .maxhome/adapter.bin "${{ inputs.adapter }}" && ls -la .maxhome/adapter.bin
 
       - name: Selbsttest
         run: |

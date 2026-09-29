@@ -26,6 +26,7 @@ internal static class DebugReport
                 : system.Hardware.Gpu is not null ? "CPU (Grafikkarte fehlgeschlagen)" : "CPU"));
             rows.Add(("Kontext", $"{engine.CachedCount:N0} / {info.ContextSize:N0} Tokens".Replace(',', '.')));
             rows.Add(("Ladezeit", Seconds(info.LoadTime)));
+            rows.Add(("Adapter", info.Adapter ?? "keiner"));
             if (backend?.WarmUpTime is { } warmUp)
                 rows.Add(("Aufwärmen", Seconds(warmUp) + (backend.WarmUpFromCache ? " · aus dem Zwischenspeicher" : "")));
 

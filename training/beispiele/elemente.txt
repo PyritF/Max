@@ -1,0 +1,268 @@
+# Elemente: nur bei echten Zahlen oder Strukturen, höchstens eins pro Antwort, genau im richtigen Format.
+
+=== tag aufteilung
+@nutzer
+Zeig mir als Diagramm, wie sich ein Tag typischerweise auf Schlaf, Arbeit und Freizeit aufteilt.
+@denken
+Der Nutzer will eine Aufteilung eines Ganzen – dafür ist `anteile` gemacht. Übliche Werte für einen Arbeitstag.
+@max
+Ein typischer Arbeitstag, grob gerechnet:
+
+```anteile
+Schlaf: 8
+Arbeit: 8
+Freizeit: 5
+Essen und Haushalt: 2
+Weg zur Arbeit: 1
+```
+
+Die „Freizeit“ ist dabei oft die Größe, die am meisten unter Druck gerät – Pendeln und Haushalt knabbern gern daran.
+
+=== ordnerstruktur csharp
+@nutzer
+Zeig mir eine typische Ordnerstruktur für ein kleines C#-Projekt.
+@max
+```baum
+MeinProjekt/
+  src/
+    MeinProjekt/
+      Program.cs
+      MeinProjekt.csproj
+  tests/
+    MeinProjekt.Tests/
+      ProgramTests.cs
+      MeinProjekt.Tests.csproj
+  MeinProjekt.slnx
+  README.md
+  .gitignore
+```
+
+Code und Tests in getrennten Ordnern, die Solution-Datei oben – so findet sich jeder sofort zurecht, und `dotnet test` im Hauptordner führt alle Tests aus.
+
+=== vergleich balken
+@nutzer
+Wie hoch sind die fünf höchsten Berge der Alpen? Als Diagramm bitte.
+@max
+```balken
+Titel: Höchste Gipfel der Alpen (m)
+Mont Blanc: 4806
+Dufourspitze: 4634
+Nordend: 4609
+Zumsteinspitze: 4563
+Signalkuppe: 4554
+```
+
+Bis auf den Mont Blanc stehen alle im **Monte-Rosa-Massiv** an der Grenze zwischen der Schweiz und Italien. Die Höhe des Mont Blanc schwankt übrigens je nach Messung um ein paar Meter, weil seine Eiskappe mal dicker, mal dünner ist.
+
+=== kurve temperatur
+@nutzer
+Wie entwickelt sich die durchschnittliche Temperatur in Wien übers Jahr? Zeig es als Kurve.
+@max
+```kurve
+Titel: Wien, mittlere Tagestemperatur (°C)
+Jan: 1
+Feb: 3
+Mär: 7
+Apr: 12
+Mai: 16
+Jun: 20
+Jul: 22
+Aug: 21
+Sep: 17
+Okt: 11
+Nov: 6
+Dez: 2
+```
+
+Das sind grobe Mittelwerte der letzten Jahrzehnte. Juli und August sind am wärmsten, Januar am kältesten – typisch für das eher kontinentale Klima im Osten Österreichs.
+
+=== fortschritt ziele
+@nutzer
+Ich hab mir für das Jahr vorgenommen: 12 Bücher lesen (bisher 7), 500 km laufen (bisher 310 km) und 3.000 € sparen (bisher 2.100 €). Zeig mir den Stand.
+@max
+```fortschritt
+Bücher: 58
+Laufen: 62
+Sparen: 70
+```
+
+Gut im Plan: Beim Sparen bist du mit **70 %** am weitesten. Bei den Büchern fehlen noch **5**, beim Laufen noch **190 km** – bei einem Buch und gut 40 km pro Monat ist beides bis Jahresende gut zu schaffen.
+
+=== spalten vergleich
+@nutzer
+Mieten oder kaufen – was spricht wofür?
+@max
+```spalten
+Mieten
+Flexibel: Umzug mit drei Monaten Kündigungsfrist.
+Kein großes Eigenkapital nötig.
+Reparaturen zahlt der Vermieter.
+---
+Kaufen
+Keine Miete mehr, sobald abbezahlt.
+Eigenes Vermögen statt Zahlungen an andere.
+Freiheit beim Umbauen und Gestalten.
+```
+
+Entscheidend sind am Ende drei Fragen: Wie lange willst du bleiben, wie viel Eigenkapital hast du, und wie stehen Kaufpreise zu Mieten in deiner Gegend? Wer nur fünf Jahre bleibt, fährt mit Mieten fast immer besser.
+
+=== kasten warnung
+@nutzer
+Ich will rm -rf / ausführen, um Platz zu schaffen.
+@max
+```kasten
+Titel: Achtung
+Farbe: rot
+Dieser Befehl löscht dein komplettes System – alle Programme, alle Daten, das Betriebssystem selbst.
+```
+
+Platz schaffst du besser gezielt: `du -sh ~/* | sort -h` zeigt dir, welche Ordner in deinem Benutzerverzeichnis am meisten belegen, und `sudo apt autoremove` räumt unter Ubuntu nicht mehr gebrauchte Pakete weg.
+
+=== kalender
+@nutzer
+Ich habe im Oktober 2026 am 3., 17. und 24. Termine. Zeig mir das im Kalender.
+@max
+```kalender
+Titel: Deine Termine
+Monat: 2026-10
+Markiert: 3, 17, 24
+```
+
+Alle drei fallen auf einen **Samstag** – das Wochenende im Oktober ist also schon gut gefüllt.
+
+=== titel wunsch
+@nutzer
+Mach mir einen großen Schriftzug "Willkommen".
+@max
+```titel
+Text: Willkommen
+Schrift: slant
+Verlauf: türkis-blau
+```
+
+=== tabelle statt element
+@nutzer
+Vergleich mir kurz Python, C# und JavaScript.
+@max
+| | Python | C# | JavaScript |
+|---|---|---|---|
+| **Stärke** | Daten, KI, Skripte | Desktop, Server, Spiele | Web, Frontend |
+| **Typen** | dynamisch | statisch | dynamisch |
+| **Einstieg** | sehr leicht | mittel | leicht |
+| **Tempo** | eher langsam | schnell | schnell |
+
+Zum Lernen ist **Python** am freundlichsten, für große Anwendungen spielt **C#** seine Stärken aus, und am Web führt an **JavaScript** kein Weg vorbei.
+
+=== kein element smalltalk
+@nutzer
+Wie war dein Tag?
+@max
+Ereignislos, im besten Sinne. Keine Abstürze, keine Aufregung – und jetzt kommst du. Wie war deiner?
+
+=== kein element einfache frage
+@nutzer
+Wie viele Tage hat ein Schaltjahr?
+@max
+366 – der 29. Februar kommt dazu.
+
+=== kein element erfinden
+@nutzer
+Zeig mir ein Diagramm, wie glücklich ich diese Woche war.
+@max
+Dafür fehlen mir die Zahlen – deine Laune kann ich schlecht messen. Wenn du mir für jeden Tag eine Note von 1 bis 10 gibst, zeichne ich dir gern die Kurve dazu.
+
+=== frage menue
+@nutzer
+Ich will programmieren lernen.
+@denken
+Der Nutzer will programmieren lernen, aber das Ziel ist offen. Die Richtung bestimmt die Sprache – hier ist eine echte Entscheidung nötig.
+@max
+Gute Entscheidung. Welche Sprache am besten passt, hängt vor allem davon ab, was du damit bauen willst:
+
+```frage
+Frage: Was möchtest du am liebsten bauen?
+- Webseiten und Web-Apps
+- Programme und Spiele für den PC
+- Datenauswertungen und kleine Helfer
+- Weiß ich noch nicht
+```
+
+=== frage menue antwort
+@nutzer
+Ich will programmieren lernen.
+@max
+Gute Entscheidung. Welche Sprache am besten passt, hängt vor allem davon ab, was du damit bauen willst:
+
+```frage
+Frage: Was möchtest du am liebsten bauen?
+- Webseiten und Web-Apps
+- Programme und Spiele für den PC
+- Datenauswertungen und kleine Helfer
+- Weiß ich noch nicht
+```
+@nutzer
+Datenauswertungen und kleine Helfer
+@max
+Dann ist **Python** die richtige Wahl – leicht zu lesen, riesige Auswahl an Bibliotheken und in Datenanalyse der Standard.
+
+So würde ich anfangen:
+
+1. **Python installieren** von python.org und einen Editor wie VS Code einrichten.
+2. **Grundlagen** lernen: Variablen, Listen, Schleifen, Funktionen – ein, zwei Wochen mit kleinen Übungen.
+3. **Ein echtes Mini-Projekt**: etwa deine Kontoauszüge als CSV einlesen und die Ausgaben pro Monat zusammenrechnen.
+4. Danach **pandas** kennenlernen – damit werden Tabellen und Auswertungen richtig bequem.
+
+Das Wichtigste ist Schritt 3: An einem eigenen kleinen Problem lernt man schneller als an jedem Kurs.
+
+=== trennlinie lang
+@nutzer
+Gib mir einen Überblick: Wie bereite ich mich auf ein Vorstellungsgespräch vor?
+@max
+--- Vorher ---
+
+- **Firma recherchieren:** Was macht sie, wer sind die Kunden, was stand zuletzt in den Nachrichten?
+- **Stellenanzeige zerlegen:** Zu jeder Anforderung ein konkretes Beispiel aus deiner Erfahrung überlegen.
+- **Eigene Fragen** vorbereiten – zwei, drei ehrliche Fragen zeigen echtes Interesse.
+
+--- Im Gespräch ---
+
+- Antworten nach dem Muster **Situation – Handlung – Ergebnis** aufbauen.
+- Bei Schwächen ehrlich sein und zeigen, was du daran tust.
+- Pausen sind erlaubt. Kurz nachdenken wirkt souveräner als drauflos reden.
+
+--- Danach ---
+
+- Am selben Tag eine **kurze Dankesmail** schicken.
+- Notieren, was gut lief und was nicht – fürs nächste Mal.
+
+=== baum hierarchie
+@nutzer
+Zeig mir die Hierarchie der Lebewesen am Beispiel der Hauskatze.
+@max
+```baum
+Lebewesen/
+  Eukaryoten/
+    Tiere/
+      Wirbeltiere/
+        Säugetiere/
+          Raubtiere/
+            Katzen/
+              Kleinkatzen/
+                Hauskatze
+```
+
+Ganz oben die großen Gruppen, nach unten immer enger: Die Hauskatze teilt sich die Familie der **Katzen** mit Löwe und Tiger, gehört aber zu den **Kleinkatzen** – die können übrigens nicht brüllen, dafür schnurren.
+
+=== zahlen tabelle
+@nutzer
+Ich habe im Januar 420 €, im Februar 380 €, im März 510 € und im April 460 € für Lebensmittel ausgegeben. Zeig mir das.
+@max
+```balken
+Titel: Lebensmittel pro Monat (€)
+Januar: 420
+Februar: 380
+März: 510
+April: 460
+```
+
+Im Schnitt sind das **442,50 €** im Monat. Der März sticht heraus – vielleicht ein Fest oder ein Großeinkauf?
