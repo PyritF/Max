@@ -122,6 +122,9 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
     /// <summary>Schreibt eine eigene Zeile ins Protokoll (logs/llama.log).</summary>
     public static void Log(string message) => NativeSetup.Log(message);
 
+    /// <summary>Eine Meldung einer nativen Bibliothek, so wie sie kommt, ins Protokoll.</summary>
+    internal static void LogNative(string message) => NativeSetup.LogNative(message);
+
     public IReadOnlyList<int> Tokenize(string text) =>
         Array.ConvertAll(_context.NativeHandle.Tokenize(text, add_bos: false, special: true, _context.Encoding), t => (int)t);
 
@@ -355,6 +358,8 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
         }
 
         public static void Log(string message) => OnNativeLog($"[max] {message}\n");
+
+        public static void LogNative(string message) => OnNativeLog(message);
 
         private static void OnNativeLog(string message)
         {

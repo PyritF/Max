@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using LLama;
 using LLama.Common;
@@ -40,7 +43,8 @@ internal sealed class VisionEngine(LlmEngine engine, string projectorPath, bool 
         {
             if (_projector is null)
             {
-                var parameters = MtmdContextParams.Default();
+                var parameters = MtmdContextParams.Default();   // lädt nebenbei die Bibliothek
+                QuietNativeLog();
                 parameters.UseGpu = useGpu;
                 parameters.PrintTimings = false;
                 parameters.Warmup = false;
@@ -98,6 +102,47 @@ internal sealed class VisionEngine(LlmEngine engine, string projectorPath, bool 
             }
             return answer.ToString().Replace("<think>", "").Replace("</think>", "").Trim();
         }
+    }
+
+    private static bool _quiet;
+
+    /// <summary>
+    /// Der Bild-Teil von llama.cpp (mtmd) schreibt sein Protokoll sonst direkt ins Terminal und zerschießt die
+    /// Oberfläche. LLamaSharp bietet dafür keinen Haken – also selbst umleiten, ins Protokoll (logs/llama.log).
+    /// </summary>
+    private static unsafe void QuietNativeLog()
+    {
+        if (_quiet)
+            return;
+        _quiet = true;
+        try
+        {
+            var module = Process.GetCurrentProcess().Modules.Cast<ProcessModule>()
+                .FirstOrDefault(m => m.ModuleName.Contains("mtmd", StringComparison.OrdinalIgnoreCase));
+            if (module is null)
+            {
+                LlmEngine.Log("Bild-Bibliothek nicht gefunden – ihr Protokoll bleibt im Terminal.");
+                return;
+            }
+            var library = NativeLibrary.Load(module.FileName);
+            delegate* unmanaged[Cdecl]<int, IntPtr, IntPtr, void> callback = &OnNativeLog;
+            foreach (var name in new[] { "mtmd_log_set", "mtmd_helper_log_set" })
+            {
+                if (NativeLibrary.TryGetExport(library, name, out var set))
+                    ((delegate* unmanaged[Cdecl]<delegate* unmanaged[Cdecl]<int, IntPtr, IntPtr, void>, IntPtr, void>)set)(callback, IntPtr.Zero);
+            }
+        }
+        catch (Exception e)
+        {
+            LlmEngine.Log($"Protokoll der Bild-Bibliothek nicht umgeleitet: {e.Message}");
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnNativeLog(int level, IntPtr text, IntPtr user)
+    {
+        if (text != IntPtr.Zero)
+            LlmEngine.LogNative(Marshal.PtrToStringUTF8(text) ?? "");
     }
 
     public void Dispose()

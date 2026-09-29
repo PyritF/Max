@@ -709,7 +709,8 @@ internal sealed partial class LlmBackend : IChatBackend
         return start == 0 ? [] : [.. _model.Tokenize(all[..start])];
     }
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"\b(bunt\w*|farbig\w*|farben?|farbverl[äa]uf\w*|verl[äa]uf\w*|colou?r\w*)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    // Nicht "Farbe" allein – "Welche Farbe hat der Kreis?" ist kein Stilwunsch (Selbsttest 48).
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(bunt\w*|farbig\w*|farbenfroh\w*|farbverl[äa]uf\w*|colou?rful|colou?rs?|mit\s+(vielen\s+)?farben|in\s+farbe|ohne\s+farben?|keine\s+farben?)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex ColorWishRegex();
 
     private int[] SingleToken(string text) => _model.Tokenize(text) is [var token] ? [token] : [];

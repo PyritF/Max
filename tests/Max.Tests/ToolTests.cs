@@ -381,6 +381,18 @@ public class ImageAndAttachmentTests : IDisposable
         Assert.Equal([plain], Attachments.Find(new Uri(plain).AbsoluteUri, _dir, out _));
     }
 
+    [Fact]
+    public void RelativePaths_CountWhenTheFileExists()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "bilder"));
+        var image = File(Path.Combine("bilder", "katze.png"));
+        var readme = File("README.md");
+        Assert.Equal([image], Attachments.Find("Schau dir bilder/katze.png an: Welche Farbe hat die Katze?", _dir, out var rest));
+        Assert.Equal("Schau dir an: Welche Farbe hat die Katze?", rest);
+        Assert.Equal([readme], Attachments.Find("Lies README.md.", _dir, out _));
+        Assert.Empty(Attachments.Find("Das steht z.B. in foto.png oder auf example.com.", _dir, out _));
+    }
+
     [Theory]
     [InlineData("Wie geht's? 1/2 und/oder /debug")]
     [InlineData("\"/gibt/es/nicht.png\" schau mal")]

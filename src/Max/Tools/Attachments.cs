@@ -57,11 +57,13 @@ internal static partial class Attachments
     }
 
     // In Anführungszeichen (alles bis zum Ende), sonst ab einem Pfad-Anfang (C:\, \\, /, ~/, file://) bis zum
-    // nächsten Leerzeichen, das nicht mit \ geschützt ist.
+    // nächsten Leerzeichen, das nicht mit \ geschützt ist – oder ein relativer Pfad mit Endung ("bilder/a.png",
+    // "README.md"), der ab dem Startordner existiert.
     [GeneratedRegex("""
         "(?<q>(?:[A-Za-z]:[\\/]|\\\\|/|~[\\/]|file://)[^"\r\n]+)"
         | '(?<s>(?:[A-Za-z]:[\\/]|\\\\|/|~[\\/]|file://)[^'\r\n]+)'
         | (?<![\w/\\])(?<b>(?:[A-Za-z]:[\\/]|\\\\|/|~[\\/]|file://)(?:\\\ |[^\s"'])+)
+        | (?<![\w/\\.])(?<b>[\w.\-]+(?:[\\/][\w.\-]+)*\.[A-Za-z0-9]{1,5})(?![\w/\\])
         """, RegexOptions.IgnorePatternWhitespace)]
     private static partial Regex PathRegex();
 

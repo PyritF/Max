@@ -1013,6 +1013,8 @@ public class AnswerGrammarTests
     [InlineData(new[] { "Schreib ab jetzt bitte alles schön bunt." }, true)]
     [InlineData(new[] { "Mit Farbverläufen bitte!" }, true)]
     [InlineData(new[] { "Wie geht's?" }, false)]
+    [InlineData(new[] { "Schau dir das Bild an: Welche Farbe hat der Kreis?" }, false)]
+    [InlineData(new[] { "Lösch bitte den Verlauf." }, false)]
     [InlineData(new[] { "Schreib bunt.", "Danke, jetzt bitte keine Farben mehr." }, false)]
     [InlineData(new[] { "Schreib bunt.", "Wieder normal, ohne Farben." }, false)]
     [InlineData(new[] { "Keine Farben bitte.", "Doch wieder bunt!" }, true)]
