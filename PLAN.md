@@ -486,7 +486,7 @@ und passt zu den Elementen, die das Modell schon zuverlässig schreibt.
 | `system` | Betriebssystem, Prozessor, RAM (frei), Grafikkarte, Laufwerke, Laufzeit | |
 | `rechnen: <Rechnung>` | exakt mit 28 Stellen, Klammern, ^, %, sqrt | kleine Modelle verrechnen sich bei großen Zahlen |
 | `ordner: <Pfad>` | Unterordner und Dateien mit Größe | relativ zum Startordner, `~` = Benutzerordner |
-| `datei: <Pfad>` | Textdatei lesen (Anfang, höchstens 256 KB) | Schlüssel und Zugangsdaten (.ssh, .env, *.pem, id_rsa …) sind tabu |
+| `datei: <Pfad>` | Textdatei lesen (Anfang, höchstens 256 KB); PDF (PdfPig, bis 60 Seiten) und Word (.docx) als Text | Schlüssel und Zugangsdaten (.ssh, .env, *.pem, id_rsa …) sind tabu |
 | `websuche: <Begriffe>` | DuckDuckGo, erste 6 Treffer mit Adresse und Auszug | ohne Konto oder Schlüssel; die Anfrage verlässt den Rechner – sichtbar in der Anzeige |
 | `webseite: <Adresse>` | Text einer Seite ohne Menüs und Skripte | nur http/https, höchstens 2 MB |
 | `bild: <Pfad> [| Frage]` | Bild oder Screenshot beschreiben, Text ablesen, Frage dazu beantworten | Bild-Zusatz des Modells (§9b), höchstens 5 Minuten |

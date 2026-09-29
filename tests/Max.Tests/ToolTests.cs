@@ -460,3 +460,59 @@ public class ImageAndAttachmentTests : IDisposable
         Assert.Contains("<tool_response>", model.Decode(model.LastPromptBeforeSampler));
     }
 }
+
+public class DocumentTests : IDisposable
+{
+    private readonly string _dir = Directory.CreateTempSubdirectory("max-dok-").FullName;
+
+    public void Dispose() => Directory.Delete(_dir, recursive: true);
+
+    [Fact]
+    public async Task Word_ParagraphsAndTables()
+    {
+        var path = Path.Combine(_dir, "brief.docx");
+        using (var zip = System.IO.Compression.ZipFile.Open(path, System.IO.Compression.ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(zip.CreateEntry("word/document.xml").Open()))
+        {
+            writer.Write("""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                <w:p><w:r><w:t>Sehr geehrte </w:t></w:r><w:r><w:t>Damen und Herren,</w:t></w:r></w:p>
+                <w:p><w:r><w:t>die Rechnung liegt bei.</w:t></w:r></w:p>
+                <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Posten</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Betrag</w:t></w:r></w:p></w:tc></w:tr>
+                <w:tr><w:tc><w:p><w:r><w:t>Miete</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>850 €</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
+                </w:body></w:document>
+                """);
+        }
+
+        var result = await new ReadFileTool(() => _dir).RunAsync("brief.docx", CancellationToken.None);
+
+        Assert.Contains("Sehr geehrte Damen und Herren,\ndie Rechnung liegt bei.", result);
+        Assert.Contains("Posten | Betrag\nMiete | 850 €", result);
+    }
+
+    [Fact]
+    public async Task Pdf_TextPerPage()
+    {
+        var builder = new UglyToad.PdfPig.Writer.PdfDocumentBuilder();
+        var font = builder.AddStandard14Font(UglyToad.PdfPig.Fonts.Standard14Fonts.Standard14Font.Helvetica);
+        builder.AddPage(UglyToad.PdfPig.Content.PageSize.A4).AddText("Kontostand 1234 Euro", 12, new UglyToad.PdfPig.Core.PdfPoint(50, 700), font);
+        builder.AddPage(UglyToad.PdfPig.Content.PageSize.A4).AddText("Zweite Seite", 12, new UglyToad.PdfPig.Core.PdfPoint(50, 700), font);
+        await File.WriteAllBytesAsync(Path.Combine(_dir, "konto.pdf"), builder.Build());
+
+        var result = await new ReadFileTool(() => _dir).RunAsync("konto.pdf", CancellationToken.None);
+
+        Assert.Contains("PDF mit 2 Seite(n)", result);
+        Assert.Contains("--- Seite 1 ---\nKontostand 1234 Euro", result);
+        Assert.Contains("--- Seite 2 ---\nZweite Seite", result);
+    }
+
+    [Fact]
+    public async Task BrokenOrOldFormats_GiveASentence()
+    {
+        await File.WriteAllTextAsync(Path.Combine(_dir, "kaputt.pdf"), "kein pdf");
+        await File.WriteAllTextAsync(Path.Combine(_dir, "alt.doc"), "x");
+        var tool = new ReadFileTool(() => _dir);
+        Assert.Contains("ließ sich nicht lesen", await tool.RunAsync("kaputt.pdf", CancellationToken.None));
+        Assert.Contains("alten Office-Format", await tool.RunAsync("alt.doc", CancellationToken.None));
+    }
+}

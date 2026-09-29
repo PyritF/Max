@@ -109,7 +109,7 @@ internal sealed class ReadFileTool(Func<string> workingDirectory) : ITool
 
     public string Name => "datei";
     public string? Argument => "Pfad, z. B. README.md";
-    public string Description => "Liest eine Textdatei (Code, Notizen, Konfiguration). Lange Dateien nur den Anfang.";
+    public string Description => "Liest eine Textdatei (Code, Notizen, Konfiguration), ein PDF oder ein Word-Dokument (.docx). Lange Dateien nur den Anfang.";
     public string Describe(string argument) => $"Lese {argument}";
 
     public async Task<string> RunAsync(string argument, CancellationToken ct)
@@ -123,6 +123,14 @@ internal sealed class ReadFileTool(Func<string> workingDirectory) : ITool
             return $"Die Datei {path} gibt es nicht.";
 
         var length = new FileInfo(path).Length;
+        if (DocumentText.IsDocument(path))
+        {
+            if (length > DocumentText.MaxBytes)
+                return $"{Path.GetFileName(path)} ist zu groß ({ListFolderTool.Size(length)}).";
+            return $"Datei {path} ({ListFolderTool.Size(length)}):\n" + await Task.Run(() => DocumentText.Read(path, ct), ct);
+        }
+        if (Path.GetExtension(path).ToLowerInvariant() is ".doc" or ".xls" or ".ppt")
+            return $"{Path.GetFileName(path)} ist im alten Office-Format – das kann ich nicht lesen. Als .docx oder PDF gespeichert geht es.";
         var buffer = new byte[(int)Math.Min(length, MaxBytes)];
         try
         {
