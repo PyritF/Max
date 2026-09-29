@@ -18,7 +18,7 @@ internal sealed class CalculatorTool : ITool
     {
         try
         {
-            return Task.FromResult($"{argument} = {Evaluate(argument)}");
+            return Task.FromResult($"{argument} = {Grouped(Evaluate(argument))}");
         }
         catch (FormatException e)
         {
@@ -28,6 +28,27 @@ internal sealed class CalculatorTool : ITool
         {
             return Task.FromResult("Division durch null.");
         }
+    }
+
+    /// <summary>
+    /// Lange ganze Zahlen in Dreiergruppen ("121.932.631.112.635.269"): Das Modell schreibt eine ungegliederte
+    /// Ziffernfolge beim Antworten gern falsch ab (im Selbsttest fehlte eine Ziffer). Erst ab 7 Stellen – dann gibt
+    /// es mindestens zwei Punkte, und die Zahl ist nicht mit einer Kommazahl zu verwechseln (auch nicht für
+    /// <see cref="Parser"/>, falls das Modell damit weiterrechnet).
+    /// </summary>
+    internal static string Grouped(string result)
+    {
+        var digits = result.TrimStart('-');
+        if (digits.Length < 7 || !digits.All(char.IsAsciiDigit))
+            return result;
+        var grouped = new System.Text.StringBuilder();
+        for (var i = 0; i < digits.Length; i++)
+        {
+            if (i > 0 && (digits.Length - i) % 3 == 0)
+                grouped.Append('.');
+            grouped.Append(digits[i]);
+        }
+        return (result.StartsWith('-') ? "-" : "") + grouped;
     }
 
     /// <summary>Das Ergebnis als Text, z. B. "121932631112635269" oder "0.333333333333".</summary>
@@ -241,13 +262,15 @@ internal sealed class CalculatorTool : ITool
             throw new FormatException($"Unerwartetes '{c}' an Stelle {_pos + 1}.");
         }
 
-        /// <summary>"3.5", "3,5" und "1.000.000" (mehrere Punkte = Tausender).</summary>
+        /// <summary>"3.5", "3,5", "1.000.000" (mehrere Punkte = Tausender) und "1.234,5".</summary>
         private decimal ReadNumber()
         {
             var start = _pos;
             while (_pos < _text.Length && (char.IsDigit(_text[_pos]) || _text[_pos] is '.' or ',' or '_' or '\''))
                 _pos++;
             var raw = _text[start.._pos].Replace("_", "").Replace("'", "");
+            if (raw.Contains('.') && raw.Contains(','))
+                raw = raw.Replace(".", "");         // deutsch: "1.234,5"
             if (raw.Count(ch => ch == '.') > 1)
                 raw = raw.Replace(".", "");
             if (raw.Count(ch => ch == ',') > 1)

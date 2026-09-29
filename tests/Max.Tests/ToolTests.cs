@@ -12,6 +12,8 @@ public class CalculatorTests
 {
     [Theory]
     [InlineData("123456789 * 987654321", "121932631112635269")]
+    [InlineData("121.932.631.112.635.269 / 987654321", "123456789")]
+    [InlineData("1.234,5 * 2", "2469")]
     [InlineData("(1 + 2) * 3", "9")]
     [InlineData("2^10", "1024")]
     [InlineData("2^3^2", "512")]
@@ -23,6 +25,13 @@ public class CalculatorTests
     [InlineData("sqrt(16) + abs(-2)", "6")]
     [InlineData("10 : 4", "2.5")]
     public void Evaluate(string expression, string expected) => Assert.Equal(expected, CalculatorTool.Evaluate(expression));
+
+    [Theory]
+    [InlineData("121932631112635269", "121.932.631.112.635.269")]
+    [InlineData("-1234567", "-1.234.567")]
+    [InlineData("123456", "123456")]
+    [InlineData("0.333333333333", "0.333333333333")]
+    public void LongResults_AreGroupedInThrees(string result, string expected) => Assert.Equal(expected, CalculatorTool.Grouped(result));
 
     [Fact]
     public void TooBig_ForExact_IsApproximate() => Assert.StartsWith("ungefähr 1E+40", CalculatorTool.Evaluate("10^40"));
