@@ -8,7 +8,7 @@ namespace Max.Tools;
 /// Alle Werkzeuge, die Max hat: Beschreibung für den System-Prompt, Grammatik für den Aufruf und das Ausführen.
 /// Ergebnisse werden gekürzt, damit eine große Datei oder Webseite nicht den ganzen Kontext füllt.
 /// </summary>
-internal sealed class ToolBox(IEnumerable<ITool> tools)
+internal sealed partial class ToolBox(IEnumerable<ITool> tools)
 {
     /// <summary>So viele Zeichen eines Ergebnisses sieht das Modell höchstens (etwa 2.500 Tokens).</summary>
     internal const int MaxResultChars = 8000;
@@ -33,6 +33,36 @@ internal sealed class ToolBox(IEnumerable<ITool> tools)
         new WebSearchTool(web),
         new ReadWebPageTool(web),
     ]);
+
+    /// <summary>
+    /// Welches Werkzeug Max beim Nachdenken benutzen will ("Ich sollte das Werkzeug `rechnen` verwenden", "Ich rufe
+    /// `websuche` auf") – oder null. Zählt nur ein Satz mit Werkzeug-Namen (in Backticks oder nach "Werkzeug") und
+    /// einem Verb des Benutzens, ohne Verneinung: "Ich habe `rechnen` für große Zahlen" ist keine Absicht.
+    /// </summary>
+    public string? IntendedTool(string thought)
+    {
+        foreach (var sentence in SentenceRegex().Split(thought))
+        {
+            if (!IntentRegex().IsMatch(sentence) || NegationRegex().IsMatch(sentence))
+                continue;
+            foreach (var tool in _tools.Values)
+            {
+                var name = System.Text.RegularExpressions.Regex.Escape(tool.Name);
+                if (System.Text.RegularExpressions.Regex.IsMatch(sentence, $@"`{name}(:[^`]*)?`|\bWerkzeug\s+[""„]?{name}\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    return tool.Name;
+            }
+        }
+        return null;
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"(?<=[.!?])\s+|\n+")]
+    private static partial System.Text.RegularExpressions.Regex SentenceRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(verwende|verwenden|benutze|benutzen|nutze|nutzen|rufe|aufrufen|aufzurufen|einsetzen|starte|starten|brauche)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex IntentRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(nicht|kein\w*|ohne|statt)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex NegationRegex();
 
     /// <summary>
     /// GBNF: der Inhalt eines <c>```werkzeug</c>-Blocks – genau ein Aufruf, ein bekannter Name, bei Bedarf die Angabe.

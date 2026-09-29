@@ -499,6 +499,10 @@ und passt zu den Elementen, die das Modell schon zuverlässig schreibt.
   ausgeführt; sonst erscheint er als Code. Im Verlauf steht der Aufruf immer als ```werkzeug.
   Ergebnis (CPU, GitHub): `ordner`, `datei` und `websuche` (DuckDuckGo) laufen, Antworten stimmen („Argentinien“,
   README richtig zusammengefasst). Die große Multiplikation rechnete das Modell lieber im Kopf – daher der Prompt-Hinweis.
+  Auch danach kündigte es beim Nachdenken „Ich sollte das Werkzeug `rechnen` verwenden“ an, schrieb dann aber eine falsche
+  Zahl und behauptete, gerechnet zu haben. Jetzt gilt: Steht beim Nachdenken ein Satz mit Werkzeug-Name und „verwenden /
+  benutzen / aufrufen“ (ohne Verneinung), muss die Antwort mit dem Aufruf beginnen (Grammatik nur für den Aufruf).
+  Farben (Selbsttest 46): Mit dem erzwungenen Verlauf am Anfang sind bunte Antworten jetzt wirklich bunt.
 
 **Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |

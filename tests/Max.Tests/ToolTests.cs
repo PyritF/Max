@@ -176,6 +176,30 @@ public class ToolBoxTests
     }
 
     [Fact]
+    public void ToolOnly_Grammar_AllowsNothingButACall()
+    {
+        using var http = new HttpClient();
+        var box = ToolBox.CreateDefault(http, () => DateTime.Now, () => ".");
+        Assert.Contains("root ::= \"```\" w-werkzeug\n", AnswerGrammar.Build(box.GrammarRule(), toolOnly: true));
+    }
+
+    [Theory]
+    // Aus dem Selbsttest: angekündigt, aber im Kopf gerechnet.
+    [InlineData("Der Nutzer möchte eine Rechnung. Ich sollte das Werkzeug `rechnen` verwenden, um das Ergebnis zu berechnen.", "rechnen")]
+    [InlineData("Die drei größten Städte sind Wien, Graz und Linz. Ich rufe `websuche` auf, um die aktuellen Einwohnerzahlen zu bekommen.", "websuche")]
+    [InlineData("Ich nutze `datei: README.md` und fasse zusammen.", "datei")]
+    [InlineData("Dafür verwende ich das Werkzeug „ordner“.", "ordner")]
+    [InlineData("Ich habe das Werkzeug `rechnen` für größere Berechnungen. Für einfache Rechnungen im Kopf kann ich das auch.", null)]
+    [InlineData("Ich sollte keine Werkzeuge verwenden, da es um allgemeines Wissen geht.", null)]
+    [InlineData("Ich brauche `websuche` hier nicht, das weiß ich.", null)]
+    [InlineData("Ich sollte die Datei lesen und das System verwenden.", null)]
+    public void IntendedTool_OnlyAnnouncedUse(string thought, string? expected)
+    {
+        using var http = new HttpClient();
+        Assert.Equal(expected, ToolBox.CreateDefault(http, () => DateTime.Now, () => ".").IntendedTool(thought));
+    }
+
+    [Fact]
     public void SystemPrompt_ListsTheTools_InTheStablePart()
     {
         using var http = new HttpClient();

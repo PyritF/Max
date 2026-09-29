@@ -42,7 +42,8 @@ internal static class AnswerGrammar
     /// gern zu einem Diagramm mit "Verlauf:" statt die Farben in den Text zu setzen.
     /// </param>
     /// <param name="widgets">false: keine Elemente (nach einem abgebrochenen Element geht die Antwort ohne weiter).</param>
-    internal static string Build(string? toolCall = null, bool colorful = false, bool widgets = true)
+    /// <param name="toolOnly">Nur ein Werkzeug-Aufruf – wenn Max beim Nachdenken beschlossen hat, eins zu benutzen.</param>
+    internal static string Build(string? toolCall = null, bool colorful = false, bool widgets = true, bool toolOnly = false)
     {
         var g = new StringBuilder();
         void Rule(string name, string body) => g.Append(name).Append(" ::= ").Append(body).Append('\n');
@@ -52,7 +53,7 @@ internal static class AnswerGrammar
         // Ein Auswahlmenü darf nur ganz am Ende stehen – danach kommt nichts mehr.
         // Ein Werkzeug-Aufruf ist ein eigener Block. Das Modell schreibt ihn oft als Code-Block ("```python" mit
         // "datei: README.md" darin) – das bleibt erlaubt, erkannt wird er dann in der Element-Schleuse.
-        Rule("root", toolCall is null ? "answer" : "\"```\" w-werkzeug | answer");
+        Rule("root", toolCall is null ? "answer" : toolOnly ? "\"```\" w-werkzeug" : "\"```\" w-werkzeug | answer");
         if (toolCall is not null)
             Rule("w-werkzeug", toolCall);
         var lead = colorful ? "[ \\n]* \"{verlauf\" ( \":\" grad )? \"}\" " : "";

@@ -75,7 +75,7 @@ internal sealed partial class LlmBackend : IChatBackend
     private readonly SamplingSettings _answer;
     private readonly SamplingSettings _thinking;
     private readonly ContextWindow _window;
-    private readonly Dictionary<(bool Tools, bool Colorful, bool Widgets), string> _grammars = [];
+    private readonly Dictionary<(bool Tools, bool Colorful, bool Widgets, bool ToolOnly), string> _grammars = [];
 
     // Tokens je Nachricht. Für eigene Antworten genau die Tokens, die auch im Cache des Modells stehen –
     // nicht neu zerlegt, damit der nächste Prompt exakt zum Cache passt.
@@ -217,6 +217,7 @@ internal sealed partial class LlmBackend : IChatBackend
         var answerTokens = new List<int>();     // die Antwort (ab dem ersten sichtbaren Zeichen)
         var answerAll = new List<int>();        // alles seit Beginn der Antwort – zum Nachführen der Grammatik
         var shown = new StringBuilder();
+        var thought = new StringBuilder();
         int thinkingTokens = 0, repairs = 0;
         TimeSpan thinkingTime = TimeSpan.Zero, firstToken = TimeSpan.Zero;
         Repair? repair = null;
@@ -256,7 +257,11 @@ internal sealed partial class LlmBackend : IChatBackend
                 }
 
                 foreach (var chunk in Route(splitter.Push(text), gate, closing, shown))
+                {
+                    if (chunk.IsThinking)
+                        thought.Append(chunk.Text);
                     yield return chunk;
+                }
 
                 if (answerPhase && text.IndexOfAny(LoopCheckChars) >= 0 && IsLooping(shown.ToString()))
                 {
@@ -352,12 +357,24 @@ internal sealed partial class LlmBackend : IChatBackend
                     foreach (var t in forced)
                         forcedText.Append(decoder.Add(t));
                     foreach (var chunk in Route(splitter.Push(forcedText.ToString()), gate, closing, shown))
+                    {
+                        if (chunk.IsThinking)
+                            thought.Append(chunk.Text);
                         yield return chunk;
+                    }
                 }
                 if (!answerPhase && splitter.ThinkingEnded)
                 {
                     answerPhase = true;
                     thinkingTime = clock.Elapsed;
+                    // Hat Max beim Nachdenken beschlossen, ein Werkzeug zu benutzen ("Ich verwende `rechnen`"), dann
+                    // auch wirklich – sonst behauptet er es nur und rechnet im Kopf. Nur vor dem ersten Ergebnis.
+                    if (allowTools && conversation.Messages.LastOrDefault()?.Role != ChatRole.Tool
+                        && _options.Tools!.IntendedTool(thought.ToString()) is { } intended)
+                    {
+                        LlmEngine.Log($"Beim Nachdenken für '{intended}' entschieden – Antwort beginnt mit dem Aufruf.");
+                        grammar = Grammar(allowTools, colorful, widgets, toolOnly: true);
+                    }
                     sampler.Dispose();
                     sampler = CreateAnswerSampler(grammar);
                 }
@@ -649,13 +666,14 @@ internal sealed partial class LlmBackend : IChatBackend
     private static partial System.Text.RegularExpressions.Regex ColorStopRegex();
 
     /// <summary>Die Grammatik für eine Runde – je Kombination nur einmal gebaut.</summary>
-    private string Grammar(bool tools, bool colorful, bool widgets)
+    private string Grammar(bool tools, bool colorful, bool widgets, bool toolOnly = false)
     {
         tools &= _options.Tools is not null;
-        if (!_grammars.TryGetValue((tools, colorful, widgets), out var gbnf))
+        toolOnly &= tools;
+        if (!_grammars.TryGetValue((tools, colorful, widgets, toolOnly), out var gbnf))
         {
-            gbnf = AnswerGrammar.Build(tools ? _options.Tools!.GrammarRule() : null, colorful, widgets);
-            _grammars[(tools, colorful, widgets)] = gbnf;
+            gbnf = AnswerGrammar.Build(tools ? _options.Tools!.GrammarRule() : null, colorful, widgets, toolOnly);
+            _grammars[(tools, colorful, widgets, toolOnly)] = gbnf;
         }
         return gbnf;
     }
