@@ -20,6 +20,9 @@ internal interface ITool
 
     /// <summary>Das Ergebnis als Text für das Modell. Fehler als verständlicher Satz, nicht als Ausnahme.</summary>
     Task<string> RunAsync(string argument, CancellationToken ct);
+
+    /// <summary>So lange darf es höchstens dauern.</summary>
+    TimeSpan Timeout => ToolBox.Timeout;
 }
 
 /// <summary>Ein Aufruf, wie ihn das Modell geschrieben hat.</summary>

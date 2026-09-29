@@ -1,0 +1,70 @@
+using System.Text.RegularExpressions;
+
+namespace Max.Tools;
+
+/// <summary>
+/// Dateien, die der Nutzer ins Terminal gezogen (oder als Pfad eingefügt) hat. Das Terminal schreibt dann nur
+/// den Pfad in die Eingabe – je nach System in Anführungszeichen ("C:\Bilder\a b.png", '/home/x/a b.png'),
+/// mit "\ " statt Leerzeichen (/home/x/a\ b.png) oder als file://-Adresse. Max sieht sich solche Dateien an,
+/// bevor er antwortet: Bilder mit <c>bild</c>, alles andere mit <c>datei</c>.
+/// </summary>
+internal static partial class Attachments
+{
+    /// <summary>Mehr Dateien auf einmal sieht Max sich nicht an.</summary>
+    internal const int MaxFiles = 3;
+
+    /// <summary>Die Aufrufe für die angehängten Dateien – leer, wenn keine darin steht.</summary>
+    /// <param name="question">Was sonst in der Nachricht steht – geht als Frage an das Bild.</param>
+    public static IReadOnlyList<ToolCall> Calls(string message, string workingDirectory)
+    {
+        var files = Find(message, workingDirectory, out var rest);
+        var question = rest.Length is > 0 and <= 300 ? rest : "";
+        return files.Select(path => ImageTool.IsImage(path)
+            ? new ToolCall("bild", question.Length > 0 ? $"{path} | {question}" : path)
+            : new ToolCall("datei", path)).ToList();
+    }
+
+    /// <summary>Alle vorhandenen Dateien in der Nachricht; <paramref name="rest"/> ist der Text ohne sie.</summary>
+    public static IReadOnlyList<string> Find(string message, string workingDirectory, out string rest)
+    {
+        var files = new List<string>();
+        var text = PathRegex().Replace(message, match =>
+        {
+            var raw = match.Groups["q"].Success ? match.Groups["q"].Value : match.Groups["s"].Success ? match.Groups["s"].Value : match.Groups["b"].Value.Replace("\\ ", " ");
+            if (Existing(raw, workingDirectory) is not { } path || files.Count >= MaxFiles)
+                return match.Value;
+            if (!files.Contains(path))
+                files.Add(path);
+            return " ";
+        });
+        rest = SpaceRegex().Replace(text, " ").Trim();
+        return files;
+    }
+
+    private static string? Existing(string raw, string workingDirectory)
+    {
+        try
+        {
+            if (raw.StartsWith("file://", StringComparison.OrdinalIgnoreCase) && Uri.TryCreate(raw, UriKind.Absolute, out var uri))
+                raw = uri.LocalPath;
+            var path = ToolPaths.Resolve(raw, workingDirectory);
+            return File.Exists(path) && ToolPaths.Forbidden(path) is null ? path : null;
+        }
+        catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return null;
+        }
+    }
+
+    // In Anführungszeichen (alles bis zum Ende), sonst ab einem Pfad-Anfang (C:\, \\, /, ~/, file://) bis zum
+    // nächsten Leerzeichen, das nicht mit \ geschützt ist.
+    [GeneratedRegex("""
+        "(?<q>(?:[A-Za-z]:[\\/]|\\\\|/|~[\\/]|file://)[^"\r\n]+)"
+        | '(?<s>(?:[A-Za-z]:[\\/]|\\\\|/|~[\\/]|file://)[^'\r\n]+)'
+        | (?<![\w/\\])(?<b>(?:[A-Za-z]:[\\/]|\\\\|/|~[\\/]|file://)(?:\\\ |[^\s"'])+)
+        """, RegexOptions.IgnorePatternWhitespace)]
+    private static partial Regex PathRegex();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex SpaceRegex();
+}

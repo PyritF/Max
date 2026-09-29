@@ -18,7 +18,7 @@ on:
 jobs:
   selftest:
     runs-on: ${{ inputs.os || 'ubuntu-latest' }}
-    timeout-minutes: 100
+    timeout-minutes: 120
     env:
       MAX_HOME: ${{ github.workspace }}/.maxhome
       # Die Test-Rechner auf GitHub haben keine Grafikkarte.
@@ -37,11 +37,11 @@ jobs:
       - name: Tests
         run: dotnet test
 
-      # Das Modell nicht bei jedem Lauf neu laden – der Schlüssel ändert sich nur mit dem Modell-Eintrag
+      # Modell und Bild-Zusatz nicht bei jedem Lauf neu laden – der Schlüssel ändert sich nur mit ihren Einträgen
       # im Manifest (nicht mit der App-Version, die der Release-Workflow einträgt).
       - name: Modell-Schlüssel
         id: model
-        run: echo "key=$(jq -c .model manifest.json | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+        run: echo "key=$(jq -c '[.model, .vision]' manifest.json | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache@v4
         with:

@@ -27,13 +27,24 @@ http.DefaultRequestHeaders.UserAgent.ParseAdd($"Max/{typeof(Program).Assembly.Ge
 
 var thinking = ThinkingSwitch.Load(paths);
 
-// Werkzeuge (nur lesend): eigener HttpClient, der Weiterleitungen folgt – Webseiten leiten oft um.
-using var web = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = true, MaxAutomaticRedirections = 5 }) { Timeout = Timeout.InfiniteTimeSpan };
-var tools = Max.Tools.ToolBox.CreateDefault(web, () => DateTime.Now, () => Environment.CurrentDirectory);
-
 SystemSnapshot? system = null;
 LlmEngine? engine = null;
 LlmBackend? llm = null;
+
+// Bildverständnis: erst, wenn der Bild-Zusatz da ist (er kommt im Hintergrund) – geladen beim ersten Bild.
+VisionEngine? vision = null;
+IVision? Vision()
+{
+    if (vision is not null || engine is null || VisionFile.Installed(paths) is not { } projector)
+        return vision;
+    // Auf die Grafikkarte nur, wenn neben dem Modell sicher Platz ist; sonst rechnet die CPU (langsamer).
+    var roomy = engine.Info.GpuLayers > 0 && system?.Hardware.Gpu is { VramBytes: >= 10L * 1024 * 1024 * 1024 };
+    return vision = new VisionEngine(engine, projector, roomy);
+}
+
+// Werkzeuge (nur lesend): eigener HttpClient, der Weiterleitungen folgt – Webseiten leiten oft um.
+using var web = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = true, MaxAutomaticRedirections = 5 }) { Timeout = Timeout.InfiniteTimeSpan };
+var tools = Max.Tools.ToolBox.CreateDefault(web, () => DateTime.Now, () => Environment.CurrentDirectory, Vision);
 void OnHardware(SystemSnapshot s) => system = s;
 void OnLoaded(LlmEngine e, LlmBackend b) => (engine, llm) = (e, b);
 Manifest? manifest = null;
@@ -74,10 +85,26 @@ using (var startup = new CancellationTokenSource())
 
 system ??= SystemSnapshot.Capture();
 using var loadedEngine = engine;
+using var disposeVision = new Disposer(() => vision?.Dispose());
 
-// Nur für den GitHub-Workflow: feste Fragen statt Chat.
+// Nur für den GitHub-Workflow: feste Fragen statt Chat – vorher den Bild-Zusatz holen, damit auch Bilder drankommen.
 if (args.Contains("--selftest") && engine is not null && llm is not null)
+{
+    var current = manifest ?? await ManifestSource.LoadAsync(http, CancellationToken.None);
+    if (VisionFile.IsMissing(paths, current.Vision))
+    {
+        Console.WriteLine("Lade den Bild-Zusatz …");
+        try
+        {
+            await VisionFile.DownloadAsync(new ModelDownloader(http), paths, current.Vision!, new StepProgress(), CancellationToken.None);
+        }
+        catch (Exception e) when (e is HttpRequestException or IOException or InvalidOperationException)
+        {
+            Console.WriteLine($"WARNUNG: Bild-Zusatz nicht geladen ({e.Message}) – Bildfragen gehen dann nicht.");
+        }
+    }
     return await SelfTest.RunAsync(engine, llm, Console.Out, m => SystemPrompt.Build(system, m, tools));
+}
 
 // 2. Übersicht
 if (!Console.IsOutputRedirected)
@@ -119,3 +146,9 @@ if (llm is not null)
 updates.Cancel();
 await updating;
 return 0;
+
+/// <summary>Räumt am Ende auf (using für etwas, das erst später entsteht).</summary>
+internal sealed class Disposer(Action dispose) : IDisposable
+{
+    public void Dispose() => dispose();
+}

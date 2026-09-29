@@ -8,8 +8,11 @@ namespace Max.Tools;
 /// Alle Werkzeuge, die Max hat: Beschreibung für den System-Prompt, Grammatik für den Aufruf und das Ausführen.
 /// Ergebnisse werden gekürzt, damit eine große Datei oder Webseite nicht den ganzen Kontext füllt.
 /// </summary>
-internal sealed partial class ToolBox(IEnumerable<ITool> tools)
+internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? workingDirectory = null)
 {
+    /// <summary>Hier wurde Max gestartet – relative Pfade gelten ab hier.</summary>
+    public Func<string> WorkingDirectory { get; } = workingDirectory ?? (() => Environment.CurrentDirectory);
+
     /// <summary>So viele Zeichen eines Ergebnisses sieht das Modell höchstens (etwa 2.500 Tokens).</summary>
     internal const int MaxResultChars = 8000;
 
@@ -23,16 +26,22 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools)
     public ITool? Find(string name) => _tools.GetValueOrDefault(name);
 
     /// <summary>Die Standard-Werkzeuge – alle nur lesend.</summary>
-    public static ToolBox CreateDefault(HttpClient web, Func<DateTime> clock, Func<string> workingDirectory) => new(
+    /// <param name="vision">Bildverständnis, sobald es bereitsteht (sonst null) – ohne Angabe gibt es kein <c>bild</c>.</param>
+    public static ToolBox CreateDefault(HttpClient web, Func<DateTime> clock, Func<string> workingDirectory, Func<IVision?>? vision = null) => new(
     [
         new ClockTool(clock),
         new SystemInfoTool(),
         new CalculatorTool(),
         new ListFolderTool(workingDirectory),
         new ReadFileTool(workingDirectory),
+        .. vision is null ? Array.Empty<ITool>() : [new ImageTool(vision, workingDirectory)],
         new WebSearchTool(web),
         new ReadWebPageTool(web),
-    ]);
+    ], workingDirectory);
+
+    /// <summary>Aufrufe für Dateien, die der Nutzer in die Nachricht gezogen hat (nur für Werkzeuge, die es gibt).</summary>
+    public IReadOnlyList<ToolCall> AttachmentCalls(string message) =>
+        Attachments.Calls(message, WorkingDirectory()).Where(call => Find(call.Name) is not null).ToList();
 
     /// <summary>
     /// Welches Werkzeug Max beim Nachdenken benutzen will ("Ich sollte das Werkzeug `rechnen` verwenden", "Ich rufe
@@ -97,7 +106,7 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools)
 
         var clock = Stopwatch.StartNew();
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(Timeout);
+        timeout.CancelAfter(tool.Timeout);
         string result;
         try
         {
@@ -105,7 +114,7 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools)
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            result = $"Abgebrochen – {tool.Name} hat länger als {Timeout.TotalSeconds:0} Sekunden gebraucht.";
+            result = $"Abgebrochen – {tool.Name} hat länger als {tool.Timeout.TotalSeconds:0} Sekunden gebraucht.";
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {

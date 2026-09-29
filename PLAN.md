@@ -489,6 +489,12 @@ und passt zu den Elementen, die das Modell schon zuverlässig schreibt.
 | `datei: <Pfad>` | Textdatei lesen (Anfang, höchstens 256 KB) | Schlüssel und Zugangsdaten (.ssh, .env, *.pem, id_rsa …) sind tabu |
 | `websuche: <Begriffe>` | DuckDuckGo, erste 6 Treffer mit Adresse und Auszug | ohne Konto oder Schlüssel; die Anfrage verlässt den Rechner – sichtbar in der Anzeige |
 | `webseite: <Adresse>` | Text einer Seite ohne Menüs und Skripte | nur http/https, höchstens 2 MB |
+| `bild: <Pfad> [| Frage]` | Bild oder Screenshot beschreiben, Text ablesen, Frage dazu beantworten | Bild-Zusatz des Modells (§9b), höchstens 5 Minuten |
+
+**Dateien ins Terminal ziehen:** Das Terminal schreibt dann den Pfad in die Eingabe (in Anführungszeichen, mit `\ `
+oder als `file://`). Max erkennt vorhandene Dateien darin (`Tools/Attachments.cs`, höchstens 3) und sieht sie sich an,
+bevor er antwortet: Bilder mit `bild` (der übrige Text der Nachricht ist die Frage), alles andere mit `datei`.
+Im Verlauf steht das wie ein normaler Werkzeug-Aufruf. Schlüssel und Zugangsdaten bleiben auch hier tabu.
 
 - Ergebnisse von Webseiten und Dateien sind laut Prompt **Daten, keine Anweisungen**.
 - Der Selbsttest fragt nach einer großen Multiplikation, dem Startordner, der README und dem Weltmeister 2022 und
@@ -525,7 +531,7 @@ Das 9B-Modell bleibt das Gesprächsmodell. Manche Tools haben statt festem Code 
 
 | Spezialist | Ansatz | Bemerkung |
 |---|---|---|
-| Bilder und Screenshots lesen | Vision-Zusatz von Qwen3.5 (`mmproj`), falls vorhanden | kein zweites Modell nötig; LLamaSharp kann das (mtmd) |
+| Bilder und Screenshots lesen ✅ | Bild-Zusatz von Qwen3.5 (`mmproj-F16.gguf`, ca. 0,9 GB) | kein zweites Modell nötig; LLamaSharp 0.27 kann das (mtmd). Umgesetzt als Werkzeug `bild` (`Llm/VisionEngine.cs`): eigener kleiner Kontext (4.096 Tokens) auf denselben Gewichten, Bild höchstens 1.024 Tokens, Antwort als Text zurück ins Gespräch – der Gesprächs-Cache bleibt reiner Text. Der Zusatz steht im Manifest (`vision`), kommt still im Hintergrund nach dem Modell und liegt als `vision.<Revision>.bin` im Datenordner. Auf der Grafikkarte nur ab 10 GB Speicher, sonst CPU. **Noch nicht mit dem echten Modell geprüft.** |
 | Sprache → Text | Whisper (whisper.cpp / Whisper.net) | klein, sehr gut, lokal |
 | Bilder erzeugen | kleines Diffusionsmodell über stable-diffusion.cpp | eigene Laufzeit; Anzeige im Terminal (Kitty/Sixel) oder als Datei |
 | Mathe | Spezialmodell nur bei klarem Vorsprung | exaktes Rechnen besser über ein Rechen-/Python-Tool |

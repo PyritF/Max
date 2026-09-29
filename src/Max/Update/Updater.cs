@@ -58,6 +58,12 @@ internal sealed class Updater(HttpClient http, MaxPaths paths, string? exePath, 
                 await DownloadModelAsync(model, ct);
                 notes.Add("neues Modell bereit – aktiv beim nächsten Start");
             }
+            if (VisionFile.IsMissing(paths, manifest.Vision))
+            {
+                Status = "Bildverständnis wird geladen";
+                await VisionFile.DownloadAsync(_downloader, paths, manifest.Vision!, Progress, ct);
+                notes.Add("Bildverständnis bereit");
+            }
             Status = notes.Count > 0 ? string.Join("; ", notes) : "aktuell";
         }
         catch (OperationCanceledException)

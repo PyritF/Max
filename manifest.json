@@ -22,5 +22,11 @@
     "sizeBytes": 5680000000,
     "contextSize": 16384,
     "thinkingBudget": 1024
+  },
+  "vision": {
+    "revision": 1,
+    "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/mmproj-F16.gguf",
+    "sha256": null,
+    "sizeBytes": 920000000
   }
 }

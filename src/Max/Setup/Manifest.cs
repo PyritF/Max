@@ -7,7 +7,7 @@ namespace Max.Setup;
 /// Steuert App- und Modell-Updates (PLAN.md §4). Liegt als <c>manifest.json</c> im Repo;
 /// eine Kopie ist in die Exe eingebaut.
 /// </summary>
-internal sealed record Manifest(AppInfo App, ModelEntry? Model)
+internal sealed record Manifest(AppInfo App, ModelEntry? Model, VisionEntry? Vision = null)
 {
     /// <summary>Taugt das Manifest? Das Modell muss eine Adresse haben (ältere Fassungen mit Stufen fallen durch).</summary>
     public bool IsComplete => Model is { Url.Length: > 0 };
@@ -35,6 +35,13 @@ internal sealed record ModelEntry(int Revision, string Url, string? Sha256, long
     /// <summary>Dateiname aus der Adresse, z. B. "Qwen3.5-9B-Q4_K_M.gguf" – kennzeichnet, welches Modell installiert ist.</summary>
     public string FileName => Uri.UnescapeDataString(Url[(Url.LastIndexOf('/') + 1)..]);
 }
+
+/// <summary>
+/// Der Bild-Zusatz zum Modell (<c>mmproj</c>) – damit Max Bilder und Screenshots lesen kann. Kommt still im
+/// Hintergrund, nachdem das Modell da ist; ohne ihn geht alles andere wie gewohnt.
+/// </summary>
+/// <param name="Revision">Wird erhöht, wenn es einen neuen Zusatz gibt (z. B. mit einem neuen Modell).</param>
+internal sealed record VisionEntry(int Revision, string Url, string? Sha256, long SizeBytes);
 
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

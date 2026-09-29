@@ -43,6 +43,18 @@ internal sealed partial class LlmEngine : ILanguageModel, IDisposable
     }
 
     public EngineInfo Info { get; }
+
+    /// <summary>Die Gewichte – für einen zweiten, kleinen Kontext (z. B. zum Ansehen eines Bildes, <see cref="VisionEngine"/>).</summary>
+    internal LLamaWeights Weights => _weights;
+
+    /// <summary>Ein eigener Kontext auf denselben Gewichten – der Gesprächs-Cache bleibt unberührt.</summary>
+    internal LLamaContext CreateSideContext(int contextSize, int batchSize) =>
+        _weights.CreateContext(new ModelParams("")
+        {
+            ContextSize = (uint)contextSize,
+            BatchSize = (uint)batchSize,
+            UBatchSize = (uint)batchSize,
+        });
     public int ContextSize => Info.ContextSize;
     public int CachedCount => _cached.Count;
 

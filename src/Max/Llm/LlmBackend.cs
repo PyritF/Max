@@ -161,6 +161,18 @@ internal sealed partial class LlmBackend : IChatBackend
     /// </summary>
     public async IAsyncEnumerable<ReplyChunk> StreamReplyAsync(Conversation conversation, [EnumeratorCancellation] CancellationToken ct)
     {
+        // Ins Terminal gezogene Dateien sieht Max sich an, bevor er antwortet – wie ein Werkzeug-Aufruf im Verlauf.
+        if (_options.Tools is { } box && conversation.Messages.LastOrDefault() is { Role: ChatRole.User } asked)
+        {
+            foreach (var call in box.AttachmentCalls(asked.Content))
+            {
+                yield return new ReplyChunk(box.Find(call.Name)!.Describe(call.Argument), IsTool: true);
+                var result = await box.RunAsync(call, ct);
+                conversation.Add(ChatRole.Assistant, call.Text);
+                conversation.Add(ChatRole.Tool, result);
+            }
+        }
+
         for (var round = 0; ; round++)
         {
             var toolCall = new ToolCallSlot();

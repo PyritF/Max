@@ -10,6 +10,10 @@ namespace Max;
 /// </summary>
 internal static class SelfTest
 {
+    // Vor Questions: statische Felder werden der Reihe nach belegt.
+    /// <summary>Wie eine ins Terminal gezogene Datei: der ganze Pfad in Anführungszeichen, dazu eine Frage.</summary>
+    private static readonly string DraggedImage = $"\"{Path.GetFullPath(Path.Combine("tests", "testbild.png"))}\" Was steht da drauf?";
+
     private static readonly string[] Questions =
     [
         "Wer bist du?",
@@ -28,6 +32,8 @@ internal static class SelfTest
         "Welche Dateien und Ordner liegen in dem Ordner, in dem du gerade läufst?",
         "Lies die README.md und sag mir in einem Satz, worum es in dem Projekt geht.",
         "Wer hat die Fußball-Weltmeisterschaft 2022 gewonnen? Schau bitte im Web nach.",
+        DraggedImage,
+        "Schau dir bitte das Bild tests/testbild.png an: Welche Farbe hat der Kreis?",
         "Schreib ab jetzt bitte alles schön bunt, mit Farbverläufen. Erzähl mir was über den Herbst.",
         "Was machst du eigentlich an einem Regentag?",
     ];
@@ -46,6 +52,8 @@ internal static class SelfTest
         ["Welche Dateien und Ordner liegen in dem Ordner, in dem du gerade läufst?"] = ("ordner", "src"),
         ["Lies die README.md und sag mir in einem Satz, worum es in dem Projekt geht."] = ("datei", "Max"),
         ["Wer hat die Fußball-Weltmeisterschaft 2022 gewonnen? Schau bitte im Web nach."] = ("websuche", "Argentinien"),
+        [DraggedImage] = ("bild", "42"),
+        ["Schau dir bitte das Bild tests/testbild.png an: Welche Farbe hat der Kreis?"] = ("bild", "rot"),
     };
 
     /// <summary>Befehlsempfänger-Floskeln am Antwortende – nur Warnung.</summary>

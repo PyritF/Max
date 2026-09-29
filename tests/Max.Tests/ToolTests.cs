@@ -333,3 +333,109 @@ public class ToolRoundTests
         Assert.Contains("⌕ Suche im Web: Wetter Graz", console.Output);
     }
 }
+
+public class ImageAndAttachmentTests : IDisposable
+{
+    private readonly string _dir = Directory.CreateTempSubdirectory("max-bild-").FullName;
+
+    public void Dispose() => Directory.Delete(_dir, recursive: true);
+
+    private string File(string name, string content = "x")
+    {
+        var path = Path.Combine(_dir, name);
+        System.IO.File.WriteAllText(path, content);
+        return path;
+    }
+
+    private sealed class FakeVision : IVision
+    {
+        public List<(string Path, string Question)> Seen { get; } = [];
+
+        public Task<string> LookAsync(string imagePath, string question, CancellationToken ct)
+        {
+            Seen.Add((imagePath, question));
+            return Task.FromResult("Ein roter Kreis und der Text MAX 42.");
+        }
+    }
+
+    [Fact]
+    public void DraggedPaths_AreFound_InEveryTerminalStyle()
+    {
+        var spaced = File("mein bild.png");
+        var plain = File("notiz.txt");
+        Assert.Equal([spaced], Attachments.Find($"\"{spaced}\" was ist das?", _dir, out var rest));
+        Assert.Equal("was ist das?", rest);
+        Assert.Equal([spaced], Attachments.Find($"'{spaced}'", _dir, out _));
+        Assert.Equal([spaced], Attachments.Find(spaced.Replace(" ", "\\ ") + " bitte", _dir, out rest));
+        Assert.Equal("bitte", rest);
+        Assert.Equal([plain], Attachments.Find($"Lies {plain}", _dir, out _));
+        Assert.Equal([plain], Attachments.Find(new Uri(plain).AbsoluteUri, _dir, out _));
+    }
+
+    [Theory]
+    [InlineData("Wie geht's? 1/2 und/oder /debug")]
+    [InlineData("\"/gibt/es/nicht.png\" schau mal")]
+    public void NoFiles_NoAttachments(string message) => Assert.Empty(Attachments.Find(message, _dir, out _));
+
+    [Fact]
+    public void SecretFiles_AreNeverAttached()
+    {
+        var secret = File(".env", "PASSWORT=1");
+        Assert.Empty(Attachments.Find($"\"{secret}\"", _dir, out _));
+    }
+
+    [Fact]
+    public void Calls_ImageGetsTheQuestion_TextFileIsRead()
+    {
+        var image = File("a.png");
+        var text = File("b.md");
+        var calls = Attachments.Calls($"\"{image}\" \"{text}\" Was steht da?", _dir);
+        Assert.Equal(new ToolCall("bild", $"{image} | Was steht da?"), calls[0]);
+        Assert.Equal(new ToolCall("datei", text), calls[1]);
+    }
+
+    [Fact]
+    public async Task ImageTool_AsksTheVision_WithTheQuestion()
+    {
+        var image = File("a.png");
+        var vision = new FakeVision();
+        var result = await new ImageTool(() => vision, () => _dir).RunAsync("a.png | Welche Farbe?", CancellationToken.None);
+        Assert.Contains("MAX 42", result);
+        Assert.Equal((image, "Welche Farbe? Antworte auf Deutsch."), Assert.Single(vision.Seen));
+    }
+
+    [Fact]
+    public async Task ImageTool_ExplainsWhatIsWrong()
+    {
+        File("a.txt");
+        File("a.png");
+        var tool = new ImageTool(() => null, () => _dir);
+        Assert.Contains("gibt es nicht", await tool.RunAsync("fehlt.png", CancellationToken.None));
+        Assert.Contains("kein Bild", await tool.RunAsync("a.txt", CancellationToken.None));
+        Assert.Contains("noch nicht auf diesem Rechner", await tool.RunAsync("a.png", CancellationToken.None));
+        Assert.Equal(("x.png", ""), ImageTool.Split("x.png"));
+    }
+
+    [Fact]
+    public async Task DraggedImage_IsLookedAt_BeforeTheAnswer()
+    {
+        var image = File("foto.png");
+        var vision = new FakeVision();
+        var model = new FakeModel("Da steht MAX 42.", null);
+        var tools = new ToolBox([new ImageTool(() => vision, () => _dir)], () => _dir);
+        var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => false, Tools: tools));
+        var conversation = new Conversation();
+        conversation.AddUser($"\"{image}\" Was steht da drauf?");
+
+        var chunks = new List<ReplyChunk>();
+        await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
+            chunks.Add(chunk);
+
+        Assert.Equal("Sehe mir foto.png an", Assert.Single(chunks, c => c.IsTool).Text);
+        Assert.Equal([ChatRole.User, ChatRole.Assistant, ChatRole.Tool], conversation.Messages.Select(m => m.Role));
+        Assert.Equal("Da steht MAX 42.", string.Concat(chunks.Where(c => !c.IsTool).Select(c => c.Text)));
+        Assert.Contains("MAX 42", conversation.Messages[2].Content);
+        Assert.Contains("Was steht da drauf?", Assert.Single(vision.Seen).Question);
+        Assert.Contains("<tool_response>", model.Decode(model.LastPromptBeforeSampler));
+    }
+}

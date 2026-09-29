@@ -23,6 +23,10 @@ internal static class ToolPrompt
           bei Bedarf danach `webseite` mit einer Adresse aus den Treffern. Nenn die Quelle kurz.
         - Fragen zu Dateien, Ordnern oder Code auf diesem Rechner: `ordner`, `datei`. Relative Pfade gelten ab dem Ordner,
           in dem du gestartet wurdest.
+        - Bilder und Screenshots: `bild: <Pfad>`, bei einer bestimmten Frage `bild: <Pfad> | <Frage>`. Du siehst das Bild
+          nicht selbst – du bekommst eine Beschreibung davon; beantworte die Frage damit.
+        - Zieht der Nutzer eine Datei ins Fenster, steht ihr Pfad in seiner Nachricht, und du hast sie schon angesehen
+          (das Ergebnis steht direkt davor). Ruf sie nicht noch einmal auf.
         - Rechnungen mit großen Zahlen oder vielen Stellen: immer erst `rechnen` – auch wenn du das Ergebnis
           zu kennen glaubst. Ein Ergebnis ist kein Diagramm.
         - Genaue Uhrzeit: `uhrzeit`. Fragen zum Rechner selbst: `system`.
