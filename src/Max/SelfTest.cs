@@ -207,6 +207,8 @@ internal static class SelfTest
                 output.WriteLine($"WARNUNG: Floskel am Ende (\"{Shorten(lastParagraph.Trim(), 60)}\").");
             if (Max.Llm.ClosingFilter.IsRule(reply.TrimEnd().Split('\n')[^1]))
                 output.WriteLine("WARNUNG: Trennlinie am Ende.");
+            if (Max.Llm.ClosingFilter.WithoutPseudoCode(reply) != reply)
+                output.WriteLine("WARNUNG: Code-Block ohne Code (steht nicht im Verlauf).");
             if (Max.Llm.ClosingFilter.ClosingParagraph(reply) is { } closingParagraph
                 && Max.Llm.ClosingFilter.FirstSentence(closingParagraph) is { Length: > 0 } closingSentence && !closings.Add(closingSentence))
                 output.WriteLine($"WARNUNG: derselbe Schluss wie in einer früheren Antwort (\"{Shorten(closingParagraph, 60)}\").");

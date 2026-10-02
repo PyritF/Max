@@ -489,6 +489,32 @@ public class LlmBackendTests
         Assert.DoesNotContain("```balken", model.Decode(model.Cache));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DroppingAnElement_RecomputesOnlyTheAnswer_NotTheWholeConversation(bool runaway)
+    {
+        // Selbsttest 56: Zurück vor das Element hieß, den ganzen Verlauf neu zu rechnen – auf der CPU über zehn Minuten.
+        string?[] script = runaway
+            ? ["A\n", "```kasten\n", .. Enumerable.Repeat<string?>("Immer dieselbe Zeile, immer wieder und wieder.\n", 9), "Ende.", null]
+            : ["A\n", "```balken\n", "x\n", "```\n", "y\n", "```\n", "z\n", "```\n", "Ende.", null];
+        var computedBeforeAnswer = -1;
+        FakeModel model = null!;
+        model = new FakeModel(script) { OnSample = i => { if (i == 0) computedBeforeAnswer = model.ComputedTokens; } };
+        var backend = Backend(model);
+        var conversation = Single("Erste Frage");
+        conversation.AddAssistant("Eine frühere Antwort, die schon im Cache steht.");
+        conversation.AddUser("?");
+
+        var (_, reply) = await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
+
+        Assert.Equal("A\nEnde.", reply);
+        Assert.True(computedBeforeAnswer > 0);
+        Assert.Equal(computedBeforeAnswer, model.ComputedTokens);
+        await backend.CompleteAsync();
+        Assert.EndsWith("A\nEnde." + Template.AssistantEnd, model.Decode(model.Cache));
+    }
+
     [Fact]
     public async Task OfferAtTheEnd_IsNeitherShownNorInTheHistory()
     {
@@ -546,6 +572,63 @@ public class LlmBackendTests
         var (_, reply) = await Collect(Backend(model).StreamReplyAsync(Single("?"), CancellationToken.None));
         Assert.True(reply.Length < 8 * sentence.Length, $"{reply.Length} Zeichen");
     }
+
+    [Fact]
+    public async Task RepeatingAnswer_OnlyTheStartGoesIntoTheHistory()
+    {
+        // Selbsttest 56: Die Schleife aus leeren ```bash-Blöcken stand im Verlauf – danach hatte jede Antwort einen ```bash-Block.
+        var line = "Immer wieder dieselbe Zeile, Wort für Wort, ohne dass sie je endet.\n";
+        var model = new FakeModel(["Vorher.\n", .. Enumerable.Repeat<string?>(line, 30), null, "Gut."]);
+        var backend = Backend(model);
+        var conversation = Single("?");
+
+        var (_, reply) = await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
+        Assert.Contains(line + line, reply);                   // gezeigt ist gezeigt
+
+        conversation.AddAssistant(reply);
+        conversation.AddUser("Und?");
+        await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
+        var prompt = model.Decode(model.LastPromptBeforeSampler);
+        Assert.Contains(Template.HistoryStart + "Vorher.\n" + Template.AssistantEnd, prompt);
+        Assert.DoesNotContain("Immer wieder", prompt);
+    }
+
+    [Fact]
+    public async Task PseudoCodeBlock_IsShown_ButNotRemembered()
+    {
+        var model = new FakeModel("Der Kreis ist **rot**.\n\n", "```bash\n", "Farbe: rot\n", "Objekt: Kreis\n", "```\n", "\nKräftig.", null, "Gut.");
+        var backend = Backend(model);
+        var conversation = Single("Welche Farbe?");
+
+        var (_, reply) = await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
+        Assert.Contains("Farbe: rot", reply);
+
+        conversation.AddAssistant(reply);
+        conversation.AddUser("Und?");
+        await Collect(backend.StreamReplyAsync(conversation, CancellationToken.None));
+        var prompt = model.Decode(model.LastPromptBeforeSampler);
+        Assert.Contains(Template.HistoryStart + "Der Kreis ist **rot**.\n\nKräftig." + Template.AssistantEnd, prompt);
+        Assert.Equal(backend.LastRun!.PromptTokens - Tokens(model, "<|im_start|>user\nUnd?<|im_end|>\n") - Tokens(model, Template.AssistantStart), backend.LastRun.ReusedTokens);
+    }
+
+    [Theory]
+    [InlineData("Intro\n", "```bash\n")]
+    [InlineData("Ein Absatz davor.\n\n", "Dieselbe Zeile noch einmal und noch einmal.\n")]
+    [InlineData("Davor. ", "Ein Satz, der sich ohne Zeilenumbruch immer wiederholt. ")]
+    public void LoopStart_IsWhereTheRepetitionBegins(string before, string loop)
+    {
+        var text = before + string.Concat(Enumerable.Repeat(loop, 60));
+        Assert.True(LlmBackend.IsLooping(text));
+        var start = LlmBackend.LoopStart(text);
+        // Schleifen in einer Zeile: zurück bis zum Zeilenanfang – also samt dem Satz davor.
+        Assert.Equal(before.EndsWith('\n') ? before.Length : 0, start);
+    }
+
+    [Theory]
+    [InlineData("Text\n```bash\nls\n", "Text\n```bash\nls\n```\n")]
+    [InlineData("Text\n```bash\nls\n```\nmehr\n", "Text\n```bash\nls\n```\nmehr\n")]
+    public void CutText_GetsItsCodeBlockClosed(string text, string expected) =>
+        Assert.Equal(expected, LlmBackend.WithClosedFence(text));
 
     [Fact]
     public void LongDifferentText_IsNoLoop()
@@ -821,6 +904,28 @@ public class ClosingFilterTests
     [Fact]
     public void OfferAtTheEnd_IsDropped() =>
         Assert.Equal("Die Antwort.\n\n", Run("Die Antwort.\n\n", "Möch", "test du mehr ", "wissen?\nSag Bescheid!"));
+
+    // Selbsttest 56: ab der Mitte in jeder Antwort ein ```bash-Block mit "Name: Wert" – Selbsttest 55: "# Beispiel".
+    [Theory]
+    [InlineData("Der Kreis ist **rot**.\n\n```bash\nFarbe: rot\nObjekt: Kreis\nQuelle: testbild.png\n```\n\nAlles klar?", "Der Kreis ist **rot**.\n\nAlles klar?")]
+    [InlineData("Die Kaution: **2.380 €**.\n\n```bash\n§ 17 Mietsicherheit: 2.380 € (in 3 Raten)\n```\n\nSeite 18.", "Die Kaution: **2.380 €**.\n\nSeite 18.")]
+    [InlineData("**152 Euro**.\n```bash\nRECHNUNG: 2026-118\nDatum: 14.09.2026\nGesamt: 152 € (Zahlbar in 14 Tagen)\n```\nVon der Werkstatt.", "**152 Euro**.\nVon der Werkstatt.")]
+    [InlineData("Auf dem Bild steht **MAX 42**.\n\n```bash\nText: \"MAX 42\"\n```", "Auf dem Bild steht **MAX 42**.\n")]
+    [InlineData("Morgen bedeckt.\n```python\n# Beispiel: Wien\n```", "Morgen bedeckt.")]
+    [InlineData("```bash\nPfad: /home/a/b.pdf\n```\n\nDa liegt sie.", "Da liegt sie.")]
+    public void PseudoCode_IsLeftOutOfTheHistory(string answer, string remembered) =>
+        Assert.Equal(remembered, ClosingFilter.WithoutPseudoCode(answer));
+
+    [Theory]
+    [InlineData("So:\n```bash\nls -la\n```")]
+    [InlineData("So:\n```bash\n# alles zeigen\nls -la\n```")]
+    [InlineData("So:\n```python\nname: str = \"Max\"\n```")]                // Zuweisung mit Typ ist Code
+    [InlineData("So:\n```yaml\nFarbe: rot\n```")]                            // in YAML ist das Code
+    [InlineData("So:\n```text\nFarbe: rot\n```")]
+    [InlineData("```bash\nOrdner: /home/a\n---\n- .git/\n- src/\n```")]
+    [InlineData("```bash\nFarbe: rot\n```")]                                 // nur der Block: dann lieber alles behalten
+    public void RealCode_StaysInTheHistory(string answer) =>
+        Assert.Equal(answer, ClosingFilter.WithoutPseudoCode(answer));
 
     [Fact]
     public void OfferInTheMiddle_StaysInOrder()
@@ -1144,7 +1249,7 @@ public class AnswerGrammarTests
         var gbnf = AnswerGrammar.Build();
         Assert.Contains("label ::= [^-:|\\n\\t`{ ] ( [^:|\\n\\t`{ ] | \" \" [^:|\\n\\t`{ ] ){0,24}", gbnf);
         Assert.Contains("plain ::= [^{}`]", gbnf);
-        Assert.Contains("answer ::= item* ( \"```\" widget item* )? ( \"```\" w-frage [ \\n]* )?", gbnf);   // ein Element, Menü nur am Ende
+        Assert.Contains("answer ::= item* ( \"```\" code | \"```\" widget ( nl item* ( \"```\" code )? )? )? ( \"```\" w-frage [ \\n]* )?", gbnf);   // ein Element, Menü nur am Ende
         Assert.DoesNotContain("w-frage |", gbnf.Split("widget ::= ")[1].Split('\n')[0]);   // "Wort}" statt "{/verlauf}" geht nicht
         Assert.Contains("unit ::= ( [%\\u20ac$\\u00b0] | \" \" [^0-9:", gbnf);
     }
@@ -1153,7 +1258,7 @@ public class AnswerGrammarTests
     public void Colorful_AnswerStartsWithAGradient()
     {
         var gbnf = AnswerGrammar.Build(colorful: true);
-        Assert.Contains("answer ::= [ \\n]* \"{verlauf\" ( \":\" grad )? \"}\" item* ( \"```\" widget item* )?", gbnf);
+        Assert.Contains("answer ::= [ \\n]* \"{verlauf\" ( \":\" grad )? \"}\" item* ( \"```\" code | \"```\" widget", gbnf);
         Assert.Contains("answer ::= item* ", AnswerGrammar.Build());
     }
 
@@ -1161,7 +1266,7 @@ public class AnswerGrammarTests
     public void WithoutWidgets_OnlyTextCodeAndTheMenuRemain()
     {
         var gbnf = AnswerGrammar.Build(widgets: false);
-        Assert.Contains("answer ::= item* ( \"```\" w-frage [ \\n]* )?\n", gbnf);
+        Assert.Contains("answer ::= item* ( \"```\" code )? ( \"```\" w-frage [ \\n]* )?\n", gbnf);
     }
 
     [Theory]
@@ -1260,5 +1365,90 @@ public class LongConversationTests
         conversation.Summarize("- Alte Notiz.", 2);
         Assert.Equal("- Alte Notiz.\n- Der Nutzer fragte: Frage 1: Erzähl mir etwas über das Thema Nummer 1, gern ausführlich und mit Beispielen dazu.",
             LlmBackend.PlainSummary(conversation, 4));
+    }
+}
+
+public class AnswerGrammarMatchTests
+{
+    private static readonly GbnfMatcher Grammar = new(AnswerGrammar.Build());
+
+    /// <summary>Die Antworten von Max aus den Trainingsbeispielen (ohne Werkzeug-Aufrufe), wie build_dataset.py sie liest.</summary>
+    public static IEnumerable<(string Name, string Answer)> TrainingAnswers()
+    {
+        foreach (var file in Directory.GetFiles(AudioTests.RepoFile("training/beispiele"), "*.txt").Order())
+        {
+            string? name = null, role = null;
+            var lines = new List<string>();
+            IEnumerable<(string, string)> Flush()
+            {
+                var text = string.Join('\n', lines).Trim('\n');
+                if (role == "max" && !text.StartsWith("```werkzeug", StringComparison.Ordinal))
+                    yield return ($"{Path.GetFileNameWithoutExtension(file)}/{name}", text);
+            }
+            foreach (var line in File.ReadAllLines(file))
+            {
+                if (line.StartsWith("=== ", StringComparison.Ordinal) || line.Trim() is "@nutzer" or "@max" or "@denken" or "@ergebnis" or "@gedaechtnis")
+                {
+                    foreach (var answer in Flush())
+                        yield return answer;
+                    if (line.StartsWith("=== ", StringComparison.Ordinal))
+                    {
+                        name = line[4..].Trim();
+                        role = null;
+                    }
+                    else
+                    {
+                        role = line.Trim()[1..];
+                    }
+                    lines.Clear();
+                }
+                else if (role is not null)
+                {
+                    lines.Add(line);
+                }
+            }
+            foreach (var answer in Flush())
+                yield return answer;
+        }
+    }
+
+    [Theory]
+    [InlineData("Hallo {rot}Welt{/rot}, mit `Code` im Satz.")]
+    [InlineData("Hier:\n```bash\necho hi\n```\nDanach.")]
+    [InlineData("```python\nprint(1)\n```")]                                    // Code ganz am Ende, ohne Zeilenumbruch danach
+    [InlineData("```python\nprint(1)\n```\n")]
+    [InlineData("Text\n```balken\nA: 1\nB: 2\n```\nDanach mit\n```bash\nls\n```")]
+    [InlineData("```balken\nA: 1\nB: 2\n```")]
+    [InlineData("Fertig.\n\n```frage\nFrage: Was nun?\n- Plaudern\n- Arbeiten\n```")]
+    [InlineData("```balken\nA: 1\n```\n```frage\nFrage: Was nun?\n- Mehr\n- Weniger\n```")]
+    public void Grammar_Accepts(string answer) => Assert.True(Grammar.Accepts(answer));
+
+    [Theory]
+    [InlineData("Hallo {foo}.")]                                                 // unbekanntes Tag
+    [InlineData("```klingon\nx\n```")]                                           // unbekannte Sprache
+    [InlineData("```balken\nA: 1\n```\n```baum\nx\n```")]                        // zwei Elemente
+    [InlineData("**Die Architektur:**\n\n```bash\n```baum\n```bash\n```fortschritt\nModel: 70-90%\n")]   // Selbsttest 56
+    [InlineData("```bash\n```")]                                                 // leerer Block
+    [InlineData("```text\n```")]
+    [InlineData("```bash\necho hi\n```baum\nx")]                                 // nach dem Schluss-``` weiter in derselben Zeile
+    [InlineData("```balken\nA: 1\n```Danach.")]
+    public void Grammar_Rejects(string answer) => Assert.False(Grammar.Accepts(answer));
+
+    [Fact]
+    public void WithoutWidgets_CodeBlocksFollowTheSameRules()
+    {
+        var grammar = new GbnfMatcher(AnswerGrammar.Build(widgets: false));
+        Assert.True(grammar.Accepts("Text\n```bash\nls\n```\nmehr\n```bash\nls\n```"));
+        Assert.False(grammar.Accepts("```bash\n```baum\n"));
+        Assert.False(grammar.Accepts("```balken\nA: 1\n```"));
+    }
+
+    [Fact]
+    public void EveryTrainingAnswer_FitsTheGrammar()
+    {
+        var answers = TrainingAnswers().ToList();
+        Assert.True(answers.Count > 500, $"{answers.Count} Antworten");
+        var rejected = answers.Where(a => !Grammar.Accepts(a.Answer)).Select(a => a.Name).ToList();
+        Assert.True(rejected.Count == 0, "Passt nicht zur Grammatik: " + string.Join(", ", rejected));
     }
 }

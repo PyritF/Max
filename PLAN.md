@@ -571,6 +571,16 @@ Im Verlauf steht das wie ein normaler Werkzeug-Aufruf. Schlüssel und Zugangsdat
   Angebot weg; ein Block direkt nach einer Frage wird nie als Aufruf ausgeführt. Grundsätzlich gilt: Solche Ticks
   verstärken sich im Verlauf selbst – was der Filter am Ende weglässt, steht auch nicht im Verlauf und steckt nicht
   an. Dauerhaft helfen soll der eigene Adapter (9a), dessen Beispiele so etwas nie zeigen.
+  Selbsttest 56: Alle Werkzeug-Fragen richtig, aber drei Fehler, behoben: (1) Nach einem Kasten wollte das Modell
+  noch einen Baum – ein zweites Element verbietet die Grammatik, also schrieb es „```bash“, „schloss“ den Block mit
+  „```baum“ und lief in eine Schleife aus leeren ```bash-Blöcken. Jetzt hat jeder Code-Block Inhalt, und nach dem
+  schließenden ``` kommt nur ein Zeilenumbruch oder das Ende (geprüft mit einem GBNF-Prüfer in den Tests, an dem
+  auch alle Trainingsantworten vorbeimüssen). (2) Die Schleife stand im Verlauf, danach hatte jede Antwort einen
+  ```bash-Block mit „Farbe: rot“. Bei einer Schleife merkt Max sich nur den Teil davor, und Code-Blöcke ohne Code
+  (nur „Name: Wert“ oder Kommentare) zeigt er, lässt sie aber im Verlauf weg. (3) Zurück vor ein kaputtes Element
+  hieß, den ganzen Verlauf neu zu rechnen – auf der CPU über zehn Minuten für eine Rechenfrage. Jetzt geht es auf
+  den Stand vor der Antwort zurück, und nur die Antwort wird nachgerechnet. Der Lauf selbst war nicht hängen
+  geblieben, nur langsam: Zusammenfassen und Gedächtnis brauchen auf der CPU zusammen rund 45 Minuten.
 
 **Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |

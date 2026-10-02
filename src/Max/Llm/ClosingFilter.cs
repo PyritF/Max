@@ -315,6 +315,51 @@ internal sealed partial class ClosingFilter
     [GeneratedRegex(@"^[a-zäöü]+:\s+\S")]
     private static partial Regex ToolLikeRegex();
 
+    /// <summary>Sprachen, in denen "Name: Wert"-Zeilen kein Code sind (anders als in YAML oder INI).</summary>
+    private static readonly HashSet<string> ScriptLanguages =
+    [
+        "bash", "sh", "shell", "zsh", "powershell", "ps1", "pwsh", "bat", "cmd", "batch", "python", "py",
+        "javascript", "js", "typescript", "ts", "csharp", "cs", "c#", "java", "c", "cpp", "go", "rust", "ruby", "php",
+    ];
+
+    /// <summary>
+    /// Code-Blöcke ohne Code – nur Kommentare oder "Name: Wert"-Zeilen (```bash mit "Farbe: rot", ```python mit
+    /// "# Beispiel: Wien") – lässt Max im Verlauf weg. Das Modell wiederholt, was in seinen früheren Antworten steht: Im
+    /// Selbsttest 56 hatte ab der Mitte jede Antwort so einen Block, im Selbsttest 55 einen "# Beispiel"-Block. Gezeigt
+    /// wird er trotzdem; ein Block mit einem echten Befehl oder einer Zuweisung bleibt immer.
+    /// </summary>
+    internal static string WithoutPseudoCode(string text)
+    {
+        var lines = text.Split('\n').ToList();
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (!lines[i].StartsWith("```", StringComparison.Ordinal) || !ScriptLanguages.Contains(lines[i][3..].Trim().ToLowerInvariant()))
+                continue;
+            var end = lines.FindIndex(i + 1, l => l.StartsWith("```", StringComparison.Ordinal));
+            if (end < 0)
+                break;
+            var body = lines.GetRange(i + 1, end - i - 1).Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
+            if (body.Count == 0 || !body.All(IsCardLine))
+            {
+                i = end;
+                continue;
+            }
+            lines.RemoveRange(i, end - i + 1);
+            while (i < lines.Count && lines[i].Trim().Length == 0 && (i == 0 || lines[i - 1].Trim().Length == 0))
+                lines.RemoveAt(i);
+            i--;
+        }
+        var result = string.Join('\n', lines);
+        return result.Trim().Length == 0 ? text : result;
+    }
+
+    private static bool IsCardLine(string line) =>
+        line.StartsWith('#') || line.StartsWith("//", StringComparison.Ordinal) || line.StartsWith("--", StringComparison.Ordinal)
+        || CardLineRegex().IsMatch(line) && !line.Contains('=');
+
+    [GeneratedRegex(@"^[\p{L}§][\p{L}\p{N} .§-]{0,40}:\s+\S")]
+    private static partial Regex CardLineRegex();
+
     /// <summary>Trennlinien raus, samt einer Leerzeile direkt dahinter.</summary>
     internal static string WithoutRules(string text)
     {

@@ -259,6 +259,7 @@ internal sealed partial class LlmBackend : IChatBackend
         int thinkingTokens = 0, repairs = 0;
         TimeSpan thinkingTime = TimeSpan.Zero, firstToken = TimeSpan.Zero;
         Repair? repair = null;
+        int? loopStart = null;                  // dreht sich die Antwort im Kreis: ab hier wiederholt sie sich
         var genClock = new Stopwatch();
 
         try
@@ -304,6 +305,7 @@ internal sealed partial class LlmBackend : IChatBackend
                 if (answerPhase && text.IndexOfAny(LoopCheckChars) >= 0 && IsLooping(shown.ToString()))
                 {
                     LlmEngine.Log("Antwort wiederholt sich, abgebrochen.");
+                    loopStart = LoopStart(shown.ToString());
                     break;
                 }
 
@@ -346,7 +348,7 @@ internal sealed partial class LlmBackend : IChatBackend
                             answerAll.Clear();
                             answerAll.AddRange(keep);
                             Truncate(answerTokens, Math.Min(answerTokens.Count, keep.Count));
-                            await _model.PrefillAsync([.. prompt, .. head, .. generated], ct);
+                            await RewindAsync(beforeReply, prompt, head, generated, ct);
                             widgets = false;
                             grammar = Grammar(allowTools, colorful, widgets);
                             sampler.Dispose();
@@ -366,7 +368,7 @@ internal sealed partial class LlmBackend : IChatBackend
                     }
                     else
                     {
-                        await _model.PrefillAsync([.. prompt, .. head, .. generated], ct);
+                        await RewindAsync(beforeReply, prompt, head, generated, ct);
                     }
                     if (shown.ToString().Trim().Length == 0)
                     {
@@ -470,7 +472,7 @@ internal sealed partial class LlmBackend : IChatBackend
                             continue;
                         }
                         // Zwischenstand kaputt: alles neu rechnen, Block weglassen.
-                        await _model.PrefillAsync([.. prompt, .. head, .. generated], ct);
+                        await RewindAsync(beforeReply, prompt, head, generated, ct);
                         released = gate.Drop();
                     }
                     else if (widgets && !codeReleased && WithoutElement(answerAll, closed.Name) is { } keep)
@@ -486,7 +488,7 @@ internal sealed partial class LlmBackend : IChatBackend
                         answerAll.Clear();
                         answerAll.AddRange(keep);
                         Truncate(answerTokens, Math.Min(answerTokens.Count, keep.Count));
-                        await _model.PrefillAsync([.. prompt, .. head, .. generated], ct);
+                        await RewindAsync(beforeReply, prompt, head, generated, ct);
                         widgets = false;
                         grammar = Grammar(allowTools, colorful, widgets);
                         sampler.Dispose();
@@ -549,16 +551,30 @@ internal sealed partial class LlmBackend : IChatBackend
             var seconds = genClock.Elapsed.TotalSeconds;
             LastRun = new GenerationStats(prompt.Count + head.Count, reused, generated.Count, thinkingTokens,
                 thinkingTime, firstToken, seconds > 0 ? (generated.Count - 1) / seconds : 0, repairs);
-            Finish(beforeReply, head, generated, shown.ToString(), WantsColors(conversation.Messages));
+            Finish(beforeReply, head, generated, shown.ToString(), loopStart, WantsColors(conversation.Messages));
             beforeReply?.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Den Cache auf Prompt, Kopf und <paramref name="generated"/> bringen, wenn Verworfenes darin steht (ein Element).
+    /// Rekurrente Schichten lassen sich nicht kürzen – also zurück auf den Stand vor der Antwort und nur die Antwort
+    /// nachrechnen. Den ganzen Verlauf neu zu rechnen dauerte auf der CPU über zehn Minuten (Selbsttest 56).
+    /// </summary>
+    private async Task RewindAsync(ModelCheckpoint? beforeReply, IReadOnlyList<int> prompt, IReadOnlyList<int> head, List<int> generated, CancellationToken ct)
+    {
+        if (beforeReply is not null && _model.Restore(beforeReply))
+            await _model.AppendAsync([.. head, .. generated], ct);
+        else
+            await _model.PrefillAsync([.. prompt, .. head, .. generated], ct);
     }
 
     /// <summary>
     /// Nach der Antwort: Den Cache so hinterlassen, wie der Verlauf beim nächsten Mal aussieht.
     /// Zurück vor die Antwort und sie in Verlaufsform (ohne Denk-Block) nachrechnen – im Hintergrund.
     /// </summary>
-    private void Finish(ModelCheckpoint? beforeReply, IReadOnlyList<int> head, List<int> generated, string shown, bool keepColors)
+    /// <param name="loopStart">Ab hier hat sich die Antwort wiederholt – das kommt nicht in den Verlauf, sonst wird die Schleife zum Vorbild.</param>
+    private void Finish(ModelCheckpoint? beforeReply, IReadOnlyList<int> head, List<int> generated, string shown, int? loopStart, bool keepColors)
     {
         if (beforeReply is null)
         {
@@ -571,8 +587,10 @@ internal sealed partial class LlmBackend : IChatBackend
         // Im Verlauf steht, was der Nutzer gesehen hat – ohne verworfene Elemente oder abgebrochene Blöcke.
         // Farb-Tags nur, wenn er Farben wollte: Sonst färbt eine zufällig bunte Antwort alle weiteren mit.
         // Antwortmöglichkeiten nach einer Schlussfrage ("Was willst du machen? / - Plaudern / - Arbeiten") nur zeigen,
-        // nicht merken: Sonst hängt das Modell ab da an jede Antwort so ein Menü aus Text.
-        var remembered = ClosingFilter.WithoutTrailingOptions(keepColors ? shown : ColorTags.Strip(shown));
+        // nicht merken: Sonst hängt das Modell ab da an jede Antwort so ein Menü aus Text. Ebenso Code-Blöcke ohne Code
+        // und eine Schleife: Was in früheren Antworten steht, macht das Modell nach.
+        var kept = loopStart is { } cut ? WithClosedFence(shown[..cut]) : shown;
+        var remembered = ClosingFilter.WithoutPseudoCode(ClosingFilter.WithoutTrailingOptions(keepColors ? kept : ColorTags.Strip(kept)));
         var history = new List<int>([.. _historyStart!, .. _model.Tokenize(remembered), .. _assistantEnd!]);
         if (!_model.Restore(beforeReply))
         {
@@ -860,6 +878,23 @@ internal sealed partial class LlmBackend : IChatBackend
             return false;
         var tail = text[^LoopChars..];
         return tail.Trim().Length > LoopChars / 2 && text.IndexOf(tail, StringComparison.Ordinal) < text.Length - LoopChars;
+    }
+
+    /// <summary>
+    /// Wo sich eine Antwort, die <see cref="IsLooping"/> erkannt hat, zu wiederholen beginnt: beim ersten Vorkommen des
+    /// Endstücks, zurück bis zum Zeilenanfang. Davor steht höchstens noch ein angefangener Durchgang.
+    /// </summary>
+    internal static int LoopStart(string text)
+    {
+        var first = text.IndexOf(text[^LoopChars..], StringComparison.Ordinal);
+        return first <= 0 ? 0 : text.LastIndexOf('\n', first - 1) + 1;
+    }
+
+    /// <summary>Ein abgeschnittener Text mit offenem Code-Block bekommt sein schließendes ```.</summary>
+    internal static string WithClosedFence(string text)
+    {
+        var fences = text.Split('\n').Count(l => l.StartsWith("```", StringComparison.Ordinal));
+        return fences % 2 == 0 ? text : text.TrimEnd('\n') + "\n```\n";
     }
 
     /// <summary>Nach Zeilen- und Satzenden auf Wiederholung prüfen – auch Schleifen ohne Zeilenumbruch fallen so auf.</summary>

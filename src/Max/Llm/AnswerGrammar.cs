@@ -57,16 +57,21 @@ internal static class AnswerGrammar
         if (toolCall is not null)
             Rule("w-werkzeug", toolCall);
         var lead = colorful ? "[ \\n]* \"{verlauf\" ( \":\" grad )? \"}\" " : "";
-        Rule("answer", lead + "item* " + (widgets ? "( \"```\" widget item* )? " : "") + "( \"```\" w-frage [ \\n]* )?");
+        // Nach dem schließenden ``` (Code oder Element) kommt ein Zeilenumbruch – oder die Antwort ist zu Ende. Sonst
+        // "schließt" das Modell einen Block mit "```baum" und schreibt den Namen als Text weiter: Im Selbsttest 56
+        // wurde daraus eine Schleife aus leeren ```bash-Blöcken (ein zweites Element war verboten, bash ging).
+        var tail = widgets ? "( \"```\" code | \"```\" widget ( nl item* ( \"```\" code )? )? )? " : "( \"```\" code )? ";
+        Rule("answer", lead + "item* " + tail + "( \"```\" w-frage [ \\n]* )?");
         Rule("item", "plain | tag | inline-code | fence");
         // Auch kein "}" im Fließtext: Kleine Modelle schließen einen Verlauf sonst mit "Wort}" statt "{/verlauf}".
         Rule("plain", "[^{}`]");
         Rule("tag", "\"{\" ( \"/\"? color | \"verlauf\" ( \":\" grad )? | \"/verlauf\" ) \"}\"");
         Rule("inline-code", "\"`\" [^`\\n]+ \"`\"");
-        Rule("fence", "\"```\" code");
+        Rule("fence", "\"```\" code nl");
         Rule("code", "lang \"\\n\" code-body | plain-lang \"\\n\" plain-body");
-        Rule("code-body", "( [^`] | \"`\" [^`] | \"``\" [^`] )* \"```\"");
-        Rule("plain-body", "( [^`{] | \"{\" [^a-zA-ZÀ-ɏ/`{] | \"`\" [^`{] | \"``\" [^`{] )* \"```\"");
+        // Kein leerer Block: Die erste Zeile hat Inhalt, ``` direkt nach der Sprache geht nicht.
+        Rule("code-body", "( [^`\\n] | \"`\" [^`] | \"``\" [^`] ) ( [^`] | \"`\" [^`] | \"``\" [^`] )* \"```\"");
+        Rule("plain-body", "( [^`{\\n] | \"{\" [^a-zA-ZÀ-ɏ/`{] | \"`\" [^`{] | \"``\" [^`{] ) ( [^`{] | \"{\" [^a-zA-ZÀ-ɏ/`{] | \"`\" [^`{] | \"``\" [^`{] )* \"```\"");
         Rule("lang", Alternatives(CodeLanguages));
         Rule("plain-lang", Alternatives(PlainLanguages));
 
