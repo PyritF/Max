@@ -224,6 +224,8 @@ public class ToolBoxTests
     [InlineData("Der Nutzer fragt, ob ich im Internet suchen kann.", null)]
     [InlineData("Der Nutzer sucht im Netz nach Tipps für Rom.", null)]
     [InlineData("Ich schaue im Internet nach.", "websuche")]
+    [InlineData("Der Preis kann sich ständig ändern, ich suche im Web.", "websuche")]
+    [InlineData("Ich kann im Web nachsehen, wenn er das möchte.", null)]
     public void IntendedTool_OnlyAnnouncedUse(string thought, string? expected)
     {
         using var http = new HttpClient();

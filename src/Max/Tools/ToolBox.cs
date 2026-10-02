@@ -116,7 +116,7 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
     [System.Text.RegularExpressions.GeneratedRegex(@"\b(ich|werde|sollte|muss)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex FirstPersonRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"\b(ob|kann|kannst|könnte|könntest)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(ob|kannst|könntest)\b|\b(kann|könnte)\s+ich\b|\bich\s+(kann|könnte)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex QuestionRegex();
 
     /// <summary>
