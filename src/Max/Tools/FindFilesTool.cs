@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using Max.Tools.Documents;
 
 namespace Max.Tools;
@@ -12,7 +13,7 @@ namespace Max.Tools;
 /// sie dabei heruntergeladen).
 /// </summary>
 /// <param name="home">Wo ohne Angabe gesucht wird – sonst der Benutzerordner.</param>
-internal sealed class FindFilesTool(Func<string> workingDirectory, Func<string>? home = null) : ITool
+internal sealed partial class FindFilesTool(Func<string> workingDirectory, Func<string>? home = null) : ITool
 {
     internal const int MaxHits = 15;
     internal static readonly TimeSpan NameTime = TimeSpan.FromSeconds(20);
@@ -22,12 +23,12 @@ internal sealed class FindFilesTool(Func<string> workingDirectory, Func<string>?
     internal const int MaxEntries = 400_000;
 
     public string Name => "finden";
-    public string? Argument => "Suchbegriffe, optional mit | Ordner";
+    public string? Argument => "Suchbegriffe, optional mit | Ordnerpfad";
     public string Description => "Findet Dateien auf diesem Rechner nach Name und Inhalt (Text, Word, Excel, PDF …) – im Benutzerordner oder im angegebenen Ordner.";
     public string Describe(string argument)
     {
         var (query, folder) = ReadFileTool.Split(argument);
-        return folder.Length > 0 ? $"Suche Dateien: {query} (in {folder})" : $"Suche Dateien: {query}";
+        return folder.Length > 0 ? $"Suche Dateien: {query} (in {Folder(folder)})" : $"Suche Dateien: {query}";
     }
 
     public TimeSpan Timeout => TimeSpan.FromSeconds(60);
@@ -37,9 +38,13 @@ internal sealed class FindFilesTool(Func<string> workingDirectory, Func<string>?
     private string Run(string argument, CancellationToken ct)
     {
         var (query, folder) = ReadFileTool.Split(argument);
-        var root = folder.Length > 0
-            ? ToolPaths.Resolve(folder, workingDirectory())
-            : home?.Invoke() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var root = home?.Invoke() ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (folder.Length > 0)
+        {
+            // "| Ordner: Downloads" – die Beschriftung schreibt das Modell gern mit. Gibt es den Ordner wörtlich, gilt er.
+            var exact = ToolPaths.Resolve(folder, workingDirectory());
+            root = Directory.Exists(exact) ? exact : ToolPaths.Resolve(Folder(folder), workingDirectory());
+        }
         if (ToolPaths.Forbidden(root) is { } reason)
             return reason;
         if (!Directory.Exists(root))
@@ -113,6 +118,17 @@ internal sealed class FindFilesTool(Func<string> workingDirectory, Func<string>?
 
     private static string Line(FileInfo file) =>
         $"{file.FullName} ({ListFolderTool.Size(file.Length)}, geändert {file.LastWriteTime:dd.MM.yyyy})";
+
+    /// <summary>"Ordner: Downloads", "im Ordner Downloads", "Pfad: ." → "Downloads" bzw. "." – ohne die Beschriftung.</summary>
+    internal static string Folder(string folder)
+    {
+        var text = folder.Trim().Trim('"', '„', '“', '\'', '`').Trim();
+        var stripped = FolderLabelRegex().Replace(text, "", 1).Trim().Trim('"', '„', '“', '\'', '`').Trim();
+        return stripped.Length > 0 ? stripped : text;
+    }
+
+    [GeneratedRegex(@"^(?:(?:im|in|unter)\s+(?:dem\s+)?)?(?:ordner|verzeichnis|pfad|folder)\b\s*[:=]?\s*|^in\s*:\s*", RegexOptions.IgnoreCase)]
+    private static partial Regex FolderLabelRegex();
 
     /// <summary>
     /// Die Begriffe der Suche – Dateitypen ("PDF", "Excel", "Fotos") werden zum Filter auf die Endung statt zum

@@ -16,10 +16,13 @@ internal sealed partial class ElementGate
     private readonly StringBuilder _held = new();   // zurückgehaltener Element-Block (Kopfzeile bis jetzt)
     private readonly StringBuilder _body = new();
     private readonly StringBuilder _rest = new();   // Text nach einem geschlossenen Block, bis entschieden ist
+    private readonly StringBuilder _probe = new();  // Kopfzeile eines Code-Blocks mitten in der Antwort, bis die erste Zeile da ist
     private bool _atLineStart = true;
     private bool _holdingLine;
     private string? _element;
     private bool _started;                          // schon etwas Sichtbares durchgelassen?
+    private bool _probing;                          // Code-Block mitten in der Antwort: Ist die erste Zeile ein Aufruf?
+    private bool _inCode;                           // in einem normal gezeigten Code-Block (dessen ``` schließt nur)
 
     /// <summary>
     /// Einen Code-Block ganz am Anfang der Antwort zurückhalten (als <see cref="Tools.ToolCall.MaybeBlockName"/>):
@@ -27,6 +30,13 @@ internal sealed partial class ElementGate
     /// entscheidet das Backend, wenn der Block zu ist – sonst wird er ganz normal als Code gezeigt.
     /// </summary>
     public bool HoldFirstFence { get; init; }
+
+    /// <summary>
+    /// Ist diese Zeile ein Werkzeug-Aufruf ("websuche: Wien")? Dann wird auch ein Code-Block mitten in der Antwort
+    /// zurückgehalten, dessen erste Zeile so aussieht – das Modell kündigt die Suche manchmal erst an ("Ich sehe
+    /// nach.") und schreibt den Aufruf dann in einen "```bash"-Block. Null: nur der erste Block (<see cref="HoldFirstFence"/>).
+    /// </summary>
+    public Func<string, bool>? IsCallLine { get; init; }
 
     /// <summary>Ein vollständiger Element-Block, über den entschieden werden muss (<see cref="Accept"/> oder <see cref="Drop"/>).</summary>
     public (string Name, string Body)? Closed { get; private set; }
@@ -49,6 +59,7 @@ internal sealed partial class ElementGate
         _body.Clear();
         _line.Clear();
         _started = true;
+        _inCode = true;                             // der Block geht als Code weiter
         _atLineStart = output.EndsWith('\n');
         return output;
     }
@@ -100,6 +111,38 @@ internal sealed partial class ElementGate
                 continue;
             }
 
+            if (_probing)
+            {
+                _probe.Append(c);
+                if (c != '\n')
+                {
+                    _line.Append(c);
+                    continue;
+                }
+                var line = _line.ToString();
+                _line.Clear();
+                var content = line.Trim();
+                if (content.Length == 0 || content.Equals(Tools.ToolCall.BlockName, StringComparison.OrdinalIgnoreCase))
+                    continue;                           // noch keine Zeile mit Inhalt
+                _probing = false;
+                var closes = content.StartsWith("```", StringComparison.Ordinal);
+                if (!closes && IsCallLine!(content))
+                {
+                    // Ein Aufruf: zurückhalten wie einen Block am Anfang – das Backend entscheidet, wenn er zu ist.
+                    _element = Tools.ToolCall.MaybeBlockName;
+                    _held.Append(_probe);
+                    _body.Clear().Append(line).Append('\n');
+                    _probe.Clear();
+                    continue;
+                }
+                output.Append(_probe);
+                _probe.Clear();
+                _inCode = !closes;
+                _atLineStart = true;
+                _started = true;
+                continue;
+            }
+
             if (_holdingLine)
             {
                 _line.Append(c);
@@ -129,7 +172,7 @@ internal sealed partial class ElementGate
     /// </summary>
     public bool WouldOpenElement(string text)
     {
-        if (_element is not null || Closed is not null)
+        if (_element is not null || Closed is not null || _probing)
             return false;
         var newline = text.IndexOf('\n');
         if (newline < 0)
@@ -165,14 +208,37 @@ internal sealed partial class ElementGate
         _body.Clear().Append(snapshot.Body);
         _line.Clear().Append(snapshot.Line);
         _rest.Clear();
+        _probe.Clear();
         Closed = null;
         _holdingLine = false;
+        _probing = false;
+        _inCode = false;
         _atLineStart = false;
     }
 
     /// <summary>Am Ende: Offenes zurückgeben. Ein nicht geschlossener Element-Block wird als geschlossen gemeldet.</summary>
     public string Flush()
     {
+        if (_probing)
+        {
+            // Der Block endet ohne Zeilenumbruch nach dem Aufruf ("```bash" / "websuche: Wien") – gilt trotzdem.
+            _probing = false;
+            var content = _line.ToString().Trim();
+            if (content.Length > 0 && !content.StartsWith("```", StringComparison.Ordinal) && IsCallLine!(content))
+            {
+                _element = Tools.ToolCall.MaybeBlockName;
+                _held.Append(_probe).Append(_line);
+                _body.Clear().Append(_line);
+                _probe.Clear();
+                _line.Clear();
+                Closed = (_element, _body.ToString());
+                return "";
+            }
+            var probe = _probe.ToString() + _line;
+            _probe.Clear();
+            _line.Clear();
+            return probe;
+        }
         if (_element is not null && Closed is null)
         {
             // Am Ende fehlt oft nur der Zeilenumbruch nach dem schließenden ``` – das gehört nicht zum Inhalt.
@@ -196,8 +262,11 @@ internal sealed partial class ElementGate
         _body.Clear();
         _line.Clear();
         _rest.Clear();
+        _probe.Clear();
         Closed = null;
         _holdingLine = false;
+        _probing = false;
+        _inCode = false;                            // ein zurückgehaltener Block ist immer ganz (oder ganz weg)
         _atLineStart = true;
         return Push(rest);
     }
@@ -217,14 +286,23 @@ internal sealed partial class ElementGate
             _body.Clear();
             return;
         }
-        if (HoldFirstFence && !_started && line.TrimStart().StartsWith("```", StringComparison.Ordinal))
+        var fence = line.TrimStart().StartsWith("```", StringComparison.Ordinal);
+        if (HoldFirstFence && !_started && fence)
         {
             _element = Tools.ToolCall.MaybeBlockName;
             _held.Append(line);
             _body.Clear();
             return;
         }
+        if (IsCallLine is not null && !_inCode && fence)
+        {
+            _probing = true;                        // erst die erste Zeile abwarten
+            _probe.Append(line);
+            return;
+        }
         output.Append(line);
+        if (fence)
+            _inCode = !_inCode;
         _started |= line.Trim().Length > 0;
     }
 

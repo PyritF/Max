@@ -184,6 +184,20 @@ public class ToolBoxTests
         Assert.DoesNotContain("werkzeug", AnswerGrammar.Gbnf);
     }
 
+    [Theory]
+    [InlineData("websuche: Wien", true)]
+    [InlineData("Rechnen: 2+3", true)]
+    [InlineData("uhrzeit", true)]
+    [InlineData("system: linux", false)]     // YAML, kein Aufruf: system hat keine Angabe
+    [InlineData("rechnen:", false)]
+    [InlineData("print(1)", false)]
+    [InlineData("zaubern: los", false)]
+    public void IsCallLine_KnownNameAndFittingArgument(string line, bool expected)
+    {
+        using var http = new HttpClient();
+        Assert.Equal(expected, ToolBox.CreateDefault(http, () => DateTime.Now, () => ".").IsCallLine(line));
+    }
+
     [Fact]
     public void ToolOnly_Grammar_AllowsNothingButACall()
     {
@@ -202,6 +216,11 @@ public class ToolBoxTests
     [InlineData("Ich sollte keine Werkzeuge verwenden, da es um allgemeines Wissen geht.", null)]
     [InlineData("Ich brauche `websuche` hier nicht, das weiß ich.", null)]
     [InlineData("Ich sollte die Datei lesen und das System verwenden.", null)]
+    // Selbsttest 50: "Websuche" ohne Backticks – geschrieben wurde der Aufruf dann in einem bash-Block.
+    [InlineData("Ich sollte Websuche nutzen, um aktuelle Informationen zu erhalten, da sich Preise ändern können.", "websuche")]
+    [InlineData("Ich sollte zuerst die aktuellen Zahlen recherchieren. Ich werde eine Websuche durchführen.", "websuche")]
+    [InlineData("Der Nutzer fragt nach einem Fakt, den ich nachweislich bestätigen will. Ich suche im Web.", "websuche")]
+    [InlineData("Eine Websuche ist hier nicht nötig, das weiß ich.", null)]
     public void IntendedTool_OnlyAnnouncedUse(string thought, string? expected)
     {
         using var http = new HttpClient();
@@ -273,6 +292,28 @@ public class ToolRoundTests
         Assert.Single(chunks, c => c.IsTool);
         Assert.Equal("Fünf.", Text(chunks).Trim());
         Assert.Equal("```werkzeug\nrechnen: 2+3\n```", conversation.Messages[1].Content);   // im Verlauf immer die richtige Form
+    }
+
+    [Fact]
+    public async Task ToolCall_InACodeBlock_AfterAnAnnouncement_IsRunToo()
+    {
+        // Selbsttest 50: erst angekündigt, dann der Aufruf in einem bash-Block – wurde als Code gezeigt.
+        var (chunks, conversation) = await Run("Ich sehe nach.\n\n", "```bash\n", "rechnen: 2+3\n", "```\n", "Fünf.", null);
+
+        Assert.Single(chunks, c => c.IsTool);
+        Assert.DoesNotContain("```", Text(chunks));
+        Assert.EndsWith("Fünf.", Text(chunks));
+        Assert.Equal("```werkzeug\nrechnen: 2+3\n```", conversation.Messages[1].Content);
+    }
+
+    [Fact]
+    public async Task RealCode_AfterSomeText_IsShownAsCode()
+    {
+        var (chunks, conversation) = await Run("So geht es:\n\n", "```bash\n", "ls -la\n", "```\n", "Fertig.", null);
+
+        Assert.DoesNotContain(chunks, c => c.IsTool);
+        Assert.Equal("So geht es:\n\n```bash\nls -la\n```\nFertig.", Text(chunks));
+        Assert.Single(conversation.Messages);
     }
 
     [Fact]
@@ -544,6 +585,29 @@ public sealed class FindFilesTests : IDisposable
         Assert.Contains("Nichts gefunden", await Find("Zebrastreifen"));
         Assert.Contains("keine brauchbaren Suchbegriffe", await Find("die das"));
         Assert.Contains("gibt es nicht", await Find("Hallo | Fehlt"));
+    }
+
+    [Theory]
+    // Selbsttest 50: "finden: mietvertrag | Ordner: ." – gesucht wurde in einem Ordner namens "Ordner: .".
+    [InlineData("Hallo | Ordner: Projekt")]
+    [InlineData("Hallo | im Ordner Projekt")]
+    [InlineData("Hallo | Pfad: \"Projekt\"")]
+    public async Task FolderLabel_IsIgnored(string argument)
+    {
+        Put("Projekt/readme.md", "Hallo");
+
+        Assert.Contains("readme.md", await Find(argument));
+        Assert.Equal("Suche Dateien: Hallo (in Projekt)", new FindFilesTool(() => _home).Describe(argument));
+    }
+
+    [Fact]
+    public async Task FolderLabel_RealFolderOfThatName_Wins()
+    {
+        Put("Ordner Projekt/readme.md", "Hallo");
+
+        Assert.Contains("readme.md", await Find("Hallo | Ordner Projekt"));
+        Assert.Equal(".", FindFilesTool.Folder("Ordner: ."));
+        Assert.Equal("Ordner", FindFilesTool.Folder("Ordner"));
     }
 }
 

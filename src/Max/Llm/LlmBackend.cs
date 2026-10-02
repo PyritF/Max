@@ -229,7 +229,7 @@ internal sealed partial class LlmBackend : IChatBackend
         var splitter = new ThinkSplitter(startInThinking: think);
         if (think)
             yield return new ReplyChunk(_template.ThinkingSeed, IsThinking: true);
-        var gate = new ElementGate { HoldFirstFence = allowTools };
+        var gate = new ElementGate { HoldFirstFence = allowTools, IsCallLine = allowTools ? _options.Tools!.IsCallLine : null };
         var closing = new ClosingFilter();
         var decoder = _model.CreateDecoder();
         var answerPhase = !think;

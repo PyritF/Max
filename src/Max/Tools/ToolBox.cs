@@ -25,6 +25,19 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
 
     public ITool? Find(string name) => _tools.GetValueOrDefault(name);
 
+    /// <summary>
+    /// Sieht die Zeile wie ein Aufruf aus ("websuche: Wien", "uhrzeit")? Ein bekannter Name, und die Angabe passt:
+    /// Werkzeuge ohne Angabe stehen allein, die anderen brauchen eine. "system: linux" in YAML ist also keiner.
+    /// </summary>
+    public bool IsCallLine(string line)
+    {
+        if (ToolCall.Parse(line) is not { } call || Find(call.Name) is not { } tool)
+            return false;
+        return tool.Argument is null
+            ? !line.Contains(':')
+            : tool.ArgumentOptional || call.Argument.Length > 0;
+    }
+
     /// <summary>Die Standard-Werkzeuge – alle nur lesend.</summary>
     /// <param name="vision">Bildverständnis, sobald es bereitsteht (sonst null) – ohne Angabe gibt es kein <c>bild</c>.</param>
     /// <param name="hearing">Spracherkennung, sobald sie bereitsteht – ohne Angabe gibt es kein <c>audio</c>.</param>
@@ -66,7 +79,12 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
     {
         foreach (var sentence in SentenceRegex().Split(thought))
         {
-            if (!IntentRegex().IsMatch(sentence) || NegationRegex().IsMatch(sentence))
+            if (NegationRegex().IsMatch(sentence))
+                continue;
+            // "Ich werde eine Websuche durchführen", "Ich suche im Web" – auch ohne den Namen in Backticks.
+            if (WebIntentRegex().IsMatch(sentence) && Find("websuche") is not null)
+                return "websuche";
+            if (!IntentRegex().IsMatch(sentence))
                 continue;
             foreach (var tool in _tools.Values)
             {
@@ -86,6 +104,14 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\b(nicht|kein\w*|ohne|statt)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex NegationRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"\bWebsuche\b.*\b(durchführen|durchzuführen|machen|starten|nutzen|verwenden|benutzen|brauche)\b" +
+        @"|\b(werde|sollte|muss|möchte|will)\b.*\bWebsuche\b" +
+        @"|\b(suche|schaue|sehe|recherchiere)\b.*\bim\s+(Web|Internet|Netz)\b" +
+        @"|\bim\s+(Web|Internet|Netz)\s+(suchen|nachsehen|nachschauen|nachzusehen|nachzuschauen|recherchieren|nachschlagen)\b",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex WebIntentRegex();
 
     /// <summary>
     /// GBNF: der Inhalt eines <c>```werkzeug</c>-Blocks – genau ein Aufruf, ein bekannter Name, bei Bedarf die Angabe.

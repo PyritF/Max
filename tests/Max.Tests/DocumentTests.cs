@@ -218,6 +218,18 @@ public sealed class DocumentTests : IDisposable
         Assert.DoesNotContain("lässt sich nicht lesen", notYet);
     }
 
+    [Fact]
+    public void ScannedPdf_JpegBehindAnotherFilter_IsUnpacked()
+    {
+        // Selbsttest 50: Die Rechnung (wie von reportlab) hat [/ASCII85Decode /DCTDecode] – das JPEG kam nie beim Bild-Zusatz an.
+        var image = PdfScan.PageImage(AudioTests.RepoFile("tests/rechnung-scan.pdf"), 1);
+
+        Assert.NotNull(image);
+        Assert.Equal(".jpg", image.Value.Extension);
+        Assert.Equal([0xFF, 0xD8], image.Value.Bytes[..2]);
+        Assert.True(image.Value.Bytes.Length > 50_000);
+    }
+
     private sealed class ReadingVision : IVision
     {
         public List<string> Seen { get; } = [];

@@ -831,12 +831,18 @@ public class ClosingFilterTests
     [InlineData("Die Blätter färben sich.\n\nPasst das zu deinem Herbst?")]
     [InlineData("Die Blätter färben sich.\n\nWas dich am meisten interessiert?")]
     [InlineData("Die Blätter färben sich.\n\n{verlauf:gelb-rot}Klingt das nach dir?{/verlauf}")]
+    // Selbsttest 50:
+    [InlineData("Die Blätter färben sich.\n\nNoch etwas dazu?")]
+    [InlineData("Die Blätter färben sich.\n\nNoch eine Frage dazu?")]
+    [InlineData("Die Blätter färben sich.\n\nGibt es etwas, das du berechnen lassen möchtest?")]
+    [InlineData("Die Blätter färben sich.\n\nHast du spezielle Anforderungen an deine Projektstruktur?")]
     public void CheckQuestionsAtTheEnd_AreDropped(string text) => Assert.Equal("Die Blätter färben sich.\n\n", Run([.. text.Select(c => c.ToString())]));
 
     [Theory]
     [InlineData("Der Regen ticktackt.\n\nUnd bei dir? Bleibst du drinnen?")]
     [InlineData("Die Liste ist lang.\n\nWas davon teuer ist, steht dabei.")]
     [InlineData("Die Liste ist lang.\n\nPasst das nicht, nimm die andere.")]
+    [InlineData("Die Liste ist lang.\n\nNoch etwas: Die Preise gelten nur bis Freitag.")]
     public void RealQuestionsAndStatements_Stay(string text) => Assert.Equal(text, Run([.. text.Select(c => c.ToString())]));
 
     [Fact]
@@ -925,6 +931,48 @@ public class ElementGateTests
         gate.Push("```bal");
         Assert.True(gate.WouldOpenElement("ken\nA"));
         Assert.False(new ElementGate().WouldOpenElement("```python\n"));
+    }
+
+    [Fact]
+    public void CallInACodeBlock_AfterSomeText_IsHeldToo()
+    {
+        // Selbsttest 50: "Ich werde mir das genauer ansehen …" und dann der Aufruf in einem bash-Block.
+        var gate = new ElementGate { IsCallLine = l => l.StartsWith("websuche:") };
+        Assert.Equal("Ich sehe nach.\n\n", gate.Push("Ich sehe nach.\n\n```bash\nwebsuche: Wien\n```\n"));
+        Assert.Equal((Max.Tools.ToolCall.MaybeBlockName, "websuche: Wien\n"), gate.Closed);
+    }
+
+    [Fact]
+    public void CallInACodeBlock_EndingWithoutNewline_IsHeldToo()
+    {
+        var gate = new ElementGate { IsCallLine = l => l.StartsWith("websuche:") };
+        Assert.Equal("Ich sehe nach.\n", gate.Push("Ich sehe nach.\n```bash\nwebsuche: Wien"));
+        Assert.Equal("", gate.Flush());
+        Assert.Equal((Max.Tools.ToolCall.MaybeBlockName, "websuche: Wien"), gate.Closed);
+    }
+
+    [Fact]
+    public void RealCode_AfterSomeText_FlowsAsCode()
+    {
+        var gate = new ElementGate { IsCallLine = l => l.StartsWith("websuche:") };
+        var text = "Zum Beispiel:\n\n```bash\nls -la\n```\nDanach:\n```bash\n\nwebsuche: ist hier nur Text\n```\nFertig.";
+        var output = gate.Push("Zum Beispiel:\n\n```bash\nls -la\n```\nDanach:\n");
+        Assert.Null(gate.Closed);
+        Assert.Equal("Zum Beispiel:\n\n```bash\nls -la\n```\nDanach:\n", output);
+        // Der zweite Block ist ein Aufruf – nach dem schließenden ``` des ersten wird wieder geprüft.
+        Assert.Equal("", gate.Push("```bash\n\nwebsuche: ist hier nur Text\n```\nFertig."));
+        Assert.NotNull(gate.Closed);
+        Assert.Equal("```bash\n\nwebsuche: ist hier nur Text\n```\nFertig.", gate.Accept());
+        Assert.Equal(text, output + "```bash\n\nwebsuche: ist hier nur Text\n```\nFertig.");
+    }
+
+    [Fact]
+    public void ClosingFenceOfShownCode_IsNotMistakenForANewBlock()
+    {
+        // Wäre das schließende ``` der Anfang eines neuen Blocks, würde "weiter" als Aufruf zurückgehalten.
+        var gate = new ElementGate { IsCallLine = l => l == "weiter" };
+        Assert.Equal("Text\n```python\nx = 1\n```\nweiter\n", gate.Push("Text\n```python\nx = 1\n```\nweiter\n"));
+        Assert.Null(gate.Closed);
     }
 
     [Fact]

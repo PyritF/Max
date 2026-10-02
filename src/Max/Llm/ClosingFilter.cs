@@ -30,6 +30,7 @@ internal sealed class ClosingFilter
         "Passt das", "Passt dir", "Klingt das", "Wie klingt das", "Hilft dir das", "Hilft das", "Reicht das", "Genügt das",
         "Was dich", "Was interessiert dich", "Interessiert dich", "Welche davon", "Welcher davon", "Welches davon",
         "Was davon", "Worauf hast du", "Wofür interessierst du",
+        "Noch etwas", "Noch eine Frage", "Noch Fragen", "Gibt es etwas", "Hast du spezielle", "Hast du besondere", "Hast du bestimmte",
     ];
 
     private readonly StringBuilder _line = new();   // Anfang einer Absatz-Zeile, noch nicht entschieden

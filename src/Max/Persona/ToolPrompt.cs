@@ -25,7 +25,8 @@ internal static class ToolPrompt
         - Fragen zu Dateien, Ordnern oder Code auf diesem Rechner: `ordner`, `datei`. Relative Pfade gelten ab dem Ordner,
           in dem du gestartet wurdest.
         - Wo eine Datei liegt („Wo ist meine Steuererklärung?“): `finden: <Begriffe>` sucht im Benutzerordner nach Name und
-          Inhalt, `finden: <Begriffe> | <Ordner>` gezielt in einem Ordner. Danach mit `datei` lesen.
+          Inhalt, `finden: <Begriffe> | <Ordnerpfad>` gezielt in einem Ordner (z. B. `finden: Rechnung | ~/Downloads`).
+          Danach mit `datei` lesen.
         - Lange Dateien und Webseiten zeigen erst den Anfang. Steht die Antwort nicht darin, such gezielt
           (`datei: vertrag.pdf | Kündigungsfrist`) oder lies eine bestimmte Stelle (`| Seite 7`, `| Zeile 120`, `| Folie 3`,
           `| Blatt Umsatz`). Am Ende des Ergebnisses steht, wie es weitergeht.

@@ -1,5 +1,7 @@
 using Max.Llm;
 using UglyToad.PdfPig;
+using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.Filters;
 
 namespace Max.Tools.Documents;
 
@@ -46,9 +48,35 @@ internal static class PdfScan
         var image = pdf.GetPage(pageNumber).GetImages().MaxBy(i => i.BoundingBox.Width * i.BoundingBox.Height);
         if (image is null)
             return null;
-        var raw = image.RawMemory.Span;
-        if (raw.Length > 3 && raw[0] == 0xFF && raw[1] == 0xD8)
-            return (raw.ToArray(), ".jpg");
+        if (Jpeg(image) is { } jpeg)
+            return (jpeg, ".jpg");
         return image.TryGetPng(out var png) ? (png, ".png") : null;
     }
+
+    /// <summary>
+    /// Die JPEG-Daten – auch wenn vor dem JPEG noch Filter stehen ([/ASCII85Decode /DCTDecode], [/FlateDecode
+    /// /DCTDecode]): Die packt Max aus, das JPEG selbst liest dann der Bild-Zusatz. Null, wenn es kein JPEG ist.
+    /// </summary>
+    private static byte[]? Jpeg(IPdfImage image)
+    {
+        var raw = image.RawMemory;
+        if (IsJpeg(raw.Span))
+            return raw.ToArray();
+        try
+        {
+            var filters = DefaultFilterProvider.Instance.GetFilters(image.ImageDictionary);
+            if (filters.Count < 2 || filters[^1] is not DctDecodeFilter)
+                return null;
+            Memory<byte> data = raw.ToArray();
+            for (var i = 0; i < filters.Count - 1; i++)
+                data = filters[i].Decode(data, image.ImageDictionary, DefaultFilterProvider.Instance, i);
+            return IsJpeg(data.Span) ? data.ToArray() : null;
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsJpeg(ReadOnlySpan<byte> bytes) => bytes.Length > 3 && bytes[0] == 0xFF && bytes[1] == 0xD8;
 }
