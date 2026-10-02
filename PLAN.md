@@ -545,6 +545,18 @@ Im Verlauf steht das wie ein normaler Werkzeug-Aufruf. Schlüssel und Zugangsdat
   zurückgehalten, wenn seine erste Zeile ein Aufruf ist, und „Ich werde eine Websuche durchführen“ zählt beim
   Nachdenken als Entscheidung. (2) Die eingescannte Rechnung hatte ihr JPEG hinter einem ASCII85-Filter – wird jetzt
   ausgepackt. (3) „finden: … | Ordner: .“ – Beschriftungen fallen weg. (4) „Noch etwas dazu?“ am Ende fällt weg.
+  Selbsttest 51: Scan (152 €), Sprachnachricht über Whisper („Donnerstag ab 16 Uhr“), Kaution, Excel und die
+  Zusammenfassung des Gesprächsanfangs liefen. Drei Fehler, behoben: (1) Ab der Mitte hängte das Modell an jede
+  Antwort eine Linie („---“) – dahinter blieb die Floskel stehen, und die Linie im Verlauf steckte die nächsten
+  Antworten an. Trennlinien am Ende fallen jetzt weg, die Floskel davor auch. (2) Werkzeuge angekündigt („Ich muss
+  die Wetter-Werkzeugfunktion aufrufen“), aber nicht benutzt – das Wetter wurde erfunden. Jetzt zählen auch solche
+  Sätze und ein allgemeines „Ich sollte ein Werkzeug aufrufen“ (dann wählt das Modell); verlangt schon die Frage ein
+  Werkzeug („Schau bitte im Web nach“, „123456789 mal 987654321“), beginnt die Antwort immer mit dem Aufruf.
+  (3) „Wohnort oder Reiseziel Wien“ – das „mir“ aus „Gib mir eine Übersicht“ galt als Aussage über sich; jetzt wird
+  Satz für Satz geprüft. Das Zusammenfassen dauerte auf der CPU 712 s: Danach steht die Notiz im System-Prompt, und
+  der Rest des Verlaufs wird einmal neu gerechnet – mit Grafikkarte Sekunden.
+  Windows (Unit-Tests): M4A über Media Foundation läuft. Eine kaputte MP3 blieb geöffnet und ließ sich nicht mehr
+  löschen – jetzt öffnet Max die Datei selbst und schließt sie immer.
 
 **Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |
