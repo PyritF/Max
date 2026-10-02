@@ -123,7 +123,10 @@ internal static class AudioDecoder
 
     private static void Mp3(string path, Resampler output, CancellationToken ct)
     {
-        using var mp3 = new NLayer.MpegFile(path);
+        // Die Datei selbst öffnen: Wirft der Decoder schon beim Öffnen (kaputte Datei), bliebe sie sonst offen –
+        // unter Windows lässt sie sich dann nicht einmal mehr löschen.
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var mp3 = new NLayer.MpegFile(stream);
         output.Start(mp3.SampleRate, mp3.Channels);
         var buffer = new float[mp3.Channels * 8192];
         while (!output.Full && mp3.ReadSamples(buffer, 0, buffer.Length) is var read and > 0)
@@ -167,7 +170,8 @@ internal static class AudioDecoder
         }
         if (text.Contains("vorbis", StringComparison.Ordinal))
         {
-            using var vorbis = new NVorbis.VorbisReader(path);
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var vorbis = new NVorbis.VorbisReader(stream, closeOnDispose: false);
             output.Start(vorbis.SampleRate, vorbis.Channels);
             var buffer = new float[vorbis.Channels * 8192];
             while (!output.Full && vorbis.ReadSamples(buffer, 0, buffer.Length) is var read and > 0)

@@ -16,7 +16,7 @@ public sealed class AudioTests : IDisposable
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Max.slnx")))
             dir = dir.Parent;
-        return Path.Combine(dir!.FullName, relative);
+        return Path.GetFullPath(Path.Combine(dir!.FullName, relative));     // unter Windows mit \ statt /
     }
 
     private static double Rms(float[] samples) => Math.Sqrt(samples.Sum(s => (double)s * s) / samples.Length);
@@ -182,6 +182,19 @@ public sealed class AudioTests : IDisposable
         Assert.Contains("ließ sich nicht abspielen", await tool.RunAsync("kaputt.mp3", CancellationToken.None));
         Assert.Contains("noch nicht auf diesem Rechner", await new AudioTool(() => null, () => _dir).RunAsync(RepoFile("tests/ton.mp3"), CancellationToken.None));
         Assert.Contains("dafür gibt es \"audio\"", await new ReadFileTool(() => _dir).RunAsync(RepoFile("tests/ton.mp3"), CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData("kaputt.mp3", "kein mp3")]
+    [InlineData("kaputt.ogg", "OggS vorbis, aber sonst nichts davon")]
+    public async Task BrokenRecording_IsClosedAgain(string name, string content)
+    {
+        // Selbsttest unter Windows: Nach einer kaputten MP3 blieb die Datei offen und ließ sich nicht mehr löschen.
+        var path = Path.Combine(_dir, name);
+        await File.WriteAllTextAsync(path, content);
+
+        Assert.ThrowsAny<Exception>(() => AudioDecoder.Load(path, 60, CancellationToken.None));
+        using var exclusive = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
     }
 
     [Fact]
