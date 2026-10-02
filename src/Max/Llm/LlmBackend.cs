@@ -230,7 +230,10 @@ internal sealed partial class LlmBackend : IChatBackend
         if (think)
             yield return new ReplyChunk(_template.ThinkingSeed, IsThinking: true);
         var gate = new ElementGate { HoldFirstFence = allowTools, IsCallLine = allowTools ? _options.Tools!.IsCallLine : null };
-        var closing = new ClosingFilter();
+        // Was frühere Antworten am Schluss sagten – kommt es wieder, ist es eine Angewohnheit (siehe ClosingFilter).
+        var closing = new ClosingFilter(conversation.Messages
+            .Where(m => m.Role == ChatRole.Assistant && !m.Content.StartsWith("```" + Tools.ToolCall.BlockName, StringComparison.Ordinal))
+            .Select(m => ClosingFilter.ClosingParagraph(m.Content)).OfType<string>().TakeLast(12));
         var decoder = _model.CreateDecoder();
         var answerPhase = !think;
         // Anfangs darf das Nachdenken nicht gleich wieder enden – sonst denkt das Modell in der Antwort weiter.

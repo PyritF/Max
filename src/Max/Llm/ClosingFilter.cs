@@ -12,6 +12,8 @@ namespace Max.Llm;
 /// Eine Trennlinie ("---") ganz am Ende fällt weg – sonst steht nach der Floskel noch etwas, sie bliebe stehen, und
 /// das Modell hängt die Linie im Gespräch bald an jede Antwort (Selbsttest 51). Folgt einer Floskel nur noch die
 /// Quelle ("Quelle: …"), fällt die Floskel weg, die Quelle bleibt.
+/// Gelernte Floskeln: Beginnt der Schluss wie der Schluss einer früheren Antwort und ist sein erster Satz derselbe, ist
+/// es eine Angewohnheit, kein Inhalt – Selbsttest 53 hängte "Und schwarz getrunken? …" an jede Antwort.
 /// </summary>
 internal sealed partial class ClosingFilter
 {
@@ -47,6 +49,72 @@ internal sealed partial class ClosingFilter
     private bool _inFence;
     private bool _anyShown;
     private bool _ruleOnly;                         // mitten im Absatz: nur prüfen, ob die Zeile eine Trennlinie wird
+    private bool _heldLearned;                      // zurückgehalten, weil der Absatz wie ein früherer Schluss beginnt
+    private readonly List<string> _learned;         // erste Sätze früherer Schlussabsätze (klein, nur Wörter)
+
+    /// <param name="earlierClosings">Die Schlussabsätze früherer Antworten (siehe <see cref="ClosingParagraph"/>).</param>
+    public ClosingFilter(IEnumerable<string>? earlierClosings = null)
+    {
+        _learned = (earlierClosings ?? []).Select(FirstSentence).Where(s => s.Split(' ').Length >= 3).Distinct().ToList();
+    }
+
+    /// <summary>
+    /// Der Schlussabsatz einer Antwort – ein kurzer Absatz ohne Code, Liste oder Tabelle hinter mindestens einem
+    /// anderen. Null, wenn es keinen gibt.
+    /// </summary>
+    internal static string? ClosingParagraph(string answer)
+    {
+        var text = WithoutTrailingRules(answer.ReplaceLineEndings("\n").TrimEnd()).TrimEnd();
+        var paragraphs = text.Split("\n\n", StringSplitOptions.RemoveEmptyEntries);
+        if (paragraphs.Length < 2)
+            return null;
+        var last = paragraphs[^1].Trim();
+        return last.Length <= 240 && !last.Contains('\n') && !last.StartsWith("```", StringComparison.Ordinal)
+            && !last.StartsWith('|') && !last.StartsWith("- ", StringComparison.Ordinal) ? last : null;
+    }
+
+    /// <summary>Der erste Satz ohne Farb-Tags und Satzzeichen, klein: "Und schwarz getrunken? Ich …" → "und schwarz getrunken".</summary>
+    internal static string FirstSentence(string paragraph)
+    {
+        var text = Max.Ui.ColorTags.Strip(paragraph);
+        var end = text.IndexOfAny(['.', '?', '!', ':']);
+        return Words(end > 0 ? text[..end] : text);
+    }
+
+    private static string Words(string text)
+    {
+        var builder = new StringBuilder(text.Length);
+        foreach (var c in text.ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(c))
+                builder.Append(c);
+            else if (builder.Length > 0 && builder[^1] != ' ')
+                builder.Append(' ');
+        }
+        return builder.ToString().Trim();
+    }
+
+    /// <summary>Beginnt der Absatz wie der Schluss einer früheren Antwort (die ersten drei Wörter)? null = noch zu kurz.</summary>
+    private bool? StartsLikeLearned(string line, bool complete)
+    {
+        var text = line.TrimStart();
+        if (text.StartsWith('{') && text.IndexOf('}') < 0)
+            return complete ? false : null;                 // erst das Farb-Tag abwarten
+        var start = Words(Max.Ui.ColorTags.Strip(text));
+        var undecided = false;
+        foreach (var learned in _learned)
+        {
+            var prefix = string.Join(' ', learned.Split(' ').Take(3));
+            if (start.StartsWith(prefix, StringComparison.Ordinal) && (start.Length == prefix.Length || start[prefix.Length] == ' '))
+            {
+                _heldLearned = true;
+                return true;
+            }
+            if (!complete && prefix.StartsWith(start, StringComparison.Ordinal))
+                undecided = true;
+        }
+        return undecided ? null : false;
+    }
 
     public string Push(string text)
     {
@@ -75,6 +143,13 @@ internal sealed partial class ClosingFilter
             var held = WithoutTrailingRules(_held.ToString());
             if (held.Trim().Length == 0)
                 LlmEngine.Log("Trennlinie am Ende weggelassen.");
+            else if (_heldLearned)
+            {
+                if (_anyShown && _learned.Contains(FirstSentence(held)))
+                    LlmEngine.Log($"Wiederholten Schluss weggelassen: {held.Trim().ReplaceLineEndings(" ")}");
+                else
+                    output.Append(held);
+            }
             else if (!_anyShown || StartsWithPhrase(held, complete: true, Phrases) != true && !held.Contains('?'))
                 output.Append(held);
             else
@@ -82,6 +157,7 @@ internal sealed partial class ClosingFilter
             _held.Clear();
         }
         _holding = false;
+        _heldLearned = false;
         return output.ToString();
     }
 
@@ -196,6 +272,7 @@ internal sealed partial class ClosingFilter
 
     private void Release(StringBuilder output)
     {
+        _heldLearned = false;
         if (_held.Length == 0)
         {
             _holding = false;
@@ -276,7 +353,10 @@ internal sealed partial class ClosingFilter
             if (text.StartsWith("- ", StringComparison.Ordinal) || text.StartsWith("* ", StringComparison.Ordinal) || text.StartsWith("• ", StringComparison.Ordinal))
                 return true;
         }
-        return StartsWithPhrase(line, complete);
+        var phrase = StartsWithPhrase(line, complete);
+        if (phrase != false || _holding || _learned.Count == 0)
+            return phrase;
+        return StartsLikeLearned(line, complete);
     }
 
     /// <summary>true = Floskel, false = sicher keine, null = noch zu kurz, um es zu sagen.</summary>

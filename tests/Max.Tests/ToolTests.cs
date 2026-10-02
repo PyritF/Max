@@ -363,6 +363,23 @@ public class ToolRoundTests
     }
 
     [Fact]
+    public async Task ClosingOfAnEarlierAnswer_IsNotRepeated()
+    {
+        var model = new FakeModel("Rot.\n\n", "Und schwarz getrunken? Ich frage mich, ob das hilft.", null);
+        var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => false));
+        var conversation = new Conversation();
+        conversation.AddUser("Wie hoch ist die Kaution?");
+        conversation.AddAssistant("2.380 €.\n\nUnd schwarz getrunken? Ich frage mich, ob das dir hilft, die Zahlen besser zu behalten.");
+        conversation.AddUser("Welche Farbe hat der Kreis?");
+
+        var chunks = new List<ReplyChunk>();
+        await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
+            chunks.Add(chunk);
+
+        Assert.Equal("Rot.\n\n", string.Concat(chunks.Select(c => c.Text)));
+    }
+
+    [Fact]
     public async Task ToolCall_EndingWithoutNewline_IsRunToo()
     {
         // So endet das echte Modell: "```" und dann sofort Schluss.

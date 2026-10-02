@@ -22,7 +22,8 @@ on:
 jobs:
   selftest:
     runs-on: ${{ inputs.os || 'ubuntu-latest' }}
-    timeout-minutes: 120
+    # Windows rechnet auf der CPU langsamer: Lauf 53 brauchte mehr als zwei Stunden.
+    timeout-minutes: 180
     env:
       MAX_HOME: ${{ github.workspace }}/.maxhome
       # Die Test-Rechner auf GitHub haben keine Grafikkarte.

@@ -107,6 +107,7 @@ internal static class SelfTest
         var result = 0;
         var colorful = false;
         int withQuestion = 0, withBox = 0;
+        var closings = new HashSet<string>();                   // erste Sätze der bisherigen Schlussabsätze
 
         foreach (var question in Questions)
         {
@@ -204,6 +205,11 @@ internal static class SelfTest
             var lastParagraph = reply.TrimEnd().Split("\n\n")[^1];
             if (reply.Contains("\n\n") && Max.Llm.ClosingFilter.StartsWithPhrase(lastParagraph, complete: true) == true)
                 output.WriteLine($"WARNUNG: Floskel am Ende (\"{Shorten(lastParagraph.Trim(), 60)}\").");
+            if (Max.Llm.ClosingFilter.IsRule(reply.TrimEnd().Split('\n')[^1]))
+                output.WriteLine("WARNUNG: Trennlinie am Ende.");
+            if (Max.Llm.ClosingFilter.ClosingParagraph(reply) is { } closingParagraph
+                && Max.Llm.ClosingFilter.FirstSentence(closingParagraph) is { Length: > 0 } closingSentence && !closings.Add(closingSentence))
+                output.WriteLine($"WARNUNG: derselbe Schluss wie in einer früheren Antwort (\"{Shorten(closingParagraph, 60)}\").");
             if (Forbidden.FirstOrDefault(name => reply.Contains(name, StringComparison.OrdinalIgnoreCase)) is { } leaked)
             {
                 output.WriteLine($"FEHLER: Max nennt \"{leaked}\".");

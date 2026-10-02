@@ -873,6 +873,37 @@ public class ClosingFilterTests
         Assert.Equal(text, Run([.. text.Select(c => c.ToString())]));
     }
 
+    private const string EarlierClosing = "Und schwarz getrunken? Ich frage mich, ob das dir hilft, die Zahlen besser zu behalten.";
+
+    private static string RunLearned(params string[] chunks)
+    {
+        var filter = new ClosingFilter([EarlierClosing]);
+        return string.Concat(chunks.Select(filter.Push)) + filter.Flush();
+    }
+
+    [Theory]
+    // Selbsttest 53: derselbe Schluss hinter jeder Antwort – ab dem zweiten Mal fällt er weg.
+    [InlineData("Die Kaution beträgt 2.380 €.\n\nUnd schwarz getrunken? Ich frage mich, ob das dir hilft, die Fakten besser zu behalten.", "Die Kaution beträgt 2.380 €.\n\n")]
+    [InlineData("Der Kreis ist **rot**.\n\n{verlauf:grau-blau}Und schwarz getrunken?{/verlauf} Ich frage mich, ob das hilft.", "Der Kreis ist **rot**.\n\n")]
+    [InlineData("Der Kreis ist rot.\n\nUnd schwarz getrunken? Gut.\n\nNoch ein Absatz danach.", "Der Kreis ist rot.\n\nUnd schwarz getrunken? Gut.\n\nNoch ein Absatz danach.")]
+    [InlineData("Und schwarz getrunken? Ich frage mich, ob das hilft.", "Und schwarz getrunken? Ich frage mich, ob das hilft.")]
+    [InlineData("Kaffee ist gesund.\n\nUnd schwarz getrunken schmeckt er am besten.", "Kaffee ist gesund.\n\nUnd schwarz getrunken schmeckt er am besten.")]
+    public void RepeatedClosing_IsDropped(string text, string expected)
+    {
+        Assert.Equal(expected, RunLearned(text));
+        Assert.Equal(expected, RunLearned([.. text.Select(c => c.ToString())]));
+    }
+
+    [Fact]
+    public void ClosingParagraph_OnlyShortLastParagraphs()
+    {
+        Assert.Equal(EarlierClosing, ClosingFilter.ClosingParagraph("Die Kaution beträgt 2.380 €.\n\n" + EarlierClosing + "\n---"));
+        Assert.Null(ClosingFilter.ClosingParagraph("Nur ein Absatz."));
+        Assert.Null(ClosingFilter.ClosingParagraph("Text.\n\n- eins\n- zwei"));
+        Assert.Null(ClosingFilter.ClosingParagraph("Text.\n\n```python\nprint(1)\n```"));
+        Assert.Equal("und schwarz getrunken", ClosingFilter.FirstSentence("{verlauf:grau-blau}Und **schwarz** getrunken?{/verlauf} Ich …"));
+    }
+
     [Fact]
     public void OnlyAQuestion_Stays() => Assert.Equal("Soll ich das für C# oder Python schreiben?", Run("Soll ich das für C# oder Python schreiben?"));
 
