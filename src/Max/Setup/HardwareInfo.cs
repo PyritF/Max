@@ -29,6 +29,15 @@ internal sealed record HardwareInfo(long RamBytes, GpuInfo? Gpu)
         {
             try { gpus.AddRange(QueryWindowsRegistry()); } catch { /* keine Rechte o. Ä. – dann eben CPU */ }
         }
+        if (gpus.Count == 0 && OperatingSystem.IsLinux())
+        {
+            // AMD meldet seinen Grafikspeicher im sysfs; für den Rest (Intel Arc …) fragt Max Vulkan selbst.
+            try { gpus.AddRange(QueryLinuxSysfs("/sys/class/drm")); } catch { /* kein sysfs – dann eben CPU */ }
+            if (gpus.Count == 0)
+            {
+                try { gpus.AddRange(QueryVulkanInfo()); } catch { /* vulkaninfo nicht installiert */ }
+            }
+        }
 
         return gpus.Where(g => g.VramBytes >= MinUsefulVramBytes).MaxBy(g => g.VramBytes);
     }
@@ -53,6 +62,118 @@ internal sealed record HardwareInfo(long RamBytes, GpuInfo? Gpu)
             return [];
         }
         return process.ExitCode == 0 ? ParseNvidiaSmi(output.Result) : [];
+    }
+
+    /// <summary>
+    /// AMD-Karten unter Linux (Treiber amdgpu): Der Grafikspeicher steht in
+    /// <c>/sys/class/drm/cardN/device/mem_info_vram_total</c>, der Name in <c>product_name</c> oder in der PCI-Liste.
+    /// </summary>
+    internal static IEnumerable<GpuInfo> QueryLinuxSysfs(string drm, IEnumerable<string>? pciIdFiles = null)
+    {
+        if (!Directory.Exists(drm))
+            yield break;
+        foreach (var card in Directory.EnumerateDirectories(drm, "card*").OrderBy(d => d, StringComparer.Ordinal))
+        {
+            var name = Path.GetFileName(card);
+            if (name.Length <= 4 || !name[4..].All(char.IsDigit))
+                continue;                                   // card0-HDMI-A-1 & Co. sind Anschlüsse
+            var device = Path.Combine(card, "device");
+            if (Read(Path.Combine(device, "vendor")) != "0x1002"
+                || !long.TryParse(Read(Path.Combine(device, "mem_info_vram_total")), NumberStyles.Integer, CultureInfo.InvariantCulture, out var vram))
+                continue;
+            var product = Read(Path.Combine(device, "product_name"));
+            var label = product is { Length: > 0 } ? product
+                : PciName("1002", Read(Path.Combine(device, "device"))?.Replace("0x", ""), pciIdFiles) is { } pci ? "AMD " + pci
+                : "AMD Radeon";
+            yield return new GpuInfo(label, vram, GpuVendor.Amd);
+        }
+
+        static string? Read(string path) => File.Exists(path) ? File.ReadAllText(path).Trim() : null;
+    }
+
+    private static readonly string[] PciIdFiles = ["/usr/share/hwdata/pci.ids", "/usr/share/misc/pci.ids", "/usr/share/pci.ids"];
+
+    /// <summary>Der Name eines PCI-Geräts aus der PCI-Liste des Systems – oder null.</summary>
+    internal static string? PciName(string vendor, string? device, IEnumerable<string>? files = null)
+    {
+        if (device is null)
+            return null;
+        foreach (var file in files ?? PciIdFiles)
+        {
+            if (!File.Exists(file))
+                continue;
+            var inVendor = false;
+            foreach (var line in File.ReadLines(file))
+            {
+                if (line.Length == 0 || line[0] == '#')
+                    continue;
+                if (line[0] != '\t')
+                {
+                    if (inVendor)
+                        return null;
+                    inVendor = line.StartsWith(vendor + "  ", StringComparison.OrdinalIgnoreCase);
+                }
+                else if (inVendor && line.Length > 1 && line[1] != '\t' && line[1..].StartsWith(device + "  ", StringComparison.OrdinalIgnoreCase))
+                {
+                    return line[(device.Length + 3)..].Trim();
+                }
+            }
+        }
+        return null;
+    }
+
+    private static IEnumerable<GpuInfo> QueryVulkanInfo()
+    {
+        var start = new ProcessStartInfo("vulkaninfo")
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        using var process = Process.Start(start);
+        if (process is null)
+            return [];
+        var output = process.StandardOutput.ReadToEndAsync();
+        _ = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(4000) || !output.Wait(500))
+        {
+            try { process.Kill(); } catch { }
+            return [];
+        }
+        return ParseVulkanInfo(output.Result);
+    }
+
+    /// <summary>
+    /// Die Ausgabe von <c>vulkaninfo</c>: je Grafikkarte (GPU0:, GPU1: …) Name, Art und die Speicherbereiche.
+    /// Nur eigenständige Karten zählen; ihr Grafikspeicher ist der größte Bereich mit DEVICE_LOCAL.
+    /// </summary>
+    internal static IReadOnlyList<GpuInfo> ParseVulkanInfo(string output)
+    {
+        var result = new List<GpuInfo>();
+        var sections = System.Text.RegularExpressions.Regex.Split(output.ReplaceLineEndings("\n"), @"^GPU\d+:[ \t]*$", System.Text.RegularExpressions.RegexOptions.Multiline);
+        foreach (var section in sections.Length > 1 ? sections.Skip(1) : sections)
+        {
+            var name = System.Text.RegularExpressions.Regex.Match(section, @"deviceName\s*=\s*(.+)$", System.Text.RegularExpressions.RegexOptions.Multiline);
+            var type = System.Text.RegularExpressions.Regex.Match(section, @"deviceType\s*=\s*(\S+)");
+            if (!name.Success || !type.Success || !type.Groups[1].Value.Contains("DISCRETE_GPU", StringComparison.Ordinal))
+                continue;
+            long vram = 0;
+            var heaps = System.Text.RegularExpressions.Regex.Split(section, @"memoryHeaps\[\d+\]:");
+            foreach (var heap in heaps.Skip(1))
+            {
+                var size = System.Text.RegularExpressions.Regex.Match(heap, @"size\s*=\s*(\d+)");
+                var block = heap.Split("memoryTypes", 2)[0];
+                if (size.Success && block.Contains("DEVICE_LOCAL", StringComparison.Ordinal) && long.TryParse(size.Groups[1].Value, out var bytes))
+                    vram = Math.Max(vram, bytes);
+            }
+            if (vram > 0)
+            {
+                var label = name.Groups[1].Value.Trim();
+                result.Add(new GpuInfo(label, vram, VendorFromName(label)));
+            }
+        }
+        return result;
     }
 
     /// <summary>Liest Zeilen wie "NVIDIA GeForce RTX 4070, 12282" (Speicher in MiB).</summary>

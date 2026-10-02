@@ -443,6 +443,90 @@ public sealed class InstallStateTests : IDisposable
     }
 }
 
+public sealed class LinuxGpuTests : IDisposable
+{
+    private readonly string _dir = Directory.CreateTempSubdirectory("max-gpu-").FullName;
+
+    public void Dispose() => Directory.Delete(_dir, recursive: true);
+
+    private void Put(string relative, string content)
+    {
+        var path = Path.Combine(_dir, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+    }
+
+    [Fact]
+    public void Amd_FromSysfs_WithNameFromThePciList()
+    {
+        Put("drm/card1/device/vendor", "0x1002\n");
+        Put("drm/card1/device/device", "0x73ff\n");
+        Put("drm/card1/device/mem_info_vram_total", "8573157376\n");
+        Put("drm/card1-DP-1/status", "connected");
+        Put("drm/card0/device/vendor", "0x8086\n");             // Intel: kein Grafikspeicher im sysfs
+        Put("pci.ids", "# Liste\n1000  LSI Logic\n\t0001  Irgendwas\n1002  Advanced Micro Devices, Inc. [AMD/ATI]\n\t73df  Navi 22\n\t73ff  Navi 23 [Radeon RX 6600/6600 XT/6600M]\n\t\t1462 5025  Untermodell\n10de  NVIDIA Corporation\n");
+
+        var gpu = Assert.Single(HardwareInfo.QueryLinuxSysfs(Path.Combine(_dir, "drm"), [Path.Combine(_dir, "pci.ids")]));
+
+        Assert.Equal(new GpuInfo("AMD Navi 23 [Radeon RX 6600/6600 XT/6600M]", 8573157376, GpuVendor.Amd), gpu);
+    }
+
+    [Fact]
+    public void Amd_ProductName_Wins()
+    {
+        Put("drm/card0/device/vendor", "0x1002");
+        Put("drm/card0/device/mem_info_vram_total", "17163091968");
+        Put("drm/card0/device/product_name", "AMD Radeon RX 7800 XT");
+        Assert.Equal("AMD Radeon RX 7800 XT", Assert.Single(HardwareInfo.QueryLinuxSysfs(Path.Combine(_dir, "drm"), [])).Name);
+    }
+
+    [Fact]
+    public void VulkanInfo_OnlyDiscreteCards_LargestDeviceLocalHeap()
+    {
+        const string output = """
+            Device Properties and Extensions:
+            =================================
+            GPU0:
+            VkPhysicalDeviceProperties:
+            ---------------------------
+            	apiVersion        = 1.3.274 (4206866)
+            	vendorID          = 0x8086
+            	deviceID          = 0x56a0
+            	deviceType        = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+            	deviceName        = Intel(R) Arc(tm) A770 Graphics (DG2)
+            VkPhysicalDeviceMemoryProperties:
+            =================================
+            memoryHeaps: count = 2
+            	memoryHeaps[0]:
+            		size   = 16225419264 (0x3c7000000) (15.11 GiB)
+            		flags: count = 1
+            			MEMORY_HEAP_DEVICE_LOCAL_BIT
+            	memoryHeaps[1]:
+            		size   = 33454080000 (0x7c9f00000) (31.16 GiB)
+            		flags:
+            			None
+            memoryTypes: count = 3
+            	memoryTypes[0]:
+            		heapIndex     = 0
+            		propertyFlags = 0x0001: count = 1
+            			MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+            GPU1:
+            VkPhysicalDeviceProperties:
+            	deviceType        = PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
+            	deviceName        = Intel(R) UHD Graphics 770 (ADL-S GT1)
+            memoryHeaps: count = 1
+            	memoryHeaps[0]:
+            		size   = 16727035904
+            		flags: count = 1
+            			MEMORY_HEAP_DEVICE_LOCAL_BIT
+            """;
+
+        var gpu = Assert.Single(HardwareInfo.ParseVulkanInfo(output));
+
+        Assert.Equal(new GpuInfo("Intel(R) Arc(tm) A770 Graphics (DG2)", 16225419264, GpuVendor.Intel), gpu);
+    }
+}
+
 /// <summary>Ersetzt das Netz in Tests: Jede Anfrage beantwortet die übergebene Funktion.</summary>
 internal sealed class FakeHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
 {
