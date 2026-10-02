@@ -1,3 +1,4 @@
+using System.Text;
 using Max.Chat;
 using Max.Llm;
 using Max.Persona;
@@ -334,6 +335,34 @@ public class ToolRoundTests
         Assert.DoesNotContain("```", Text(chunks));
         Assert.EndsWith("Fünf.", Text(chunks));
         Assert.Equal("```werkzeug\nrechnen: 2+3\n```", conversation.Messages[1].Content);
+    }
+
+    [Fact]
+    public async Task TextBeforeACall_DoesNotSpoilTheCache()
+    {
+        // Selbsttest 58: Erst Text, dann der Aufruf mitten in der Antwort – danach rechnete Max zweimal den ganzen
+        // Verlauf neu (der Text stand im Cache, im Verlauf aber der Aufruf), auf der CPU je acht Minuten.
+        var model = new FakeModel("Ich rechne nach.\n\n", "```bash\n", "rechnen: 2+3\n", "```\n", "Fünf.", null, "Gern.", null);
+        var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => false, Tools: new ToolBox([new CalculatorTool()])));
+        var conversation = new Conversation();
+        conversation.AddUser("Was ist 2+3?");
+
+        var reply = new StringBuilder();
+        await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
+            if (!chunk.IsTool && !chunk.IsThinking && !chunk.IsStatus)
+                reply.Append(chunk.Text);
+        Assert.Equal("Ich rechne nach.\n\nFünf.", reply.ToString());
+        // Die zweite Runde rechnet nur Aufruf und Ergebnis dazu – die Frage davor steht noch im Cache.
+        var template = new ChatMlTemplate();
+        var question = template.Message(ChatRole.System, "Du bist Max.") + template.Message(ChatRole.User, "Was ist 2+3?");
+        Assert.Equal(model.Tokenize(question).Count, backend.LastRun!.ReusedTokens);
+
+        conversation.AddAssistant(reply.ToString());           // so wie die Anzeige es tut
+        conversation.AddUser("Danke");
+        await foreach (var _ in backend.StreamReplyAsync(conversation, CancellationToken.None)) { }
+        var next = backend.LastRun!;
+        Assert.Equal(next.PromptTokens - model.Tokenize(template.Message(ChatRole.User, "Danke") + template.AssistantStart).Count, next.ReusedTokens);
+        Assert.Contains("Ich rechne nach.\n\nFünf.", model.Decode(model.LastPromptBeforeSampler));
     }
 
     [Fact]

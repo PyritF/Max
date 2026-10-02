@@ -587,6 +587,10 @@ Im Verlauf steht das wie ein normaler Werkzeug-Aufruf. Schlüssel und Zugangsdat
   verbietet. Nach einem Werkzeug-Ergebnis fällt so ein Schlussabsatz jetzt weg (beginnt wie eine Frage an den Nutzer
   und endet mit „?“); beim Plaudern bleibt eine Gegenfrage erlaubt. Floskeln zählen auch hinter „Und“, „Aber“,
   „Also“, „Oder“ („Und hast du noch Fragen dazu?“).
+  Selbsttest 58 (Windows, fertige `max.exe`, mit Download des Modells): alle Werkzeug-Fragen richtig. Ein Fehler,
+  behoben: Schrieb Max erst Text und rief dann mitten in der Antwort ein Werkzeug auf, stand der Text im Cache, im
+  Verlauf aber der Aufruf – danach rechnete er zweimal den ganzen Verlauf neu (auf der CPU je acht Minuten). Jetzt
+  geht es nach einem Aufruf zurück vor die Runde, und der Text davor kommt mit der Antwort in den Verlauf.
 
 **Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |

@@ -182,12 +182,20 @@ internal sealed partial class LlmBackend : IChatBackend
             }
         }
 
+        // Was frühere Runden dieser Antwort schon gezeigt haben ("Ich sehe nach." vor einem Aufruf mitten in der
+        // Antwort) – die Anzeige hängt alle Runden aneinander, und so kommt die Antwort in den Verlauf.
+        var shownBefore = new StringBuilder();
         for (var round = 0; ; round++)
         {
             var toolCall = new ToolCallSlot();
             var allowTools = _options.Tools is not null && round < _options.MaxToolRounds;
-            await foreach (var chunk in RoundAsync(conversation, allowTools, toolCall, ct))
+            var earlier = shownBefore.ToString();
+            await foreach (var chunk in RoundAsync(conversation, allowTools, toolCall, earlier, ct))
+            {
+                if (!chunk.IsThinking && !chunk.IsTool && !chunk.IsStatus)
+                    shownBefore.Append(chunk.Text);
                 yield return chunk;
+            }
             if (toolCall.Call is not { } call)
                 yield break;
 
@@ -206,7 +214,9 @@ internal sealed partial class LlmBackend : IChatBackend
     }
 
     /// <summary>Eine Runde: Prompt aus dem Verlauf, Nachdenken, Antwort – oder ein Werkzeug-Aufruf statt der Antwort.</summary>
-    private async IAsyncEnumerable<ReplyChunk> RoundAsync(Conversation conversation, bool allowTools, ToolCallSlot toolCall, [EnumeratorCancellation] CancellationToken ct)
+    /// <param name="shownBefore">Was frühere Runden dieser Antwort schon gezeigt haben.</param>
+    private async IAsyncEnumerable<ReplyChunk> RoundAsync(Conversation conversation, bool allowTools, ToolCallSlot toolCall, string shownBefore,
+        [EnumeratorCancellation] CancellationToken ct)
     {
         await FinishCommitAsync();
 
@@ -553,7 +563,7 @@ internal sealed partial class LlmBackend : IChatBackend
             var seconds = genClock.Elapsed.TotalSeconds;
             LastRun = new GenerationStats(prompt.Count + head.Count, reused, generated.Count, thinkingTokens,
                 thinkingTime, firstToken, seconds > 0 ? (generated.Count - 1) / seconds : 0, repairs);
-            Finish(beforeReply, head, generated, shown.ToString(), loopStart, WantsColors(conversation.Messages));
+            Finish(beforeReply, head, generated, shownBefore, shown.ToString(), loopStart, toolCall.Call is not null, WantsColors(conversation.Messages));
             beforeReply?.Dispose();
         }
     }
@@ -575,14 +585,27 @@ internal sealed partial class LlmBackend : IChatBackend
     /// Nach der Antwort: Den Cache so hinterlassen, wie der Verlauf beim nächsten Mal aussieht.
     /// Zurück vor die Antwort und sie in Verlaufsform (ohne Denk-Block) nachrechnen – im Hintergrund.
     /// </summary>
+    /// <param name="shownBefore">Was frühere Runden dieser Antwort gezeigt haben – es kommt mit in den Verlauf.</param>
     /// <param name="loopStart">Ab hier hat sich die Antwort wiederholt – das kommt nicht in den Verlauf, sonst wird die Schleife zum Vorbild.</param>
-    private void Finish(ModelCheckpoint? beforeReply, IReadOnlyList<int> head, List<int> generated, string shown, int? loopStart, bool keepColors)
+    /// <param name="calledTool">Die Runde endete mit einem Werkzeug-Aufruf.</param>
+    private void Finish(ModelCheckpoint? beforeReply, IReadOnlyList<int> head, List<int> generated, string shownBefore, string shown, int? loopStart,
+        bool calledTool, bool keepColors)
     {
+        // So steht die Antwort gleich im Verlauf: alles, was die Anzeige aus allen Runden aneinandergehängt hat.
+        var reply = shownBefore + shown;
         if (beforeReply is null)
         {
             // Ohne Zwischenstand bleibt der Kopf (samt Nachdenken) im Cache – dann eben auch im Verlauf (bleibt schnell).
-            if (shown.Length > 0)
-                Remember(shown, [.. head, .. generated, .. _assistantEnd!]);
+            if (shown.Length > 0 && !calledTool)
+                Remember(reply, [.. head, .. generated, .. _assistantEnd!]);
+            return;
+        }
+        if (calledTool)
+        {
+            // Der Aufruf kommt als eigene Nachricht in den Verlauf (StreamReplyAsync), ein Text davor mit der Antwort der
+            // nächsten Runde. Also nur zurück vor die Runde – dann passt der nächste Prompt zum Cache. Selbsttest 58: Mit
+            // dem Text davor im Cache rechnete Max zweimal den ganzen Verlauf neu, auf der CPU je acht Minuten.
+            _model.Restore(beforeReply);
             return;
         }
 
@@ -591,19 +614,19 @@ internal sealed partial class LlmBackend : IChatBackend
         // Antwortmöglichkeiten nach einer Schlussfrage ("Was willst du machen? / - Plaudern / - Arbeiten") nur zeigen,
         // nicht merken: Sonst hängt das Modell ab da an jede Antwort so ein Menü aus Text. Ebenso Code-Blöcke ohne Code
         // und eine Schleife: Was in früheren Antworten steht, macht das Modell nach.
-        var kept = loopStart is { } cut ? WithClosedFence(shown[..cut]) : shown;
+        var kept = shownBefore + (loopStart is { } cut ? WithClosedFence(shown[..cut]) : shown);
         var remembered = ClosingFilter.WithoutPseudoCode(ClosingFilter.WithoutTrailingOptions(keepColors ? kept : ColorTags.Strip(kept)));
         var history = new List<int>([.. _historyStart!, .. _model.Tokenize(remembered), .. _assistantEnd!]);
         if (!_model.Restore(beforeReply))
         {
-            if (shown.Length > 0)
-                Remember(shown, history);          // Cache ist leer, der nächste Prompt rechnet alles neu
+            if (reply.Length > 0)
+                Remember(reply, history);          // Cache ist leer, der nächste Prompt rechnet alles neu
             return;
         }
-        if (shown.Length == 0)
+        if (reply.Length == 0)
             return;
 
-        Remember(shown, history);
+        Remember(reply, history);
         _pendingCommit = _model.AppendAsync(history, CancellationToken.None);
     }
 
