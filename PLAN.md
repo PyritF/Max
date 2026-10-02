@@ -566,6 +566,11 @@ Im Verlauf steht das wie ein normaler Werkzeug-Aufruf. Schlüssel und Zugangsdat
   nicht samt Inhalt weggelassen – die Antwort geht vor dem Block ohne Elemente weiter (die Zahl einer Rechnung stand
   in einem ungültigen Balken); der Bild-Zusatz hört auf, wenn sich seine Antwort wiederholt, und `datei` darf für
   eingescannte Seiten auf der CPU bis zu 10 Minuten brauchen.
+  Selbsttest 55: Alle Werkzeug-Fragen richtig. Neue Angewohnheit: hinter jedem Angebot ein Code-Block ohne echten Code
+  („# Beispiel: Wien“, „datei: PLAN.md“), der das Angebot am Leben hielt. Ein solcher Block fällt jetzt mit dem
+  Angebot weg; ein Block direkt nach einer Frage wird nie als Aufruf ausgeführt. Grundsätzlich gilt: Solche Ticks
+  verstärken sich im Verlauf selbst – was der Filter am Ende weglässt, steht auch nicht im Verlauf und steckt nicht
+  an. Dauerhaft helfen soll der eigene Adapter (9a), dessen Beispiele so etwas nie zeigen.
 
 **Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |
