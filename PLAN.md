@@ -557,6 +557,15 @@ Im Verlauf steht das wie ein normaler Werkzeug-Aufruf. Schlüssel und Zugangsdat
   der Rest des Verlaufs wird einmal neu gerechnet – mit Grafikkarte Sekunden.
   Windows (Unit-Tests): M4A über Media Foundation läuft. Eine kaputte MP3 blieb geöffnet und ließ sich nicht mehr
   löschen – jetzt öffnet Max die Datei selbst und schließt sie immer.
+  Selbsttest 53 (Windows, fertige `max.exe`): Modell, Bild-Zusatz, Whisper, Wetter, Websuche, Kaution und Excel laufen
+  auch als einzelne Datei unter Windows; der Lauf brauchte länger als zwei Stunden (Zeitlimit jetzt 180 Minuten).
+  Angewohnheiten im langen Gespräch: Das Modell hängte „Und schwarz getrunken? …“ an jede Antwort. Der Floskel-Filter
+  kennt jetzt die Schlussabsätze früherer Antworten und lässt eine Wiederholung weg.
+  Selbsttest 54: Die erzwungenen Aufrufe greifen („Werkzeug 'websuche' beschlossen“). Neu behoben: Trennlinien fallen
+  ganz weg (das Modell setzte „---“ vor jede Schlussbemerkung); ein Element, das auch neu erzeugt kaputt bleibt, wird
+  nicht samt Inhalt weggelassen – die Antwort geht vor dem Block ohne Elemente weiter (die Zahl einer Rechnung stand
+  in einem ungültigen Balken); der Bild-Zusatz hört auf, wenn sich seine Antwort wiederholt, und `datei` darf für
+  eingescannte Seiten auf der CPU bis zu 10 Minuten brauchen.
 
 **Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |
