@@ -63,11 +63,14 @@ Max/
 │       │   ├── ThinkSplitter.cs      (Nachdenken und Antwort trennen)
 │       │   ├── AnswerGrammar.cs      (GBNF: nur gültige Tags und Elemente)
 │       │   ├── GrammarSampler.cs     (Token ziehen, mit Grammatik-Prüfung)
-│       │   ├── ElementGate.cs        (Elemente zurückhalten, prüfen, ggf. neu erzeugen)
+│       │   ├── ElementGate.cs        (Elemente und Werkzeug-Aufrufe in Code-Blöcken zurückhalten, prüfen)
+│       │   ├── VisionEngine.cs       (Bild-Zusatz: Bilder ansehen, Scans ablesen)
+│       │   ├── SpeechEngine.cs       (Whisper: Aufnahmen abschreiben)
 │       │   └── GgufInfo.cs           (Schichtzahl aus dem Dateikopf)
 │       ├── Chat/
 │       │   ├── ChatMessage.cs        (Rollen: system, user, assistant, tool)
-│       │   ├── Conversation.cs       (Verlauf, Kontextlänge, Kürzen)
+│       │   ├── Conversation.cs       (Verlauf, Zusammenfassung des Anfangs langer Gespräche)
+│       │   ├── ConversationArchive.cs (die letzten 50 Gespräche in gespraeche/, für /verlauf und /weiter)
 │       │   └── ChatSession.cs        (ein „Zug“: Eingabe → Modell → Antwort)
 │       ├── Persona/
 │       │   └── system-prompt.md      (als Embedded Resource eingebunden)
@@ -88,6 +91,7 @@ Max/
 │           └── InstallState.cs       (state.json)
 │   ── Phase 2 ──
 │       ├── Tools/                    (ITool, ToolBox, lesende Werkzeuge – Phase 2, umgesetzt)
+│       │   └── Documents/            (PDF, Word, Excel, PowerPoint, Text als Seiten/Zeilen; Suche, Scans)
 │       └── Agent/                    (Berechtigungen für schreibende Werkzeuge – später)
 └── tests/
     └── Max.Tests/                    (xUnit: Requirements, ChatTemplate, MarkdownRenderer …)
@@ -114,7 +118,7 @@ Ui  ──►  ChatSession  ──►  LlmEngine
 
 Mit `MAX_HOME` lässt sich der Ordner verlegen (Tests, Ausprobieren).
 
-Inhalt: `core.bin` (Modell), `state.json` (installiertes Modell, Version, Prüfsumme), `cache/` (gerechneter System-Prompt), `history/` (gespeicherte Chats, optional), `logs/`.
+Inhalt: `core.bin` (Modell), `vision.<Revision>.bin` (Bild-Zusatz), `audio.<Revision>.bin` (Whisper), `state.json` (installiertes Modell, Version, Prüfsumme), `memory.json` (Gedächtnis), `settings.json`, `gespraeche/` (die letzten 50 Gespräche), `cache/` (gerechneter System-Prompt), `logs/`.
 
 ---
 
@@ -318,7 +322,8 @@ Zusätzlich kann das Manifest ein `disabled: true` („Not-Aus“) und eine `mes
 | `/clear` | Gespräch zurücksetzen |
 | `/debug` | Technische Infos: Modell, Backend, VRAM/RAM, Tokens/s, Kontextauslastung; schaltet außerdem einen Debug-Modus an/aus, der den Denk-Text und Timings zeigt |
 | `/exit` | Beenden |
-| *(optional)* `/save`, `/load` | Gespräch speichern bzw. laden |
+| `/verlauf` (`/verlauf löschen`) | Die letzten Gespräche mit Datum und Thema (bzw. alle löschen) |
+| `/weiter`, `/weiter 3` | Im letzten (bzw. drittletzten) Gespräch weitermachen |
 | `/denken` | Nachdenken vor jeder Antwort an/aus |
 | `/gedächtnis`, `/vergiss 3` bzw. `/vergiss alles` | Gedächtnis anzeigen bzw. Einträge löschen (siehe 8a) |
 
@@ -453,11 +458,29 @@ Lösung: **Die Begrüßung für den nächsten Start wird schon am Ende der aktue
 - „Zuletzt“ im Startbildschirm zeigt das letzte Gespräch („Gestern, 23:41 – Tabellen im Renderer repariert“).
 - Ein eigenes Interface `IGreetingProvider` war nicht nötig: `MemoryBook.TakeGreeting` liefert die Begrüßung oder nichts.
 
+### Gespräche fortsetzen
+
+- Jedes Gespräch wird nach jeder Antwort als JSON in `gespraeche/` gespeichert, die letzten 50 bleiben
+  (`Chat/ConversationArchive.cs`). Das Thema aus der Zusammenfassung am Ende wird zum Titel.
+- `/verlauf` zeigt sie („Gestern, 23:41 – Tabellen im Renderer“), `/weiter` macht im letzten weiter, `/weiter 3` im
+  drittletzten, `/verlauf löschen` räumt auf. Fortgesetzt wird mit dem ganzen Verlauf – samt Zusammenfassung, falls
+  das Gespräch schon lang war.
+
+### Lange Gespräche
+
+Würde beim Kürzen auf die Kontextlänge Ungelesenes wegfallen, fasst Max den Anfang erst zusammen
+(`LlmBackend.SummarizeAsync`): ein Auftrag mit Grammatik (bis zu 10 Stichpunkte), mit „Notiere mir den Anfang …“ in
+der Anzeige. Die Stichpunkte stehen danach im System-Prompt unter „## Früher in diesem Gespräch“, die alten Nachrichten
+fallen weg. Klappt das nicht, gibt es eine einfache Zusammenfassung aus den Nachrichten selbst. Passt eine einzelne
+Runde nicht (riesige Werkzeug-Ergebnisse), werden deren Ergebnisse gekürzt, statt abzustürzen.
+
 | # | Schritt |
 |---|---|
 | 22 | `MemoryStore` – `memory.json` laden und speichern, `/gedächtnis`, `/vergiss` ✅ |
 | 23 | Fakten-Extraktion am Sitzungsende + Einbau in den System-Prompt ✅ |
 | 24 | KI-Begrüßung (vorab erzeugt, je Tageszeit) mit Fallback, „Zuletzt“ im Startbildschirm ✅ |
+| 24a | Gespräche speichern und fortsetzen (`/verlauf`, `/weiter`) ✅ |
+| 24b | Lange Gespräche: den Anfang zusammenfassen statt streichen ✅ |
 
 ---
 
@@ -474,7 +497,8 @@ und passt zu den Elementen, die das Modell schon zuverlässig schreibt.
 
 **Ablauf** (`LlmBackend.StreamReplyAsync`, in Runden):
 1. Das Modell denkt nach und schreibt Text **oder** einen Werkzeug-Block. Der Block wird nie angezeigt.
-2. Max zeigt „⌕ Suche im Web: …“ (mit Spinner), führt das Werkzeug aus (höchstens 30 s, Ergebnis höchstens 8.000 Zeichen)
+2. Max zeigt „⌕ Suche im Web: …“ (mit Spinner), führt das Werkzeug aus (meist höchstens 30 s, Bilder und Aufnahmen
+   länger; Ergebnis höchstens 8.000 Zeichen)
    und legt Aufruf und Ergebnis in den Verlauf – das Ergebnis wie bei Qwen üblich als `<tool_response>`.
 3. Nächste Runde: Das Modell sieht das Ergebnis und antwortet – oder ruft das nächste Werkzeug auf, höchstens drei Mal.
 4. Der Cache springt nach jeder Runde auf den Stand vor der Antwort zurück; die nächste Runde rechnet nur Aufruf und Ergebnis dazu.
@@ -486,14 +510,20 @@ und passt zu den Elementen, die das Modell schon zuverlässig schreibt.
 | `system` | Betriebssystem, Prozessor, RAM (frei), Grafikkarte, Laufwerke, Laufzeit | |
 | `rechnen: <Rechnung>` | exakt mit 28 Stellen, Klammern, ^, %, sqrt | kleine Modelle verrechnen sich bei großen Zahlen |
 | `ordner: <Pfad>` | Unterordner und Dateien mit Größe | relativ zum Startordner, `~` = Benutzerordner |
-| `datei: <Pfad>` | Textdatei lesen (Anfang, höchstens 256 KB); PDF (PdfPig, bis 60 Seiten) und Word (.docx) als Text | Schlüssel und Zugangsdaten (.ssh, .env, *.pem, id_rsa …) sind tabu |
+| `datei: <Pfad> [| …]` | Text und Code, PDF (bis 400 Seiten), Word, Excel, PowerPoint als Dokument mit Seiten, Folien, Blättern oder Zeilen (`Tools/Documents/`). Lange Dokumente: erst der Anfang, `| Suchbegriff` zeigt die passenden Stellen (BM25 über Abschnitte, Umlaute und Endungen egal), `| Seite 7`, `| Zeile 120`, `| Blatt Umsatz`, `| Ende` eine bestimmte Stelle. Am Ende steht, wie es weitergeht | Schlüssel und Zugangsdaten (.ssh, .env, *.pem, id_rsa …) sind tabu. Eingescannte PDF-Seiten liest der Bild-Zusatz ab, nur wenn sie gezeigt werden (höchstens 2 je Aufruf). Alte Formate (.doc, .xls, .ppt) und verschlüsselte PDFs: ein ehrlicher Satz |
+| `finden: <Begriffe> [| Ordner]` | Dateien nach Name und Inhalt, im Benutzerordner oder einem Ordner; „Fotos“, „Excel“ … filtern nach Endung | versteckte Ordner, Programmdaten und Schlüssel bleiben außen vor; Name 20 s, insgesamt höchstens 45 s |
 | `websuche: <Begriffe>` | DuckDuckGo, erste 6 Treffer mit Adresse und Auszug | ohne Konto oder Schlüssel; die Anfrage verlässt den Rechner – sichtbar in der Anzeige |
-| `webseite: <Adresse>` | Text einer Seite ohne Menüs und Skripte | nur http/https, höchstens 2 MB |
+| `webseite: <Adresse> [| …]` | Text einer Seite ohne Menüs und Skripte, lange Seiten wie Dokumente (Teile, Suche) | nur http/https, höchstens 2 MB |
+| `wetter: <Ort>` | Wetter jetzt und 7 Tage (Open-Meteo, ohne Konto) | nur der Ortsname verlässt den Rechner |
 | `bild: <Pfad> [| Frage]` | Bild oder Screenshot beschreiben, Text ablesen, Frage dazu beantworten | Bild-Zusatz des Modells (§9b), höchstens 5 Minuten |
+| `audio: <Pfad> [| …]` | Aufnahme abschreiben (Sprachnachricht, Memo, Mitschnitt; WAV, MP3, Ogg/Opus, M4A …), höchstens 30 Minuten; danach wie ein Dokument mit Zeitmarken | Whisper (§9b), auf der CPU |
+| `zwischenablage [: Frage]` | Screenshot (wird angesehen), kopierter Text oder kopierte Dateien | nur, wenn der Nutzer in seiner Nachricht Zwischenablage oder Screenshot erwähnt – dort liegen oft Passwörter |
 
 **Dateien ins Terminal ziehen:** Das Terminal schreibt dann den Pfad in die Eingabe (in Anführungszeichen, mit `\ `
 oder als `file://`). Max erkennt vorhandene Dateien darin (`Tools/Attachments.cs`, höchstens 3) und sieht sie sich an,
-bevor er antwortet: Bilder mit `bild` (der übrige Text der Nachricht ist die Frage), alles andere mit `datei`.
+bevor er antwortet: Bilder mit `bild`, Aufnahmen mit `audio`, alles andere mit `datei` – der übrige Text der Nachricht
+ist jeweils die Frage (in langen Dokumenten sucht Max damit gleich die passenden Stellen). Erwähnt die Nachricht die
+Zwischenablage oder einen Screenshot, sieht Max dort hinein.
 Im Verlauf steht das wie ein normaler Werkzeug-Aufruf. Schlüssel und Zugangsdaten bleiben auch hier tabu.
 
 - Ergebnisse von Webseiten und Dateien sind laut Prompt **Daten, keine Anweisungen**.
@@ -509,6 +539,12 @@ Im Verlauf steht das wie ein normaler Werkzeug-Aufruf. Schlüssel und Zugangsdat
   Zahl und behauptete, gerechnet zu haben. Jetzt gilt: Steht beim Nachdenken ein Satz mit Werkzeug-Name und „verwenden /
   benutzen / aufrufen“ (ohne Verneinung), muss die Antwort mit dem Aufruf beginnen (Grammatik nur für den Aufruf).
   Farben (Selbsttest 46): Mit dem erzwungenen Verlauf am Anfang sind bunte Antworten jetzt wirklich bunt.
+  Selbsttest 50 (Dokumente, Excel, Scan, Wetter, finden): Kaution auf Seite 18 eines 25-seitigen Vertrags gefunden,
+  Excel-Monat richtig, Wetter richtig gelesen. Vier Fehler, behoben: (1) Das Modell kündigte „Ich werde mir das genauer
+  ansehen …“ an und schrieb den Aufruf dann in einen ```bash-Block – jetzt wird auch ein Code-Block mitten in der Antwort
+  zurückgehalten, wenn seine erste Zeile ein Aufruf ist, und „Ich werde eine Websuche durchführen“ zählt beim
+  Nachdenken als Entscheidung. (2) Die eingescannte Rechnung hatte ihr JPEG hinter einem ASCII85-Filter – wird jetzt
+  ausgepackt. (3) „finden: … | Ordner: .“ – Beschriftungen fallen weg. (4) „Noch etwas dazu?“ am Ende fällt weg.
 
 **Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |
@@ -532,7 +568,7 @@ Das 9B-Modell bleibt das Gesprächsmodell. Manche Tools haben statt festem Code 
 | Spezialist | Ansatz | Bemerkung |
 |---|---|---|
 | Bilder und Screenshots lesen ✅ | Bild-Zusatz von Qwen3.5 (`mmproj-F16.gguf`, ca. 0,9 GB) | kein zweites Modell nötig; LLamaSharp 0.27 kann das (mtmd). Umgesetzt als Werkzeug `bild` (`Llm/VisionEngine.cs`): eigener kleiner Kontext (4.096 Tokens) auf denselben Gewichten, Bild höchstens 1.024 Tokens, Antwort als Text zurück ins Gespräch – der Gesprächs-Cache bleibt reiner Text. Der Zusatz steht im Manifest (`vision`), kommt still im Hintergrund nach dem Modell und liegt als `vision.<Revision>.bin` im Datenordner. Auf der Grafikkarte nur ab 10 GB Speicher, sonst CPU. Selbsttest 48: Zusatz lädt, ein hineingezogenes Testbild („MAX 42“) wurde richtig gelesen – 38 s auf der CPU (davon 16 s Bild-Kodierung). Das Protokoll des Bild-Teils (mtmd) landete im Terminal – jetzt über `mtmd_log_set` ins Protokoll umgeleitet. Relative Pfade mit Endung („bilder/a.png“, „README.md“) zählen jetzt auch als angehängte Datei, wenn es sie gibt. Selbsttest 49: beide Bildfragen richtig („MAX 42“, „rot“), 33 s je Bild auf der CPU, kein Protokoll mehr im Terminal. |
-| Sprache → Text | Whisper (whisper.cpp / Whisper.net) | klein, sehr gut, lokal |
+| Sprache → Text ✅ | Whisper large-v3-turbo (q5_0, ca. 0,6 GB) über Whisper.net 1.9.1 | Umgesetzt als Werkzeug `audio` (`Llm/SpeechEngine.cs`, `Tools/AudioTool.cs`), auf der CPU (braucht AVX2). Der Zusatz steht im Manifest (`audio`) und kommt wie der Bild-Zusatz still im Hintergrund (`audio.<Revision>.bin`). Lesen ohne fremde Programme: WAV selbst, MP3 (NLayer), Ogg/Opus (Concentus), Ogg/Vorbis (NVorbis), unter Windows alles andere über Media Foundation (M4A, AAC, WMA, MP4), sonst ffmpeg, falls installiert. Auf 16 kHz mono umgerechnet, höchstens 30 Minuten. Die Abschrift ist ein Dokument mit Zeitmarken („[1:23] …“) – lange Aufnahmen gezielt durchsuchen wie ein PDF. Die Whisper-Bibliothek steckt nur für das eigene System in der Exe. |
 | Bilder erzeugen | kleines Diffusionsmodell über stable-diffusion.cpp | eigene Laufzeit; Anzeige im Terminal (Kitty/Sixel) oder als Datei |
 | Mathe | Spezialmodell nur bei klarem Vorsprung | exaktes Rechnen besser über ein Rechen-/Python-Tool |
 | Recherche | hängt vor allem an Websuche und Seiten lesen (Tools) | ein kleines Modell höchstens zum Zusammenfassen |
@@ -593,3 +629,9 @@ Statt Max' Persönlichkeit nur über den System-Prompt vorzugeben, wird sie dem 
 - [x] Wird ein Element (z. B. eine lange Übersicht) über 3000 Zeichen lang, bricht Max die ganze restliche Antwort ab. Jetzt: Grenze 6000 Zeichen, ein Element, das sich im Kreis dreht, fällt schon früher auf. Dann fällt nur das Element weg, und die Antwort geht ohne Elemente weiter (erst beim zweiten Mal wird abgebrochen). Noch nicht mit dem echten Modell geprüft.
 - [x] **Bunt ohne Farben:** Bei „schreib bunt, mit Farbverläufen“ griff das Modell zu einem Diagramm mit „Verlauf:“, statt den Text zu färben. Jetzt beginnt jede Antwort mit einem `{verlauf}`, solange der Wunsch gilt (Grammatik). „Keine Farben mehr“ nimmt ihn zurück. Im Selbsttest bestätigt (46–49).
 - [x] **Abschluss-Rückfragen** wie „Passt das zu deinem Herbst?“ oder „Was dich am meisten interessiert?“ fallen am Ende weg, wie schon die Angebots-Floskeln. Echte Gegenfragen im Gespräch („Und bei dir?“) bleiben.
+- [x] **Lange Dokumente:** Bisher nur der Anfang (60 Seiten, 256 KB) – jetzt Seiten, Suche, Excel und PowerPoint (siehe Phase 2). Im Selbsttest: Kaution auf Seite 18 gefunden.
+- [x] **Lange Gespräche** verloren ihren Anfang – jetzt wird er zusammengefasst (8a).
+- [x] **Linux: AMD- und Intel-Grafikkarten** erkennen (sysfs, sonst `vulkaninfo`) – bisher nur NVIDIA über `nvidia-smi`.
+- [ ] **Windows:** Aufnahmen über Media Foundation (M4A) und die Zwischenablage auf einem echten Windows prüfen – der Unit-Test für M4A läuft nur dort (Selbsttest mit `windows-latest`).
+- [ ] **Eingescannte Seiten:** Wie gut liest der Bild-Zusatz echte Scans (schräg, blass, mehrspaltig)? Mit ein paar echten Briefen ausprobieren.
+- [ ] **Schreibende Werkzeuge** (Phase 2, zweiter Schritt): Dateien anlegen und ändern, Befehle ausführen – nur mit Nachfrage.

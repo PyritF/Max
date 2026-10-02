@@ -4,6 +4,16 @@ Ein lokaler KI-Assistent fürs Terminal – ohne Cloud, ohne API-Key.
 
 - Plan & Architektur: [PLAN.md](PLAN.md)
 
+## Was Max kann
+
+- Plaudern, erklären, Code schreiben – mit Diagrammen, Tabellen und Farben direkt im Terminal.
+- Dateien lesen: Text und Code, PDF, Word, Excel, PowerPoint – auch lange Dokumente gezielt an der richtigen Stelle,
+  eingescannte Seiten über den Bild-Zusatz.
+- Dateien finden, Bilder und Screenshots ansehen (auch aus der Zwischenablage), Aufnahmen abschreiben.
+- Im Web suchen, Webseiten lesen, das Wetter nachsehen, exakt rechnen.
+- Sich Wichtiges über dich merken und Gespräche fortsetzen (`/verlauf`, `/weiter`).
+- Alles nur lesend: Max verändert nichts auf deinem Rechner. Ins Netz geht nur, was er nachschlägt.
+
 ## Bauen & Starten
 
 ```bash
@@ -13,7 +23,8 @@ dotnet run --project src/Max
 dotnet run --project src/Max -- --demo-first-start   # Vorschau: erster Start mit Download
 ```
 
-Beim ersten Start richtet Max sich ein und lädt dabei das Modell herunter (rund 5,7 GB).
+Beim ersten Start richtet Max sich ein und lädt dabei das Modell herunter (rund 5,7 GB). Der Bild-Zusatz (0,9 GB) und
+die Spracherkennung (0,6 GB) kommen danach still im Hintergrund.
 
 **Voraussetzungen:** eine Grafikkarte mit mindestens 4 GB Speicher (ab 8 GB passt das Modell ganz darauf; unter 6 GB rechnet der Prozessor mit, dann braucht es 16 GB Arbeitsspeicher)
 und mindestens 8 GB Arbeitsspeicher. Fehlt etwas, sagt Max das beim Start und lädt nichts herunter.
@@ -28,6 +39,7 @@ und mindestens 8 GB Arbeitsspeicher. Fehlt etwas, sagt Max das beim Start und l�
 | `MAX_RELEASE_URL` | Updates von einer anderen Adresse laden (statt `github.com/PyritF/Max/releases/download`) |
 | `MAX_NO_UPDATE` | `1` schaltet die stillen Updates ab |
 | `MAX_GRAMMAR` | `0` schaltet die feste Schreibweise (Grammatik) ab – zur Fehlersuche |
+| `MAX_ADAPTER` | `aus` lädt Max ohne den eigenen Adapter (`adapter.bin`) – zum Vergleichen |
 
 ```powershell
 $env:MAX_HOME = "$env:TEMP\max-test"; dotnet run --project src/Max

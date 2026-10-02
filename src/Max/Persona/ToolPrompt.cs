@@ -11,7 +11,7 @@ internal static class ToolPrompt
     public static string Section(ToolBox? tools) => tools is null ? "" : $$"""
         ## Werkzeuge
         Du hast Werkzeuge, um nachzusehen statt zu raten. Brauchst du eins, besteht deine Antwort nur aus dem Aufruf –
-        ein Block, sonst nichts:
+        ein Block, sonst nichts: kein Satz davor („Ich sehe nach …“), kein anderer Code-Block (nicht ```bash):
         ```{{ToolCall.BlockName}}
         websuche: Einwohner Graz 2026
         ```
