@@ -12,6 +12,15 @@ internal interface ITool
     /// <summary>Was die Angabe ist ("Suchbegriff") – null, wenn das Werkzeug keine braucht.</summary>
     string? Argument { get; }
 
+    /// <summary>Die Angabe darf auch fehlen (z. B. eine Frage zum Bild in der Zwischenablage).</summary>
+    bool ArgumentOptional => false;
+
+    /// <summary>
+    /// Darf das Werkzeug für diese Nachricht des Nutzers laufen? Manches (die Zwischenablage) nur, wenn er
+    /// ausdrücklich darum bittet – nicht, weil das Modell oder eine Webseite es so will.
+    /// </summary>
+    bool AllowedFor(string? request) => true;
+
     /// <summary>Für den System-Prompt: wann das Werkzeug hilft.</summary>
     string Description { get; }
 

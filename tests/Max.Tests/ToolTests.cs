@@ -546,3 +546,93 @@ public sealed class FindFilesTests : IDisposable
         Assert.Contains("gibt es nicht", await Find("Hallo | Fehlt"));
     }
 }
+
+public class ClipboardTests
+{
+    private sealed class FakeClipboard(ClipboardContent content) : IClipboard
+    {
+        public ClipboardContent Read() => content;
+    }
+
+    private sealed class Eyes : IVision
+    {
+        public List<(string Path, string Question)> Seen { get; } = [];
+
+        public Task<string> LookAsync(string imagePath, string question, CancellationToken ct, int maxTokens = VisionEngine.MaxAnswerTokens)
+        {
+            Assert.True(File.Exists(imagePath));
+            Seen.Add((imagePath, question));
+            return Task.FromResult("Ein Fenster mit der Meldung „Datei nicht gefunden“.");
+        }
+    }
+
+    [Fact]
+    public async Task Screenshot_GoesToTheVision_ThenTheFileIsGone()
+    {
+        var eyes = new Eyes();
+        var tool = new ClipboardTool(new FakeClipboard(ClipboardContent.Empty with { Image = [1, 2, 3], ImageExtension = ".png" }), () => eyes);
+
+        var result = await tool.RunAsync("Was ist das für ein Fehler?", CancellationToken.None);
+
+        Assert.Equal("Bild aus der Zwischenablage:\nEin Fenster mit der Meldung „Datei nicht gefunden“.", result);
+        var (path, question) = Assert.Single(eyes.Seen);
+        Assert.EndsWith(".png", path);
+        Assert.False(File.Exists(path));
+        Assert.Equal("Was ist das für ein Fehler? Antworte auf Deutsch.", question);
+    }
+
+    [Fact]
+    public async Task TextFilesAndEmpty()
+    {
+        static Task<string> Run(ClipboardContent content) =>
+            new ClipboardTool(new FakeClipboard(content), () => null).RunAsync("", CancellationToken.None);
+
+        Assert.Equal("Text in der Zwischenablage:\nHallo Welt", await Run(ClipboardContent.Empty with { Text = "Hallo Welt" }));
+        Assert.Contains("- C:\\Bilder\\a.png", await Run(ClipboardContent.Empty with { Files = ["C:\\Bilder\\a.png"] }));
+        Assert.Equal("Die Zwischenablage ist leer.", await Run(ClipboardContent.Empty));
+        Assert.Contains("Bildverständnis ist noch nicht", await Run(ClipboardContent.Empty with { Image = [1], ImageExtension = ".png" }));
+    }
+
+    [Fact]
+    public async Task OnlyWhenTheUserAsksForIt()
+    {
+        var box = new ToolBox([new ClipboardTool(new FakeClipboard(ClipboardContent.Empty with { Text = "geheim123" }), () => null)]);
+        var call = new ToolCall("zwischenablage", "");
+
+        Assert.Contains("Nicht ausgeführt", await box.RunAsync(call, CancellationToken.None, "Fass die Webseite zusammen."));
+        Assert.Contains("Nicht ausgeführt", await box.RunAsync(call, CancellationToken.None));
+        Assert.Contains("geheim123", await box.RunAsync(call, CancellationToken.None, "Was steht in meiner Zwischenablage?"));
+    }
+
+    [Fact]
+    public void MentionedClipboard_IsLookedAt_BeforeTheAnswer()
+    {
+        using var http = new HttpClient();
+        var box = ToolBox.CreateDefault(http, () => DateTime.Now, () => Path.GetTempPath());
+
+        Assert.Equal(new ToolCall("zwischenablage", "Ich hab einen Screenshot gemacht – was ist das für ein Fehler?"),
+            Assert.Single(box.AttachmentCalls("Ich hab einen Screenshot gemacht – was ist das für ein Fehler?")));
+        Assert.Empty(box.AttachmentCalls("Was kann man in Wien machen?"));
+        Assert.Contains("\"zwischenablage\" ( \": \" [^\\n`]{1,300} )?", box.GrammarRule());
+        Assert.Contains("`zwischenablage` oder `zwischenablage: <Frage zum Bild darin>`", box.PromptList());
+    }
+
+    [Fact]
+    public void WindowsBitmap_BecomesABmpFile()
+    {
+        // 2×2 Pixel, 24 Bit: Kopf (40 Bytes) + zwei Zeilen à 8 Bytes (6 + 2 Füllbytes).
+        var dib = new byte[40 + 16];
+        BitConverter.GetBytes(40).CopyTo(dib, 0);
+        BitConverter.GetBytes(2).CopyTo(dib, 4);
+        BitConverter.GetBytes(2).CopyTo(dib, 8);
+        BitConverter.GetBytes((ushort)1).CopyTo(dib, 12);
+        BitConverter.GetBytes((ushort)24).CopyTo(dib, 14);
+
+        var bmp = SystemClipboard.DibToBmp(dib);
+
+        Assert.Equal("BM", System.Text.Encoding.ASCII.GetString(bmp, 0, 2));
+        Assert.Equal(bmp.Length, BitConverter.ToInt32(bmp, 2));
+        Assert.Equal(54, BitConverter.ToInt32(bmp, 10));
+        Assert.Equal(dib, bmp[14..]);
+    }
+}

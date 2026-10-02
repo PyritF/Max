@@ -39,11 +39,20 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
         new WebSearchTool(web),
         new ReadWebPageTool(web),
         new WeatherTool(web),
+        new ClipboardTool(new SystemClipboard(), vision ?? (() => null)),
     ], workingDirectory);
 
-    /// <summary>Aufrufe für Dateien, die der Nutzer in die Nachricht gezogen hat (nur für Werkzeuge, die es gibt).</summary>
-    public IReadOnlyList<ToolCall> AttachmentCalls(string message) =>
-        Attachments.Calls(message, WorkingDirectory()).Where(call => Find(call.Name) is not null).ToList();
+    /// <summary>
+    /// Was Max sich ansieht, bevor er antwortet: Dateien, die der Nutzer in die Nachricht gezogen hat – oder, wenn er
+    /// ausdrücklich von der Zwischenablage oder einem Screenshot spricht, die Zwischenablage (nur Werkzeuge, die es gibt).
+    /// </summary>
+    public IReadOnlyList<ToolCall> AttachmentCalls(string message)
+    {
+        var calls = Attachments.Calls(message, WorkingDirectory()).Where(call => Find(call.Name) is not null).ToList();
+        if (calls.Count == 0 && Find("zwischenablage") is not null && ClipboardTool.Mentioned(message))
+            calls.Add(new ToolCall("zwischenablage", message.Length <= 300 ? message.Replace('|', '/').ReplaceLineEndings(" ").Trim() : ""));
+        return calls;
+    }
 
     /// <summary>
     /// Welches Werkzeug Max beim Nachdenken benutzen will ("Ich sollte das Werkzeug `rechnen` verwenden", "Ich rufe
@@ -82,7 +91,9 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
     {
         var calls = _tools.Values.Select(t => t.Argument is null
             ? $"\"{t.Name}\""
-            : $"\"{t.Name}: \" [^\\n`]{{1,300}}");
+            : t.ArgumentOptional
+                ? $"\"{t.Name}\" ( \": \" [^\\n`]{{1,300}} )?"
+                : $"\"{t.Name}: \" [^\\n`]{{1,300}}");
         return $"\"{ToolCall.BlockName}\" \"\\n\" ( {string.Join(" | ", calls)} ) \"\\n```\"";
     }
 
@@ -92,19 +103,27 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
         var text = new StringBuilder();
         foreach (var tool in _tools.Values)
         {
-            var call = tool.Argument is null ? tool.Name : $"{tool.Name}: <{tool.Argument}>";
+            var call = tool.Argument is null ? tool.Name
+                : tool.ArgumentOptional ? $"{tool.Name}` oder `{tool.Name}: <{tool.Argument}>"
+                : $"{tool.Name}: <{tool.Argument}>";
             text.Append("- `").Append(call).Append("` – ").Append(tool.Description).Append('\n');
         }
         return text.ToString().TrimEnd();
     }
 
     /// <summary>Führt den Aufruf aus. Fehler, Zeitüberschreitung und Unbekanntes werden zu einem Satz fürs Modell.</summary>
-    public async Task<string> RunAsync(ToolCall call, CancellationToken ct)
+    /// <param name="request">Die Nachricht des Nutzers, auf die Max gerade antwortet – manche Werkzeuge nur auf seinen Wunsch.</param>
+    public async Task<string> RunAsync(ToolCall call, CancellationToken ct, string? request = null)
     {
         if (Find(call.Name) is not { } tool)
             return $"Ein Werkzeug \"{call.Name}\" gibt es nicht.";
-        if (tool.Argument is not null && call.Argument.Length == 0)
+        if (tool.Argument is not null && !tool.ArgumentOptional && call.Argument.Length == 0)
             return $"{tool.Name} braucht eine Angabe ({tool.Argument}).";
+        if (!tool.AllowedFor(request))
+        {
+            LlmEngine.Log($"Werkzeug {call.Name} ohne ausdrücklichen Wunsch des Nutzers verweigert.");
+            return $"Nicht ausgeführt: {tool.Name} nur, wenn der Nutzer in seiner Nachricht ausdrücklich danach fragt.";
+        }
 
         var clock = Stopwatch.StartNew();
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
