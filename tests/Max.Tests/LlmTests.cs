@@ -609,6 +609,7 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
     /// <summary>Der Cache, als zuletzt ein Sampler erzeugt wurde – bei der zweiten Antwort also deren Prompt.</summary>
     public IReadOnlyList<int> LastPromptBeforeSampler { get; private set; } = [];
     public List<bool> SamplerGrammars { get; } = [];
+    public List<string?> SamplerGrammarTexts { get; } = [];
     public Action<int>? OnSample { get; init; }
     public bool FailRestore { get; set; }
 
@@ -650,6 +651,7 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
     public ITokenSampler CreateSampler(SamplingSettings settings, string? grammar = null, uint? seed = null, IReadOnlyCollection<int>? banned = null)
     {
         SamplerGrammars.Add(grammar is not null);
+        SamplerGrammarTexts.Add(grammar);
         SamplerBans.Add(banned ?? []);
         LastPromptBeforeSampler = Cache.ToArray();
         return new Sampler(this, grammar is not null);
@@ -844,6 +846,32 @@ public class ClosingFilterTests
     [InlineData("Die Liste ist lang.\n\nPasst das nicht, nimm die andere.")]
     [InlineData("Die Liste ist lang.\n\nNoch etwas: Die Preise gelten nur bis Freitag.")]
     public void RealQuestionsAndStatements_Stay(string text) => Assert.Equal(text, Run([.. text.Select(c => c.ToString())]));
+
+    [Theory]
+    // Selbsttest 51: Ab der Mitte hängte das Modell an jede Antwort eine Linie – die Floskel davor blieb stehen.
+    [InlineData("Die Kaution beträgt 2.380 €.\n\nMöchtest du die anderen Klauseln sehen?\n---", "Die Kaution beträgt 2.380 €.\n\n")]
+    [InlineData("Die Kaution beträgt 2.380 €.\n\nMöchtest du mehr?\n---\n", "Die Kaution beträgt 2.380 €.\n\n")]
+    [InlineData("Auf dem Bild steht **MAX 42**.\n\nDas war es.\n---", "Auf dem Bild steht **MAX 42**.\n\nDas war es.\n")]
+    [InlineData("Text.\n\n***\n", "Text.\n\n")]
+    [InlineData("Wien hat 2 Millionen Einwohner.\n\nWillst du mehr Details?\n---\nQuelle: example.org", "Wien hat 2 Millionen Einwohner.\n\n---\nQuelle: example.org")]
+    [InlineData("Wien hat 2 Millionen Einwohner.\n\nMöchtest du mehr?\n\nQuelle: example.org", "Wien hat 2 Millionen Einwohner.\n\nQuelle: example.org")]
+    public void TrailingRules_AreDropped_AndTheOfferBeforeThem(string text, string expected)
+    {
+        Assert.Equal(expected, Run(text));
+        Assert.Equal(expected, Run([.. text.Select(c => c.ToString())]));
+    }
+
+    [Theory]
+    [InlineData("Eins.\n\n---\n\nZwei.")]
+    [InlineData("Zutaten:\n- Mehl\n- Milch\n- Eier")]
+    [InlineData("**Wichtig** zuerst.\nDann der Rest.")]
+    [InlineData("Text.\n\n```yaml\n---\nname: max\n```\n")]
+    [InlineData("Text.\n\n- - - ist auch eine Linie, aber hier geht es weiter.")]
+    public void RulesAndListsInTheMiddle_Stay(string text)
+    {
+        Assert.Equal(text, Run(text));
+        Assert.Equal(text, Run([.. text.Select(c => c.ToString())]));
+    }
 
     [Fact]
     public void OnlyAQuestion_Stays() => Assert.Equal("Soll ich das für C# oder Python schreiben?", Run("Soll ich das für C# oder Python schreiben?"));

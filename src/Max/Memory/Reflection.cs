@@ -136,9 +136,10 @@ internal sealed partial record Reflection(IReadOnlyList<string> Facts, string? S
             return null;
         }
         var words = quote.Split(' ');
-        if (!words.Any(w => w is "ich" or "mein" or "meine" or "meinen" or "meinem" or "meiner" or "mir" or "mich")
-            || words.Any(w => w is "heute" or "gestern" or "vorhin")
-            || IsRequest(line[(bar + 3)..], words))
+        // Satz für Satz: Mindestens einer muss eine Aussage über sich sein – keine Frage, keine Bitte. Sonst zählt das
+        // "mir" aus "Was kann man in Wien machen? Gib mir eine Übersicht" (Selbsttest 51: "Wohnort oder Reiseziel Wien").
+        if (!SentenceRegex().Split(Unquote(line[(bar + 3)..])).Any(AboutHimself)
+            || words.Any(w => w is "heute" or "gestern" or "vorhin"))
         {
             LlmEngine.Log($"Gedächtnis: nicht über sich oder nur vorübergehend, verworfen: {line}");
             return null;
@@ -151,6 +152,17 @@ internal sealed partial record Reflection(IReadOnlyList<string> Facts, string? S
     /// <summary>Was das Modell selbst als erschlossen kennzeichnet, ist kein Fakt.</summary>
     [System.Text.RegularExpressions.GeneratedRegex(@"\b(impliziert|vermutlich|wahrscheinlich|scheint|offenbar|wohl)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex Guessed();
+
+    /// <summary>Ein Satz mit ich/mein/mir/mich, der weder Frage noch Bitte an Max ist.</summary>
+    private static bool AboutHimself(string sentence)
+    {
+        var words = MemoryData.Normalize(sentence).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Any(w => w is "ich" or "mein" or "meine" or "meinen" or "meinem" or "meiner" or "mir" or "mich")
+            && !IsRequest(sentence, words);
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"(?<=[.!?])\s+")]
+    private static partial System.Text.RegularExpressions.Regex SentenceRegex();
 
     /// <summary>
     /// Bitten und Fragen an Max sind keine Aussagen über sich – "Erzähl mir was über den Herbst" heißt nicht "mag den Herbst".

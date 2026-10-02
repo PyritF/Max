@@ -71,6 +71,11 @@ jobs:
         if: always()
         run: tail -n 60 .maxhome/logs/llama.log || true
 
+      # Was Max selbst protokolliert: Werkzeug-Aufrufe, erzwungene Aufrufe, verworfene Notizen, weggelassene Floskeln.
+      - name: Protokoll von Max
+        if: always()
+        run: grep -a '^\[max\]' .maxhome/logs/llama.log | cut -c1-400 | tail -n 200 || true
+
       # Die getestete Datei zum Herunterladen (Actions → Lauf → Artifacts), z. B. für den Test auf einem Rechner mit Grafikkarte.
       - uses: actions/upload-artifact@v4
         if: inputs.exe

@@ -185,6 +185,25 @@ public class ToolBoxTests
     }
 
     [Theory]
+    [InlineData("Was ist 123456789 mal 987654321?", "rechnen")]
+    [InlineData("Rechne 48.213 * 12", "rechnen")]
+    [InlineData("Was ist 17 hoch 12?", "rechnen")]
+    [InlineData("Wer hat die Fußball-Weltmeisterschaft 2022 gewonnen? Schau bitte im Web nach.", "websuche")]
+    [InlineData("Such im Internet nach einem Rezept für Linsensuppe.", "websuche")]
+    [InlineData("Kannst du im Internet nachschauen, wann der Baumarkt aufmacht?", "websuche")]
+    [InlineData("Was ist 3 mal 4?", null)]
+    [InlineData("Ruf mich unter 0711-456780 an.", null)]
+    [InlineData("Lies https://example.com/123456/789", null)]
+    [InlineData("Der Bildschirm hat 1920x1080 Pixel.", null)]
+    [InlineData("Bist du im Internet?", null)]
+    [InlineData("Ich habe im Internet nach Rezepten gesucht, aber nichts gefunden.", null)]
+    public void RequiredTool_WhenTheQuestionAsksForIt(string request, string? expected)
+    {
+        using var http = new HttpClient();
+        Assert.Equal(expected, ToolBox.CreateDefault(http, () => DateTime.Now, () => ".").RequiredTool(request));
+    }
+
+    [Theory]
     [InlineData("websuche: Wien", true)]
     [InlineData("Rechnen: 2+3", true)]
     [InlineData("uhrzeit", true)]
@@ -226,6 +245,12 @@ public class ToolBoxTests
     [InlineData("Ich schaue im Internet nach.", "websuche")]
     [InlineData("Der Preis kann sich ständig ändern, ich suche im Web.", "websuche")]
     [InlineData("Ich kann im Web nachsehen, wenn er das möchte.", null)]
+    // Selbsttest 51: angekündigt, aber nicht als Aufruf erkannt.
+    [InlineData("Das ist eine klare Rechnung, die ich mit dem `rechnen`-Werkzeug machen sollte, um genau zu sein.", "rechnen")]
+    [InlineData("Ich muss die Wetter-Werkzeugfunktion aufrufen, um aktuelle Informationen zu erhalten.", "wetter")]
+    [InlineData("Ich sollte ein Werkzeug aufrufen, um die Antwort zu verifizieren.", ToolBox.AnyTool)]
+    [InlineData("Ich sollte das direkt sagen, ohne ein Werkzeug aufzurufen.", null)]
+    [InlineData("Der Nutzer fragt, ob ich ein Werkzeug benutzen kann.", null)]
     public void IntendedTool_OnlyAnnouncedUse(string thought, string? expected)
     {
         using var http = new HttpClient();
@@ -319,6 +344,22 @@ public class ToolRoundTests
         Assert.DoesNotContain(chunks, c => c.IsTool);
         Assert.Equal("So geht es:\n\n```bash\nls -la\n```\nFertig.", Text(chunks));
         Assert.Single(conversation.Messages);
+    }
+
+    [Theory]
+    [InlineData("Was ist 123456789 mal 987654321?", true)]
+    [InlineData("Was ist 3 mal 4?", false)]
+    public async Task QuestionThatNeedsATool_StartsWithTheCall(string question, bool forced)
+    {
+        // Selbsttest 51: "123456789 mal 987654321" ohne rechnen – die Zahl fehlte. Jetzt legt die Grammatik den Aufruf fest.
+        var model = new FakeModel("```werkzeug\n", "rechnen: 2+3\n", "```\n", "Fünf.", null);
+        var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => false, Tools: new ToolBox([new CalculatorTool()])));
+        var conversation = new Conversation();
+        conversation.AddUser(question);
+        await foreach (var _ in backend.StreamReplyAsync(conversation, CancellationToken.None)) { }
+
+        Assert.Equal(forced, model.SamplerGrammarTexts[0]!.Contains("root ::= \"```\" w-werkzeug\n", StringComparison.Ordinal));
+        Assert.DoesNotContain("root ::= \"```\" w-werkzeug\n", model.SamplerGrammarTexts[^1]!);   // nach dem Ergebnis frei
     }
 
     [Fact]

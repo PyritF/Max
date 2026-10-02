@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Max.Llm;
 
@@ -8,8 +9,11 @@ namespace Max.Llm;
 /// aus dem Verlauf, sonst gewöhnt sich das Modell die Floskel im Gespräch an. Besteht die ganze Antwort nur
 /// aus so einem Absatz, ist es eine echte Rückfrage und bleibt. Dasselbe gilt für Abschluss-Rückfragen
 /// („Passt das so?“) – die fallen aber nur weg, wenn der Absatz wirklich eine Frage ist. Code-Blöcke bleiben unberührt.
+/// Eine Trennlinie ("---") ganz am Ende fällt weg – sonst steht nach der Floskel noch etwas, sie bliebe stehen, und
+/// das Modell hängt die Linie im Gespräch bald an jede Antwort (Selbsttest 51). Folgt einer Floskel nur noch die
+/// Quelle ("Quelle: …"), fällt die Floskel weg, die Quelle bleibt.
 /// </summary>
-internal sealed class ClosingFilter
+internal sealed partial class ClosingFilter
 {
     internal static readonly string[] Phrases =
     [
@@ -42,6 +46,7 @@ internal sealed class ClosingFilter
     private bool _holding;
     private bool _inFence;
     private bool _anyShown;
+    private bool _ruleOnly;                         // mitten im Absatz: nur prüfen, ob die Zeile eine Trennlinie wird
 
     public string Push(string text)
     {
@@ -60,18 +65,20 @@ internal sealed class ClosingFilter
             var line = _line.ToString();
             _line.Clear();
             _deciding = false;
-            if (StartsWithPhrase(line, complete: true) == true)
+            if (!_ruleOnly && StartsWithPhrase(line, complete: true) == true || IsRule(line))
                 _held.Append(line);
             else
                 Emit(line, output);
         }
         if (_held.Length > 0)
         {
-            var held = _held.ToString();
-            if (!_anyShown || StartsWithPhrase(held, complete: true, Phrases) != true && !held.Contains('?'))
-                output.Append(_held);
+            var held = WithoutTrailingRules(_held.ToString());
+            if (held.Trim().Length == 0)
+                LlmEngine.Log("Trennlinie am Ende weggelassen.");
+            else if (!_anyShown || StartsWithPhrase(held, complete: true, Phrases) != true && !held.Contains('?'))
+                output.Append(held);
             else
-                LlmEngine.Log($"Floskel am Ende weggelassen: {_held.ToString().Trim().ReplaceLineEndings(" ")}");
+                LlmEngine.Log($"Floskel am Ende weggelassen: {held.Trim().ReplaceLineEndings(" ")}");
             _held.Clear();
         }
         _holding = false;
@@ -95,7 +102,10 @@ internal sealed class ClosingFilter
                 case false:
                     _deciding = false;
                     _line.Clear();
-                    Release(output);
+                    if (IsSource(line))
+                        DropClosing(output);
+                    else
+                        Release(output);
                     Emit(line, output);
                     break;
             }
@@ -112,9 +122,11 @@ internal sealed class ClosingFilter
                 NewLine(blank: true);
                 return;
             }
-            // In einem zurückgehaltenen Absatz zählt jede Zeile; sonst nur Zeilen am Absatz-Anfang.
-            if ((_paragraphStart || _holding) && !char.IsWhiteSpace(c))
+            // In einem zurückgehaltenen Absatz zählt jede Zeile; sonst nur Zeilen am Absatz-Anfang – und jede Zeile,
+            // die eine Trennlinie werden könnte.
+            if ((_paragraphStart || _holding || c is '-' or '*' or '_') && !char.IsWhiteSpace(c))
             {
+                _ruleOnly = !_paragraphStart && !_holding;
                 _atLineStart = false;
                 _deciding = true;
                 Add(c, output);
@@ -142,6 +154,45 @@ internal sealed class ClosingFilter
         _atLineStart = true;
         _paragraphStart = blank || _paragraphStart && _holding;
     }
+
+    /// <summary>Nach einer Floskel kommt nur noch die Quelle: Floskel weg, Trennlinien davor bleiben.</summary>
+    private void DropClosing(StringBuilder output)
+    {
+        var held = _held.ToString();
+        if (!_anyShown || StartsWithPhrase(held, complete: true) != true)
+        {
+            Release(output);
+            return;
+        }
+        var lines = held.Split('\n');
+        var rule = Array.FindIndex(lines, IsRule);
+        LlmEngine.Log($"Floskel vor der Quelle weggelassen: {(rule < 0 ? held : string.Join(' ', lines[..rule])).Trim()}");
+        _held.Clear();
+        _holding = false;
+        if (rule >= 0)
+            Emit(string.Join('\n', lines[rule..]), output);
+    }
+
+    /// <summary>Eine Zeile, die nur eine Trennlinie ist: "---", "***", "___", "- - -".</summary>
+    internal static bool IsRule(string line) => RuleRegex().IsMatch(line);
+
+    /// <summary>"Quelle: …", "Quellen: …", "(Quelle: …)" – die Herkunft einer Antwort.</summary>
+    private static bool IsSource(string line) => SourceRegex().IsMatch(line);
+
+    /// <summary>Linien (und Leerzeilen) am Ende weg.</summary>
+    internal static string WithoutTrailingRules(string text)
+    {
+        var lines = text.Split('\n').ToList();
+        while (lines.Count > 0 && (lines[^1].Trim().Length == 0 || IsRule(lines[^1])))
+            lines.RemoveAt(lines.Count - 1);
+        return lines.Count == 0 ? "" : string.Join('\n', lines) + (text.EndsWith('\n') ? "\n" : "");
+    }
+
+    [GeneratedRegex(@"^\s*([-*_])(\s*\1){2,}\s*$")]
+    private static partial Regex RuleRegex();
+
+    [GeneratedRegex(@"^\s*[(*_]*(Quelle|Quellen)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SourceRegex();
 
     private void Release(StringBuilder output)
     {
@@ -202,8 +253,23 @@ internal sealed class ClosingFilter
     /// </summary>
     private bool? Decide(string line, bool complete)
     {
+        // Nur Striche, Sternchen, Unterstriche: Wird das eine Trennlinie? Dann zurückhalten, bis klar ist, ob noch etwas kommt.
+        var trimmed = line.Trim();
+        if (trimmed.Length > 0 && trimmed.All(c => c is '-' or '*' or '_' or ' '))
+        {
+            if (!complete)
+                return null;
+            if (IsRule(trimmed))
+                return true;
+        }
+        if (_ruleOnly)
+            return false;
         if (_holding)
         {
+            // Hinter einer Floskel: Wird das die Quelle ("Quelle: …")? Dann fällt die Floskel weg – erst abwarten.
+            var start = trimmed.TrimStart('(', '*', '_');
+            if (!complete && start.Length < 6 && "quelle".StartsWith(start, StringComparison.OrdinalIgnoreCase))
+                return null;
             var text = line.TrimStart();
             if (text.Length == 1 && text[0] is '-' or '*' or '•' && !complete)
                 return null;

@@ -238,6 +238,13 @@ internal sealed partial class LlmBackend : IChatBackend
         var widgets = true;
         var codeReleased = false;           // ein Code-Block vom Anfang floss als Text weiter (Werkzeug-Zweig der Grammatik)
         var grammar = Grammar(allowTools, colorful, widgets);
+        // Vor dem ersten Werkzeug-Ergebnis dieser Frage: Darf (oder muss) die Antwort mit einem Aufruf beginnen?
+        var firstRound = allowTools && conversation.Messages.LastOrDefault()?.Role != ChatRole.Tool;
+        if (!think && firstRound && _options.Tools!.RequiredTool(conversation.LastUserMessage?.Content) is { } required)
+        {
+            LlmEngine.Log($"Die Frage verlangt '{required}' – Antwort beginnt mit dem Aufruf.");
+            grammar = Grammar(allowTools, colorful, widgets, toolOnly: true);
+        }
         var sampler = answerPhase ? CreateAnswerSampler(grammar) : _model.CreateSampler(_thinking, banned: _thinkEnd);
         var thinkingFree = _thinkEnd!.Length == 0;
 
@@ -396,11 +403,11 @@ internal sealed partial class LlmBackend : IChatBackend
                     answerPhase = true;
                     thinkingTime = clock.Elapsed;
                     // Hat Max beim Nachdenken beschlossen, ein Werkzeug zu benutzen ("Ich verwende `rechnen`"), dann
-                    // auch wirklich – sonst behauptet er es nur und rechnet im Kopf. Nur vor dem ersten Ergebnis.
-                    if (allowTools && conversation.Messages.LastOrDefault()?.Role != ChatRole.Tool
-                        && _options.Tools!.IntendedTool(thought.ToString()) is { } intended)
+                    // auch wirklich – sonst behauptet er es nur und rechnet im Kopf. Ebenso, wenn schon die Frage eins
+                    // verlangt ("Schau im Web nach"). Nur vor dem ersten Ergebnis.
+                    if (firstRound && (_options.Tools!.IntendedTool(thought.ToString()) ?? _options.Tools.RequiredTool(conversation.LastUserMessage?.Content)) is { } intended)
                     {
-                        LlmEngine.Log($"Beim Nachdenken für '{intended}' entschieden – Antwort beginnt mit dem Aufruf.");
+                        LlmEngine.Log($"Werkzeug '{intended}' beschlossen – Antwort beginnt mit dem Aufruf.");
                         grammar = Grammar(allowTools, colorful, widgets, toolOnly: true);
                     }
                     sampler.Dispose();

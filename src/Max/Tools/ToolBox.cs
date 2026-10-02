@@ -70,29 +70,62 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
         return calls;
     }
 
+    /// <summary>Steht für "irgendein Werkzeug" – das Modell wählt selbst, welches.</summary>
+    public const string AnyTool = "*";
+
     /// <summary>
     /// Welches Werkzeug Max beim Nachdenken benutzen will ("Ich sollte das Werkzeug `rechnen` verwenden", "Ich rufe
-    /// `websuche` auf") – oder null. Zählt nur ein Satz mit Werkzeug-Namen (in Backticks oder nach "Werkzeug") und
-    /// einem Verb des Benutzens, ohne Verneinung: "Ich habe `rechnen` für große Zahlen" ist keine Absicht.
+    /// `websuche` auf", "die Wetter-Werkzeugfunktion aufrufen") – oder null. Zählt nur ein Satz mit Werkzeug-Namen
+    /// (in Backticks, nach oder vor "Werkzeug") und einem Verb des Benutzens, ohne Verneinung und nicht als Frage:
+    /// "Ich habe `rechnen` für große Zahlen" ist keine Absicht. Ohne Namen ("Ich sollte ein Werkzeug aufrufen"):
+    /// <see cref="AnyTool"/>.
     /// </summary>
     public string? IntendedTool(string thought)
     {
         foreach (var sentence in SentenceRegex().Split(thought))
         {
-            if (NegationRegex().IsMatch(sentence))
+            if (NegationRegex().IsMatch(sentence) || QuestionRegex().IsMatch(sentence))
                 continue;
             // "Ich werde eine Websuche durchführen", "Ich suche im Web" – auch ohne den Namen in Backticks. Nur in der
             // Ich-Form und nicht als Frage ("Der Nutzer fragt, ob ich im Internet suchen kann").
             if (WebTargetRegex().IsMatch(sentence) && WebActionRegex().IsMatch(sentence) && FirstPersonRegex().IsMatch(sentence)
-                && !QuestionRegex().IsMatch(sentence) && Find("websuche") is not null)
+                && Find("websuche") is not null)
                 return "websuche";
             if (!IntentRegex().IsMatch(sentence))
                 continue;
             foreach (var tool in _tools.Values)
             {
                 var name = System.Text.RegularExpressions.Regex.Escape(tool.Name);
-                if (System.Text.RegularExpressions.Regex.IsMatch(sentence, $@"`{name}(:[^`]*)?`|\bWerkzeug\s+[""„]?{name}\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                if (System.Text.RegularExpressions.Regex.IsMatch(sentence, $@"`{name}(:[^`]*)?`|\bWerkzeug\s+[""„]?{name}\b|\b{name}-Werkzeug",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                     return tool.Name;
+            }
+            if (AnyToolRegex().IsMatch(sentence) && FirstPersonRegex().IsMatch(sentence))
+                return AnyTool;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Verlangt schon die Frage ein Werkzeug? Dann beginnt die Antwort mit einem Aufruf, egal was das Modell beim
+    /// Nachdenken schreibt: "Schau bitte im Web nach" → websuche, "123456789 mal 987654321" → rechnen (Selbsttest 51:
+    /// beides angekündigt, aber nicht benutzt – die Zahl fehlte, der Weltmeister kam aus dem Gedächtnis).
+    /// </summary>
+    public string? RequiredTool(string? request)
+    {
+        if (string.IsNullOrWhiteSpace(request))
+            return null;
+        if (Find("websuche") is not null && WebRequestRegex().IsMatch(request))
+            return "websuche";
+        if (Find("rechnen") is not null)
+        {
+            foreach (System.Text.RegularExpressions.Match m in BigCalculationRegex().Matches(request))
+            {
+                var a = m.Groups["a"].Value.Count(char.IsAsciiDigit);
+                var b = m.Groups["b"].Value.Count(char.IsAsciiDigit);
+                var power = m.Groups["op"].Value is "hoch" or "^";
+                if (Math.Max(a, b) >= 5 || power && int.TryParse(m.Groups["b"].Value, out var exponent) && exponent >= 5)
+                    return "rechnen";
             }
         }
         return null;
@@ -101,11 +134,30 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
     [System.Text.RegularExpressions.GeneratedRegex(@"(?<=[.!?])\s+|\n+")]
     private static partial System.Text.RegularExpressions.Regex SentenceRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"\b(verwende|verwenden|benutze|benutzen|nutze|nutzen|rufe|aufrufen|aufzurufen|einsetzen|starte|starten|brauche)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(verwende|verwenden|benutze|benutzen|nutze|nutzen|rufe|aufrufen|aufzurufen|einsetzen|starte|starten|brauche|mache|machen|durchführen|ausführen|abrufen|abfragen)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex IntentRegex();
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\b(nicht|kein\w*|ohne|statt)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex NegationRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\bWerkzeug", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex AnyToolRegex();
+
+    // "Schau (bitte) im Web nach", "such im Internet", "recherchier im Netz", "google mal" – ausdrücklich gewünscht.
+    // Ein Verb des Suchens gehört dazu: "Bist du im Internet?" ist keine Bitte.
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"\b(such|schau|guck|recherchier|nachschlag|nachseh|nachschau|find)\w*\b[^.?!]*\b(im|ins)\s+(Web|Internet|Netz)\b" +
+        @"|\b(im|ins)\s+(Web|Internet|Netz)\b[^.?!]*\b(such|schau|guck|recherchier|nachschlag|nachseh|nachschau|find)\w*" +
+        @"|\bonline\s+nach|\bgoogle|\bwebsuche\b",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex WebRequestRegex();
+
+    // Zwei Zahlen mit einer Rechenart dazwischen; Bindestrich, Schrägstrich und x nur mit Leerzeichen (keine
+    // Telefonnummern, Adressen oder Maße wie 1920x1080).
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"(?<a>\d[\d.']*)\s*(?<op>mal|×|\*|·|plus|\+|hoch|\^|geteilt\s+durch|(?<=\s)(?:minus|-|−|/|x|durch)(?=\s))\s*(?<b>\d[\d.']*)",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex BigCalculationRegex();
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\b(Websuche|im\s+(Web|Internet|Netz))\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex WebTargetRegex();

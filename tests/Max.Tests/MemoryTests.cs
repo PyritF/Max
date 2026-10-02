@@ -143,6 +143,7 @@ public class ReflectionTests
     private static readonly string[] UserSaid =
     [
         "Übrigens: Ich programmiere beruflich in C#, und meinen Kaffee trinke ich schwarz.", "Was kann man in Wien machen?",
+        "Was kann man in Graz machen? Gib mir eine Übersicht mit Kosten.",
         "Ich hatte heute einen langen Tag.", "Erzähl mir was über den Herbst.", "Zeig mir eine typische Ordnerstruktur für C#.",
     ];
 
@@ -151,6 +152,7 @@ public class ReflectionTests
         - Programmiert in C#. | "Ich programmiere beruflich in C#"
         - Trinkt Kaffee schwarz. | "meinen Kaffee trinke ich schwarz"
         - Wohnt in Wien. | "Was kann man in Wien machen?"
+        - Wohnort oder Reiseziel Graz. | "Was kann man in Graz machen? Gib mir eine Übersicht mit Kosten."
         - Hatte einen langen Tag. | "Ich hatte heute einen langen Tag."
         - Mag Tee. | "Ich trinke gern Tee"
         - Mag den Herbst. | "Erzähl mir was über den Herbst."
@@ -170,7 +172,8 @@ public class ReflectionTests
     {
         var reflection = Reflection.Parse(Sample, Now, UserSaid)!;
 
-        // Wien: kein Satz über sich selbst; langer Tag: vorübergehend; Tee: so nie gesagt; Herbst, Ordner: Bitten an Max;
+        // Wien: kein Satz über sich selbst; Graz: Frage und Bitte, das "mir" gehört zur Bitte (Selbsttest 51);
+        // langer Tag: vorübergehend; Tee: so nie gesagt; Herbst, Ordner: Bitten an Max;
         // "impliziert" und ein zweiter Fakt aus demselben Satz: Ausdeutung.
         Assert.Equal(["Programmiert in C#.", "Trinkt Kaffee schwarz."], reflection.Facts);
         Assert.Equal("Tabellen im Renderer repariert", reflection.Summary);
