@@ -81,8 +81,10 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
         {
             if (NegationRegex().IsMatch(sentence))
                 continue;
-            // "Ich werde eine Websuche durchführen", "Ich suche im Web" – auch ohne den Namen in Backticks.
-            if (WebIntentRegex().IsMatch(sentence) && Find("websuche") is not null)
+            // "Ich werde eine Websuche durchführen", "Ich suche im Web" – auch ohne den Namen in Backticks. Nur in der
+            // Ich-Form und nicht als Frage ("Der Nutzer fragt, ob ich im Internet suchen kann").
+            if (WebTargetRegex().IsMatch(sentence) && WebActionRegex().IsMatch(sentence) && FirstPersonRegex().IsMatch(sentence)
+                && !QuestionRegex().IsMatch(sentence) && Find("websuche") is not null)
                 return "websuche";
             if (!IntentRegex().IsMatch(sentence))
                 continue;
@@ -105,13 +107,17 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
     [System.Text.RegularExpressions.GeneratedRegex(@"\b(nicht|kein\w*|ohne|statt)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex NegationRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex(
-        @"\bWebsuche\b.*\b(durchführen|durchzuführen|machen|starten|nutzen|verwenden|benutzen|brauche)\b" +
-        @"|\b(werde|sollte|muss|möchte|will)\b.*\bWebsuche\b" +
-        @"|\b(suche|schaue|sehe|recherchiere)\b.*\bim\s+(Web|Internet|Netz)\b" +
-        @"|\bim\s+(Web|Internet|Netz)\s+(suchen|nachsehen|nachschauen|nachzusehen|nachzuschauen|recherchieren|nachschlagen)\b",
-        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
-    private static partial System.Text.RegularExpressions.Regex WebIntentRegex();
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(Websuche|im\s+(Web|Internet|Netz))\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex WebTargetRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(durchführen|durchzuführen|machen|mache|starten|starte|nutzen|nutze|verwenden|verwende|benutzen|benutze|brauche|suche|suchen|schaue|nachsehen|nachschauen|nachzusehen|nachzuschauen|recherchiere|recherchieren|nachschlagen)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex WebActionRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(ich|werde|sollte|muss)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex FirstPersonRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\b(ob|kann|kannst|könnte|könntest)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex QuestionRegex();
 
     /// <summary>
     /// GBNF: der Inhalt eines <c>```werkzeug</c>-Blocks – genau ein Aufruf, ein bekannter Name, bei Bedarf die Angabe.

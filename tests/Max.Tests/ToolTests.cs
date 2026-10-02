@@ -221,6 +221,9 @@ public class ToolBoxTests
     [InlineData("Ich sollte zuerst die aktuellen Zahlen recherchieren. Ich werde eine Websuche durchführen.", "websuche")]
     [InlineData("Der Nutzer fragt nach einem Fakt, den ich nachweislich bestätigen will. Ich suche im Web.", "websuche")]
     [InlineData("Eine Websuche ist hier nicht nötig, das weiß ich.", null)]
+    [InlineData("Der Nutzer fragt, ob ich im Internet suchen kann.", null)]
+    [InlineData("Der Nutzer sucht im Netz nach Tipps für Rom.", null)]
+    [InlineData("Ich schaue im Internet nach.", "websuche")]
     public void IntendedTool_OnlyAnnouncedUse(string thought, string? expected)
     {
         using var http = new HttpClient();
