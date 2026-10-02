@@ -120,7 +120,8 @@ internal sealed class ReadFileTool(Func<string> workingDirectory, Func<IVision?>
     public string Describe(string argument) => Describe("Lese", argument);
 
     // Eingescannte PDF-Seiten liest der Bild-Zusatz – das dauert auf der CPU.
-    public TimeSpan Timeout => TimeSpan.FromMinutes(5);
+    // Eingescannte Seiten liest der Bild-Zusatz ab – auf der CPU bis zu einigen Minuten je Seite (Selbsttest 54: 309 s).
+    public TimeSpan Timeout => TimeSpan.FromMinutes(10);
 
     public async Task<string> RunAsync(string argument, CancellationToken ct)
     {

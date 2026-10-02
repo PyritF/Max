@@ -77,6 +77,13 @@ internal sealed partial class ElementGate
         _rest.Clear();
     }
 
+    /// <summary>Block und alles danach verwerfen – die Antwort geht vor dem Block neu weiter.</summary>
+    public void Reset()
+    {
+        _rest.Clear();
+        Continue();
+    }
+
     /// <summary>Nimmt Antwort-Text an und liefert, was schon angezeigt werden darf.</summary>
     public string Push(string text)
     {

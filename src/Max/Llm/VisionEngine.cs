@@ -95,7 +95,14 @@ internal sealed class VisionEngine(LlmEngine engine, string projectorPath, bool 
                 if (token.IsEndOfGeneration(context.NativeHandle.Vocab))
                     break;
                 decoder.Add(token);
-                answer.Append(decoder.Read());
+                var piece = decoder.Read();
+                answer.Append(piece);
+                // Dreht sich die Antwort im Kreis (eine Zeile immer wieder), aufhören – auf der CPU kostet jedes Token Zeit.
+                if (piece.IndexOfAny(['\n', '.']) >= 0 && LlmBackend.IsLooping(answer.ToString()))
+                {
+                    LlmEngine.Log("Bild-Antwort wiederholt sich, abgebrochen.");
+                    break;
+                }
                 batch.Clear();
                 batch.Add(token, new LLamaPos { Value = past++ }, LLamaSeqId.Zero, logits: true);
                 if (context.NativeHandle.Decode(batch) != DecodeResult.Ok)

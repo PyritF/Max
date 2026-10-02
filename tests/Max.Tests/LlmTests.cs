@@ -472,8 +472,10 @@ public class LlmBackendTests
     }
 
     [Fact]
-    public async Task ElementThatStaysBroken_IsDropped()
+    public async Task ElementThatStaysBroken_IsDropped_AndTheAnswerGoesOnWithoutElements()
     {
+        // Selbsttest 54: das Ergebnis einer Rechnung dreimal als ungültiger Balken – weggelassen fehlte die Zahl.
+        // Jetzt geht es vor dem Block ohne Elemente weiter: Das Modell schreibt die Antwort als Text.
         var model = new FakeModel("A\n", "```balken\n", "x\n", "```\n", "y\n", "```\n", "z\n", "```\n", "Ende.");
         var backend = Backend(model);
 
@@ -481,6 +483,10 @@ public class LlmBackendTests
 
         Assert.Equal("A\nEnde.", reply);
         Assert.Equal(LlmBackend.MaxRepairs, backend.LastRun!.Repairs);
+        Assert.Contains("widget", model.SamplerGrammarTexts[0]!);
+        Assert.DoesNotContain("\"```\" widget", model.SamplerGrammarTexts[^1]!);     // danach keine Elemente mehr
+        await backend.CompleteAsync();
+        Assert.DoesNotContain("```balken", model.Decode(model.Cache));
     }
 
     [Fact]
@@ -853,7 +859,10 @@ public class ClosingFilterTests
     [InlineData("Die Kaution beträgt 2.380 €.\n\nMöchtest du mehr?\n---\n", "Die Kaution beträgt 2.380 €.\n\n")]
     [InlineData("Auf dem Bild steht **MAX 42**.\n\nDas war es.\n---", "Auf dem Bild steht **MAX 42**.\n\nDas war es.\n")]
     [InlineData("Text.\n\n***\n", "Text.\n\n")]
-    [InlineData("Wien hat 2 Millionen Einwohner.\n\nWillst du mehr Details?\n---\nQuelle: example.org", "Wien hat 2 Millionen Einwohner.\n\n---\nQuelle: example.org")]
+    [InlineData("Wien hat 2 Millionen Einwohner.\n\nWillst du mehr Details?\n---\nQuelle: example.org", "Wien hat 2 Millionen Einwohner.\n\nQuelle: example.org")]
+    // Selbsttest 54: die Linie vor jeder Schlussbemerkung – Linien fallen ganz weg.
+    [InlineData("Die Kaution beträgt 2.380 €.\n\n---\n\nSeite 18, § 17.", "Die Kaution beträgt 2.380 €.\n\nSeite 18, § 17.")]
+    [InlineData("Eins.\n---\nZwei.", "Eins.\nZwei.")]
     [InlineData("Wien hat 2 Millionen Einwohner.\n\nMöchtest du mehr?\n\nQuelle: example.org", "Wien hat 2 Millionen Einwohner.\n\nQuelle: example.org")]
     public void TrailingRules_AreDropped_AndTheOfferBeforeThem(string text, string expected)
     {
@@ -862,7 +871,6 @@ public class ClosingFilterTests
     }
 
     [Theory]
-    [InlineData("Eins.\n\n---\n\nZwei.")]
     [InlineData("Zutaten:\n- Mehl\n- Milch\n- Eier")]
     [InlineData("**Wichtig** zuerst.\nDann der Rest.")]
     [InlineData("Text.\n\n```yaml\n---\nname: max\n```\n")]

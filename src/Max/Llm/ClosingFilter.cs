@@ -9,9 +9,9 @@ namespace Max.Llm;
 /// aus dem Verlauf, sonst gewöhnt sich das Modell die Floskel im Gespräch an. Besteht die ganze Antwort nur
 /// aus so einem Absatz, ist es eine echte Rückfrage und bleibt. Dasselbe gilt für Abschluss-Rückfragen
 /// („Passt das so?“) – die fallen aber nur weg, wenn der Absatz wirklich eine Frage ist. Code-Blöcke bleiben unberührt.
-/// Eine Trennlinie ("---") ganz am Ende fällt weg – sonst steht nach der Floskel noch etwas, sie bliebe stehen, und
-/// das Modell hängt die Linie im Gespräch bald an jede Antwort (Selbsttest 51). Folgt einer Floskel nur noch die
-/// Quelle ("Quelle: …"), fällt die Floskel weg, die Quelle bleibt.
+/// Trennlinien ("---") fallen weg: Am Ende hielten sie die Floskel davor am Leben, und das Modell setzte sie bald in
+/// jede Antwort, vor jede Schlussbemerkung (Selbsttest 51, 54) – Max braucht sie nicht. Folgt einer Floskel nur noch
+/// die Quelle ("Quelle: …"), fällt die Floskel weg, die Quelle bleibt.
 /// Gelernte Floskeln: Beginnt der Schluss wie der Schluss einer früheren Antwort und ist sein erster Satz derselbe, ist
 /// es eine Angewohnheit, kein Inhalt – Selbsttest 53 hängte "Und schwarz getrunken? …" an jede Antwort.
 /// </summary>
@@ -148,10 +148,10 @@ internal sealed partial class ClosingFilter
                 if (_anyShown && _learned.Contains(FirstSentence(held)))
                     LlmEngine.Log($"Wiederholten Schluss weggelassen: {held.Trim().ReplaceLineEndings(" ")}");
                 else
-                    output.Append(held);
+                    output.Append(WithoutRules(held));
             }
             else if (!_anyShown || StartsWithPhrase(held, complete: true, Phrases) != true && !held.Contains('?'))
-                output.Append(held);
+                output.Append(WithoutRules(held));
             else
                 LlmEngine.Log($"Floskel am Ende weggelassen: {held.Trim().ReplaceLineEndings(" ")}");
             _held.Clear();
@@ -240,13 +240,9 @@ internal sealed partial class ClosingFilter
             Release(output);
             return;
         }
-        var lines = held.Split('\n');
-        var rule = Array.FindIndex(lines, IsRule);
-        LlmEngine.Log($"Floskel vor der Quelle weggelassen: {(rule < 0 ? held : string.Join(' ', lines[..rule])).Trim()}");
+        LlmEngine.Log($"Floskel vor der Quelle weggelassen: {WithoutRules(held).Trim().ReplaceLineEndings(" ")}");
         _held.Clear();
         _holding = false;
-        if (rule >= 0)
-            Emit(string.Join('\n', lines[rule..]), output);
     }
 
     /// <summary>Eine Zeile, die nur eine Trennlinie ist: "---", "***", "___", "- - -".</summary>
@@ -254,6 +250,22 @@ internal sealed partial class ClosingFilter
 
     /// <summary>"Quelle: …", "Quellen: …", "(Quelle: …)" – die Herkunft einer Antwort.</summary>
     private static bool IsSource(string line) => SourceRegex().IsMatch(line);
+
+    /// <summary>Trennlinien raus, samt einer Leerzeile direkt dahinter.</summary>
+    internal static string WithoutRules(string text)
+    {
+        var lines = text.Split('\n').ToList();
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (!IsRule(lines[i]))
+                continue;
+            lines.RemoveAt(i);
+            if (i < lines.Count - 1 && lines[i].Trim().Length == 0)
+                lines.RemoveAt(i);
+            i--;
+        }
+        return string.Join('\n', lines);
+    }
 
     /// <summary>Linien (und Leerzeilen) am Ende weg.</summary>
     internal static string WithoutTrailingRules(string text)
@@ -278,7 +290,7 @@ internal sealed partial class ClosingFilter
             _holding = false;
             return;
         }
-        var held = _held.ToString();
+        var held = WithoutRules(_held.ToString());
         _held.Clear();
         _holding = false;
         Emit(held, output);

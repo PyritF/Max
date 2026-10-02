@@ -473,6 +473,29 @@ internal sealed partial class LlmBackend : IChatBackend
                         await _model.PrefillAsync([.. prompt, .. head, .. generated], ct);
                         released = gate.Drop();
                     }
+                    else if (widgets && !codeReleased && WithoutElement(answerAll, closed.Name) is { } keep)
+                    {
+                        // Auch neu erzeugt kaputt: zurück vor den Block und ohne Elemente weiterschreiben, statt ihn samt
+                        // Inhalt wegzulassen (Selbsttest 54: das Ergebnis einer Rechnung als Balken – die Zahl fehlte).
+                        gate.Reset();
+                        repair?.Dispose();
+                        repair = null;
+                        LlmEngine.Log($"Element '{closed.Name}' ungültig – die Antwort geht ohne Elemente weiter.");
+                        Truncate(generated, generated.Count - answerAll.Count);
+                        generated.AddRange(keep);
+                        answerAll.Clear();
+                        answerAll.AddRange(keep);
+                        Truncate(answerTokens, Math.Min(answerTokens.Count, keep.Count));
+                        await _model.PrefillAsync([.. prompt, .. head, .. generated], ct);
+                        widgets = false;
+                        grammar = Grammar(allowTools, colorful, widgets);
+                        sampler.Dispose();
+                        sampler = CreateAnswerSampler(grammar);
+                        foreach (var t in answerAll)
+                            sampler.Accept(t);
+                        decoder = _model.CreateDecoder();
+                        continue;
+                    }
                     else
                     {
                         LlmEngine.Log($"Element '{closed.Name}' ungültig, weggelassen.");
