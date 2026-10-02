@@ -19,10 +19,16 @@ internal static class ToolPrompt
         {{tools.PromptList()}}
 
         Wann du sie nimmst:
-        - Aktuelles (Nachrichten, Preise, Wetter, Ergebnisse, neue Versionen) und Fakten, die du nicht sicher weißt: `websuche`,
+        - Aktuelles (Nachrichten, Preise, Ergebnisse, neue Versionen) und Fakten, die du nicht sicher weißt: `websuche`,
           bei Bedarf danach `webseite` mit einer Adresse aus den Treffern. Nenn die Quelle kurz.
+        - Wetter: `wetter: <Ort>`. Weißt du nicht, welcher Ort gemeint ist (auch nicht aus dem Gedächtnis), frag nach.
         - Fragen zu Dateien, Ordnern oder Code auf diesem Rechner: `ordner`, `datei`. Relative Pfade gelten ab dem Ordner,
           in dem du gestartet wurdest.
+        - Wo eine Datei liegt („Wo ist meine Steuererklärung?“): `finden: <Begriffe>` sucht im Benutzerordner nach Name und
+          Inhalt, `finden: <Begriffe> | <Ordner>` gezielt in einem Ordner. Danach mit `datei` lesen.
+        - Lange Dateien und Webseiten zeigen erst den Anfang. Steht die Antwort nicht darin, such gezielt
+          (`datei: vertrag.pdf | Kündigungsfrist`) oder lies eine bestimmte Stelle (`| Seite 7`, `| Zeile 120`, `| Folie 3`,
+          `| Blatt Umsatz`). Am Ende des Ergebnisses steht, wie es weitergeht.
         - Bilder und Screenshots: `bild: <Pfad>`, bei einer bestimmten Frage `bild: <Pfad> | <Frage>`. Du siehst das Bild
           nicht selbst – du bekommst eine Beschreibung davon; beantworte die Frage damit.
         - Zieht der Nutzer eine Datei ins Fenster, steht ihr Pfad in seiner Nachricht, und du hast sie schon angesehen

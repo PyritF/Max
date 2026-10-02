@@ -33,10 +33,12 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
         new SystemInfoTool(),
         new CalculatorTool(),
         new ListFolderTool(workingDirectory),
-        new ReadFileTool(workingDirectory),
+        new ReadFileTool(workingDirectory, vision),
+        new FindFilesTool(workingDirectory),
         .. vision is null ? Array.Empty<ITool>() : [new ImageTool(vision, workingDirectory)],
         new WebSearchTool(web),
         new ReadWebPageTool(web),
+        new WeatherTool(web),
     ], workingDirectory);
 
     /// <summary>Aufrufe für Dateien, die der Nutzer in die Nachricht gezogen hat (nur für Werkzeuge, die es gibt).</summary>

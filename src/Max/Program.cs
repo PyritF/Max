@@ -98,7 +98,7 @@ if (args.Contains("--selftest") && engine is not null && llm is not null)
         {
             await VisionFile.DownloadAsync(new ModelDownloader(http), paths, current.Vision!, new StepProgress(), CancellationToken.None);
         }
-        catch (Exception e) when (e is HttpRequestException or IOException or InvalidOperationException)
+        catch (Exception e) when (e is HttpRequestException or IOException or InvalidOperationException or SetupException)
         {
             Console.WriteLine($"WARNUNG: Bild-Zusatz nicht geladen ({e.Message}) – Bildfragen gehen dann nicht.");
         }

@@ -635,12 +635,57 @@ internal sealed partial class LlmBackend : IChatBackend
             _thinkTags = [.. SingleToken("<think>"), .. _thinkEnd];
         }
 
-        var first = _window.FirstIncluded(messages, _systemTokens.Count + _thinkingStart.Count, m => TokensOf(m).Count);
+        var fixedCost = _systemTokens.Count + _thinkingStart.Count;
+        var first = _window.FirstIncluded(messages, fixedCost, m => TokensOf(m).Count);
+        // Die letzte Frage des Nutzers bleibt immer – sonst antwortet Max auf ein Werkzeug-Ergebnis ohne Frage.
+        var question = LastIndexOf(messages, ChatRole.User);
+        if (question >= 0 && first > question)
+            first = question;
+        var included = messages.Skip(first).ToList();
+        FitTurn(included, fixedCost);
 
         var prompt = new List<int>(_systemTokens);
-        for (var i = first; i < messages.Count; i++)
-            prompt.AddRange(TokensOf(messages[i]));
+        foreach (var message in included)
+            prompt.AddRange(TokensOf(message));
         return prompt;
+    }
+
+    /// <summary>So viel bleibt von einem Werkzeug-Ergebnis mindestens, wenn der Platz knapp wird.</summary>
+    internal const int MinToolChars = 400;
+
+    /// <summary>
+    /// Passt selbst die laufende Runde nicht in den Kontext (mehrere lange Dokumente, Webseiten …), werden ihre
+    /// Werkzeug-Ergebnisse gekürzt – das längste zuerst. Nur im Prompt; im Verlauf bleibt alles, wie es war.
+    /// Immer gleich gekürzt, damit der Cache in der nächsten Runde weiter passt.
+    /// </summary>
+    private void FitTurn(List<ChatMessage> included, int fixedCost)
+    {
+        var total = fixedCost + included.Sum(m => TokensOf(m).Count);
+        while (total > _window.Budget)
+        {
+            var tools = included.Select((message, index) => (Message: message, Index: index))
+                .Where(x => x.Message.Role == ChatRole.Tool && x.Message.Content.Length > MinToolChars + 100).ToList();
+            if (tools.Count == 0)
+                return;
+            var longest = tools.MaxBy(x => TokensOf(x.Message).Count);
+            var tokens = TokensOf(longest.Message).Count;
+            var keep = Math.Max(MinToolChars, (int)(longest.Message.Content.Length * (tokens - (total - _window.Budget) - 60) / (double)tokens));
+            if (keep >= longest.Message.Content.Length - 100)
+                keep = Math.Max(MinToolChars, longest.Message.Content.Length / 2);
+            included[longest.Index] = longest.Message with
+            {
+                Content = longest.Message.Content[..keep] + "\n… (gekürzt – für alles reicht der Platz im Gespräch nicht)",
+            };
+            total = fixedCost + included.Sum(m => TokensOf(m).Count);
+        }
+    }
+
+    private static int LastIndexOf(IReadOnlyList<ChatMessage> messages, ChatRole role)
+    {
+        for (var i = messages.Count - 1; i >= 0; i--)
+            if (messages[i].Role == role)
+                return i;
+        return -1;
     }
 
     private IReadOnlyList<int> TokensOf(ChatMessage message)

@@ -32,6 +32,11 @@ internal static class SelfTest
         "Welche Dateien und Ordner liegen in dem Ordner, in dem du gerade läufst?",
         "Lies die README.md und sag mir in einem Satz, worum es in dem Projekt geht.",
         "Wer hat die Fußball-Weltmeisterschaft 2022 gewonnen? Schau bitte im Web nach.",
+        "Wie hoch ist laut tests/mietvertrag.pdf die Kaution?",
+        "In welchem Monat war der Umsatz laut tests/umsatz.xlsx am höchsten?",
+        "Was ist der Gesamtbetrag auf der eingescannten Rechnung tests/rechnung-scan.pdf?",
+        "Wie wird das Wetter morgen in Graz?",
+        "Wo auf diesem Rechner liegt die Datei mit dem Mietvertrag?",
         DraggedImage,
         "Schau dir bitte das Bild tests/testbild.png an: Welche Farbe hat der Kreis?",
         "Schreib ab jetzt bitte alles schön bunt, mit Farbverläufen. Erzähl mir was über den Herbst.",
@@ -52,6 +57,13 @@ internal static class SelfTest
         ["Welche Dateien und Ordner liegen in dem Ordner, in dem du gerade läufst?"] = ("ordner", "src"),
         ["Lies die README.md und sag mir in einem Satz, worum es in dem Projekt geht."] = ("datei", "Max"),
         ["Wer hat die Fußball-Weltmeisterschaft 2022 gewonnen? Schau bitte im Web nach."] = ("websuche", "Argentinien"),
+        // Steht erst auf Seite 18 – ohne gezieltes Suchen im Dokument nicht zu finden.
+        ["Wie hoch ist laut tests/mietvertrag.pdf die Kaution?"] = ("datei", "2380"),
+        ["In welchem Monat war der Umsatz laut tests/umsatz.xlsx am höchsten?"] = ("datei", "Oktober"),
+        // Nur ein Bild im PDF – der Bild-Zusatz liest es ab.
+        ["Was ist der Gesamtbetrag auf der eingescannten Rechnung tests/rechnung-scan.pdf?"] = ("datei", "152"),
+        ["Wie wird das Wetter morgen in Graz?"] = ("wetter", "°C"),
+        ["Wo auf diesem Rechner liegt die Datei mit dem Mietvertrag?"] = ("finden", "mietvertrag.pdf"),
         [DraggedImage] = ("bild", "42"),
         ["Schau dir bitte das Bild tests/testbild.png an: Welche Farbe hat der Kreis?"] = ("bild", "rot"),
     };
@@ -99,21 +111,29 @@ internal static class SelfTest
             var reply = "";
             var thought = "";
             var toolsUsed = new List<string>();
-            await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
+            try
             {
-                if (chunk.IsTool)
+                await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
                 {
-                    toolsUsed.Add(chunk.Text);
-                    output.WriteLine($"  ⌕ {chunk.Text}");
+                    if (chunk.IsTool)
+                    {
+                        toolsUsed.Add(chunk.Text);
+                        output.WriteLine($"  ⌕ {chunk.Text}");
+                    }
+                    else if (chunk.IsThinking)
+                    {
+                        thought += chunk.Text;
+                    }
+                    else
+                    {
+                        reply += chunk.Text;
+                    }
                 }
-                else if (chunk.IsThinking)
-                {
-                    thought += chunk.Text;
-                }
-                else
-                {
-                    reply += chunk.Text;
-                }
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                output.WriteLine($"FEHLER: Antwort gescheitert ({e.Message}).");
+                result = Math.Max(result, 1);
             }
             foreach (var message in conversation.Messages.Where(m => m.Role == ChatRole.Tool).TakeLast(toolsUsed.Count))
                 output.WriteLine($"  ⌕ Ergebnis: {Shorten(message.Content.ReplaceLineEndings(" / "), 300)}");

@@ -133,6 +133,18 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
             writer.Write("(abgebrochen)", new Style(Theme.Muted));
             writer.Finish();
         }
+        catch (Exception e)
+        {
+            // Lieber ein ehrlicher Satz als ein Absturz – Max läuft weiter, Einzelheiten stehen im Protokoll.
+            await StopSpinnerAsync();
+            await StopThinkingAsync();
+            markdown.Finish();
+            Llm.LlmEngine.Log($"Antwort gescheitert: {e}");
+            var gap = text.Length > 0 && !char.IsWhiteSpace(text[^1]) ? " " : "";
+            writer.Write(gap, Style.Plain);
+            writer.Write($"(Da ist mir etwas durcheinandergeraten: {e.Message} Frag gern noch einmal.)", new Style(Theme.Muted));
+            writer.Finish();
+        }
         finally
         {
             spinnerStop.Dispose();

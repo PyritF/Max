@@ -90,7 +90,7 @@ public sealed class FileToolTests : IDisposable
     [Fact]
     public async Task BinaryAndMissing_GiveAHint()
     {
-        Assert.Contains("keine Textdatei", await new ReadFileTool(() => _dir).RunAsync("bild.png", CancellationToken.None));
+        Assert.Contains("dafür gibt es \"bild\"", await new ReadFileTool(() => _dir).RunAsync("bild.png", CancellationToken.None));
         Assert.Contains("gibt es nicht", await new ReadFileTool(() => _dir).RunAsync("fehlt.txt", CancellationToken.None));
         Assert.Contains("ist ein Ordner", await new ReadFileTool(() => _dir).RunAsync("src", CancellationToken.None));
     }
@@ -325,6 +325,26 @@ public class ToolRoundTests
     }
 
     [Fact]
+    public void TooMuchForTheContext_ToolResultsAreShortened_TheQuestionStays()
+    {
+        var model = new FakeModel { ContextSize = 4000 };
+        var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => false, Tools: new ToolBox([new CalculatorTool()])));
+        var conversation = new Conversation();
+        conversation.AddUser("Was steht in den beiden Dateien?");
+        conversation.Add(ChatRole.Assistant, "```werkzeug\ndatei: a.txt\n```");
+        conversation.Add(ChatRole.Tool, "A" + new string('a', 3000));
+        conversation.Add(ChatRole.Assistant, "```werkzeug\ndatei: b.txt\n```");
+        conversation.Add(ChatRole.Tool, "B" + new string('b', 1500));
+
+        var prompt = model.Decode(backend.BuildPrompt(conversation.Messages));
+
+        Assert.Contains("Was steht in den beiden Dateien?", prompt);
+        Assert.Contains("(gekürzt – für alles reicht der Platz im Gespräch nicht)", prompt);
+        Assert.True(prompt.Length < 4000 - LlmBackend.AnswerReserve);
+        Assert.Equal(3001, conversation.Messages[2].Content.Length);          // im Verlauf bleibt alles
+    }
+
+    [Fact]
     public async Task ChatView_ShowsWhatMaxIsDoing()
     {
         var console = new TestConsole();
@@ -360,7 +380,7 @@ public class ImageAndAttachmentTests : IDisposable
     {
         public List<(string Path, string Question)> Seen { get; } = [];
 
-        public Task<string> LookAsync(string imagePath, string question, CancellationToken ct)
+        public Task<string> LookAsync(string imagePath, string question, CancellationToken ct, int maxTokens = VisionEngine.MaxAnswerTokens)
         {
             Seen.Add((imagePath, question));
             return Task.FromResult("Ein roter Kreis und der Text MAX 42.");
@@ -412,7 +432,7 @@ public class ImageAndAttachmentTests : IDisposable
         var text = File("b.md");
         var calls = Attachments.Calls($"\"{image}\" \"{text}\" Was steht da?", _dir);
         Assert.Equal(new ToolCall("bild", $"{image} | Was steht da?"), calls[0]);
-        Assert.Equal(new ToolCall("datei", text), calls[1]);
+        Assert.Equal(new ToolCall("datei", $"{text} | Was steht da?"), calls[1]);
     }
 
     [Fact]
@@ -461,58 +481,68 @@ public class ImageAndAttachmentTests : IDisposable
     }
 }
 
-public class DocumentTests : IDisposable
+public sealed class FindFilesTests : IDisposable
 {
-    private readonly string _dir = Directory.CreateTempSubdirectory("max-dok-").FullName;
+    private readonly string _home = Directory.CreateTempSubdirectory("max-finden-").FullName;
 
-    public void Dispose() => Directory.Delete(_dir, recursive: true);
+    public void Dispose() => Directory.Delete(_home, recursive: true);
+
+    private void Put(string relative, string content = "x")
+    {
+        var path = Path.Combine(_home, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+    }
+
+    private Task<string> Find(string argument) =>
+        new FindFilesTool(() => _home, () => _home).RunAsync(argument, CancellationToken.None);
 
     [Fact]
-    public async Task Word_ParagraphsAndTables()
+    public async Task ByName_AndByContent_NotInHiddenOrJunkFolders()
     {
-        var path = Path.Combine(_dir, "brief.docx");
-        using (var zip = System.IO.Compression.ZipFile.Open(path, System.IO.Compression.ZipArchiveMode.Create))
-        using (var writer = new StreamWriter(zip.CreateEntry("word/document.xml").Open()))
-        {
-            writer.Write("""
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
-                <w:p><w:r><w:t>Sehr geehrte </w:t></w:r><w:r><w:t>Damen und Herren,</w:t></w:r></w:p>
-                <w:p><w:r><w:t>die Rechnung liegt bei.</w:t></w:r></w:p>
-                <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Posten</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Betrag</w:t></w:r></w:p></w:tc></w:tr>
-                <w:tr><w:tc><w:p><w:r><w:t>Miete</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>850 €</w:t></w:r></w:p></w:tc></w:tr></w:tbl>
-                </w:body></w:document>
-                """);
-        }
+        Put("Dokumente/Steuer/Steuererklärung_2025.pdf");
+        Put("Dokumente/Steuer/Steuererklärung_2024.pdf");
+        Put("Dokumente/Notizen/finanzen.txt", "Einkaufsliste\nDie Steuererklärung 2025 bis Ende Juli abgeben.\nSonst nichts.");
+        Put(".versteckt/Steuererklärung_2025.txt");
+        Put("node_modules/paket/Steuererklärung_2025.txt");
+        Put(".ssh/Steuererklärung_2025");
 
-        var result = await new ReadFileTool(() => _dir).RunAsync("brief.docx", CancellationToken.None);
+        var result = await Find("meine Steuererklärung von 2025");
 
-        Assert.Contains("Sehr geehrte Damen und Herren,\ndie Rechnung liegt bei.", result);
-        Assert.Contains("Posten | Betrag\nMiete | 850 €", result);
+        Assert.Contains("Im Namen:\n- " + Path.Combine(_home, "Dokumente", "Steuer", "Steuererklärung_2025.pdf"), result);
+        Assert.DoesNotContain("2024", result);
+        Assert.Contains("Im Inhalt:\n- " + Path.Combine(_home, "Dokumente", "Notizen", "finanzen.txt"), result);
+        Assert.Contains("„Die Steuererklärung 2025 bis Ende Juli abgeben.“", result);
+        Assert.DoesNotContain("versteckt", result);
+        Assert.DoesNotContain("node_modules", result);
+        Assert.DoesNotContain(".ssh", result);
     }
 
     [Fact]
-    public async Task Pdf_TextPerPage()
+    public async Task TypeWords_FilterByExtension()
     {
-        var builder = new UglyToad.PdfPig.Writer.PdfDocumentBuilder();
-        var font = builder.AddStandard14Font(UglyToad.PdfPig.Fonts.Standard14Fonts.Standard14Font.Helvetica);
-        builder.AddPage(UglyToad.PdfPig.Content.PageSize.A4).AddText("Kontostand 1234 Euro", 12, new UglyToad.PdfPig.Core.PdfPoint(50, 700), font);
-        builder.AddPage(UglyToad.PdfPig.Content.PageSize.A4).AddText("Zweite Seite", 12, new UglyToad.PdfPig.Core.PdfPoint(50, 700), font);
-        await File.WriteAllBytesAsync(Path.Combine(_dir, "konto.pdf"), builder.Build());
+        Put("Bilder/Urlaub Kroatien.jpg");
+        Put("Notizen/Urlaub Kroatien.txt");
 
-        var result = await new ReadFileTool(() => _dir).RunAsync("konto.pdf", CancellationToken.None);
+        var result = await Find("Fotos vom Urlaub in Kroatien");
 
-        Assert.Contains("PDF mit 2 Seite(n)", result);
-        Assert.Contains("--- Seite 1 ---\nKontostand 1234 Euro", result);
-        Assert.Contains("--- Seite 2 ---\nZweite Seite", result);
+        Assert.Contains("Urlaub Kroatien.jpg", result);
+        Assert.DoesNotContain("Urlaub Kroatien.txt", result);
+        var (terms, types) = FindFilesTool.Split("Fotos Kroatien");
+        Assert.Equal(["kroati"], terms);
+        Assert.Contains(".heic", types);
     }
 
     [Fact]
-    public async Task BrokenOrOldFormats_GiveASentence()
+    public async Task InAFolder_NothingFound_AndNoTerms()
     {
-        await File.WriteAllTextAsync(Path.Combine(_dir, "kaputt.pdf"), "kein pdf");
-        await File.WriteAllTextAsync(Path.Combine(_dir, "alt.doc"), "x");
-        var tool = new ReadFileTool(() => _dir);
-        Assert.Contains("ließ sich nicht lesen", await tool.RunAsync("kaputt.pdf", CancellationToken.None));
-        Assert.Contains("alten Office-Format", await tool.RunAsync("alt.doc", CancellationToken.None));
+        Put("Projekt/readme.md", "Hallo");
+        Put("Anderes/hallo.txt", "Hallo");
+
+        Assert.Contains("readme.md", await Find("Hallo | Projekt"));
+        Assert.DoesNotContain("hallo.txt", await Find("Hallo | Projekt"));
+        Assert.Contains("Nichts gefunden", await Find("Zebrastreifen"));
+        Assert.Contains("keine brauchbaren Suchbegriffe", await Find("die das"));
+        Assert.Contains("gibt es nicht", await Find("Hallo | Fehlt"));
     }
 }

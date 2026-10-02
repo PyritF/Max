@@ -602,7 +602,7 @@ internal sealed class FakeModel(params string?[] script) : ILanguageModel
     public Action<int>? OnSample { get; init; }
     public bool FailRestore { get; set; }
 
-    public int ContextSize => 100_000;
+    public int ContextSize { get; init; } = 100_000;
     public int CachedCount => Cache.Count;
 
     // Wie beim echten Modell sind die Denk-Tags je ein einzelnes Token.

@@ -12,7 +12,8 @@ namespace Max.Llm;
 internal interface IVision
 {
     /// <summary>Beschreibt das Bild oder beantwortet <paramref name="question"/> dazu.</summary>
-    Task<string> LookAsync(string imagePath, string question, CancellationToken ct);
+    /// <param name="maxTokens">So lang darf die Antwort höchstens werden (eine abgeschriebene Seite braucht mehr).</param>
+    Task<string> LookAsync(string imagePath, string question, CancellationToken ct, int maxTokens = VisionEngine.MaxAnswerTokens);
 }
 
 /// <summary>
@@ -36,7 +37,7 @@ internal sealed class VisionEngine(LlmEngine engine, string projectorPath, bool 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private MtmdWeights? _projector;
 
-    public async Task<string> LookAsync(string imagePath, string question, CancellationToken ct)
+    public async Task<string> LookAsync(string imagePath, string question, CancellationToken ct, int maxTokens = MaxAnswerTokens)
     {
         await _gate.WaitAsync(ct);
         try
@@ -55,7 +56,7 @@ internal sealed class VisionEngine(LlmEngine engine, string projectorPath, bool 
                     throw new InvalidOperationException("Der Zusatz kann keine Bilder.");
                 LlmEngine.Log($"Bild-Zusatz geladen ({(useGpu ? "Grafikkarte" : "CPU")}).");
             }
-            return await Task.Run(() => Look(_projector, imagePath, question, ct), ct);
+            return await Task.Run(() => Look(_projector, imagePath, question, maxTokens, ct), ct);
         }
         finally
         {
@@ -63,7 +64,7 @@ internal sealed class VisionEngine(LlmEngine engine, string projectorPath, bool 
         }
     }
 
-    private string Look(MtmdWeights projector, string imagePath, string question, CancellationToken ct)
+    private string Look(MtmdWeights projector, string imagePath, string question, int maxTokens, CancellationToken ct)
     {
         using var context = engine.CreateSideContext(ContextSize, batchSize: MaxImageTokens * 2);
         using var image = projector.LoadMedia(imagePath);
@@ -87,7 +88,7 @@ internal sealed class VisionEngine(LlmEngine engine, string projectorPath, bool 
             var decoder = new StreamingTokenDecoder(context);
             var answer = new StringBuilder();
             var batch = new LLamaBatch();
-            for (var i = 0; i < MaxAnswerTokens && past + 1 < ContextSize; i++)
+            for (var i = 0; i < maxTokens && past + 1 < ContextSize; i++)
             {
                 ct.ThrowIfCancellationRequested();
                 var token = (LLamaToken)sampler.Sample();

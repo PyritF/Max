@@ -13,15 +13,15 @@ internal static partial class Attachments
     /// <summary>Mehr Dateien auf einmal sieht Max sich nicht an.</summary>
     internal const int MaxFiles = 3;
 
-    /// <summary>Die Aufrufe für die angehängten Dateien – leer, wenn keine darin steht.</summary>
-    /// <param name="question">Was sonst in der Nachricht steht – geht als Frage an das Bild.</param>
+    /// <summary>
+    /// Die Aufrufe für die angehängten Dateien – leer, wenn keine darin steht. Was sonst in der Nachricht steht, ist
+    /// die Frage dazu: Ein Bild bekommt sie gestellt, in einem langen Dokument sucht Max die passenden Stellen.
+    /// </summary>
     public static IReadOnlyList<ToolCall> Calls(string message, string workingDirectory)
     {
         var files = Find(message, workingDirectory, out var rest);
-        var question = rest.Length is > 0 and <= 300 ? rest : "";
-        return files.Select(path => ImageTool.IsImage(path)
-            ? new ToolCall("bild", question.Length > 0 ? $"{path} | {question}" : path)
-            : new ToolCall("datei", path)).ToList();
+        var question = rest.Length is > 0 and <= 300 ? rest.Replace('|', '/') : "";
+        return files.Select(path => new ToolCall(ImageTool.IsImage(path) ? "bild" : "datei", question.Length > 0 ? $"{path} | {question}" : path)).ToList();
     }
 
     /// <summary>Alle vorhandenen Dateien in der Nachricht; <paramref name="rest"/> ist der Text ohne sie.</summary>

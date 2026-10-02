@@ -1,4 +1,6 @@
 using System.Text;
+using Max.Llm;
+using Max.Tools.Documents;
 
 namespace Max.Tools;
 
@@ -101,53 +103,121 @@ internal sealed class ListFolderTool(Func<string> workingDirectory) : ITool
     };
 }
 
-/// <summary>Liest eine Textdatei. Binärdateien und sehr große Dateien nur mit Hinweis bzw. gekürzt.</summary>
-internal sealed class ReadFileTool(Func<string> workingDirectory) : ITool
+/// <summary>
+/// Liest Dateien: Text und Code, PDF, Word, Excel, PowerPoint. Lange Dateien gezielt – mit " | Suchbegriff" die
+/// passenden Stellen, mit " | Seite 7" (Zeile, Folie, Blatt) eine bestimmte Stelle (siehe <see cref="DocumentView"/>).
+/// Gelesene Dateien bleiben kurz im Speicher, damit Blättern und Suchen nicht jedes Mal neu liest.
+/// </summary>
+internal sealed class ReadFileTool(Func<string> workingDirectory, Func<IVision?>? vision = null) : ITool
 {
-    /// <summary>Mehr wird nicht gelesen – die Toolbox kürzt ohnehin auf <see cref="ToolBox.MaxResultChars"/>.</summary>
-    internal const int MaxBytes = 256 * 1024;
+    private readonly RecentCache<Document> _recent = new();
 
     public string Name => "datei";
-    public string? Argument => "Pfad, z. B. README.md";
-    public string Description => "Liest eine Textdatei (Code, Notizen, Konfiguration), ein PDF oder ein Word-Dokument (.docx). Lange Dateien nur den Anfang.";
-    public string Describe(string argument) => $"Lese {argument}";
+    public string? Argument => "Pfad, optional mit | Suchbegriff oder | Seite 7";
+    public string Description =>
+        "Liest eine Datei: Text und Code, PDF, Word, Excel, PowerPoint. Bei langen Dateien den Anfang – mit „| Suchbegriff“ " +
+        "die passenden Stellen, mit „| Seite 7“ (bzw. Zeile, Folie, Blatt) eine bestimmte.";
+    public string Describe(string argument) => Describe("Lese", argument);
+
+    // Eingescannte PDF-Seiten liest der Bild-Zusatz – das dauert auf der CPU.
+    public TimeSpan Timeout => TimeSpan.FromMinutes(5);
 
     public async Task<string> RunAsync(string argument, CancellationToken ct)
     {
-        var path = ToolPaths.Resolve(argument, workingDirectory());
+        var (raw, selector) = Split(argument);
+        var path = ToolPaths.Resolve(raw, workingDirectory());
         if (ToolPaths.Forbidden(path) is { } reason)
             return reason;
         if (Directory.Exists(path))
             return $"{path} ist ein Ordner – dafür gibt es \"ordner\".";
         if (!File.Exists(path))
             return $"Die Datei {path} gibt es nicht.";
+        if (ImageTool.IsImage(path))
+            return $"{Path.GetFileName(path)} ist ein Bild – dafür gibt es \"bild\".";
 
-        var length = new FileInfo(path).Length;
-        if (DocumentText.IsDocument(path))
-        {
-            if (length > DocumentText.MaxBytes)
-                return $"{Path.GetFileName(path)} ist zu groß ({ListFolderTool.Size(length)}).";
-            return $"Datei {path} ({ListFolderTool.Size(length)}):\n" + await Task.Run(() => DocumentText.Read(path, ct), ct);
-        }
-        if (Path.GetExtension(path).ToLowerInvariant() is ".doc" or ".xls" or ".ppt")
-            return $"{Path.GetFileName(path)} ist im alten Office-Format – das kann ich nicht lesen. Als .docx oder PDF gespeichert geht es.";
-        var buffer = new byte[(int)Math.Min(length, MaxBytes)];
+        var info = new FileInfo(path);
+        Document document;
         try
         {
-            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            var read = 0;
-            while (read < buffer.Length && await stream.ReadAsync(buffer.AsMemory(read), ct) is var n and > 0)
-                read += n;
+            var key = $"{path}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+            document = await Task.Run(() => _recent.Get(key, () => DocumentReader.Load(path, vision, ct)), ct);
+        }
+        catch (DocumentException e)
+        {
+            return e.Message;
         }
         catch (UnauthorizedAccessException)
         {
             return $"Auf {path} habe ich keinen Zugriff.";
         }
-        if (Array.IndexOf(buffer, (byte)0, 0, Math.Min(buffer.Length, 8192)) >= 0)
-            return $"{Path.GetFileName(path)} ist keine Textdatei ({ListFolderTool.Size(length)}).";
+        catch (IOException e)
+        {
+            return $"{Path.GetFileName(path)} ließ sich nicht lesen ({e.Message}).";
+        }
+        return await DocumentView.RenderAsync(document, $"Datei {path} ({ListFolderTool.Size(info.Length)})", $"{Name}: {raw}", selector, ct);
+    }
 
-        var text = Encoding.UTF8.GetString(buffer).TrimStart('﻿');
-        var header = $"Datei {path} ({ListFolderTool.Size(length)}):\n";
-        return length > MaxBytes ? header + text + "\n… (nur der Anfang)" : header + text;
+    /// <summary>"vertrag.pdf | Kündigung" → Pfad und was darin gesucht wird.</summary>
+    internal static (string Target, string Selector) Split(string argument)
+    {
+        var bar = argument.IndexOf('|');
+        return bar < 0 ? (argument.Trim(), "") : (argument[..bar].Trim(), argument[(bar + 1)..].Trim());
+    }
+
+    /// <summary>"Lese vertrag.pdf", "Lese vertrag.pdf, Seite 7", "Suche in vertrag.pdf: Kündigung".</summary>
+    internal static string Describe(string verb, string argument)
+    {
+        var (target, selector) = Split(argument);
+        var name = Path.GetFileName(target.TrimEnd('/', '\\'));
+        if (name.Length == 0 || target.Contains("://", StringComparison.Ordinal))
+            name = target;
+        if (selector.Length == 0)
+            return $"{verb} {name}";
+        // Eine ganze Frage (hineingezogene Datei mit Frage dazu) zeigt die Anzeige nicht noch einmal.
+        if (DocumentView.Parse(selector) is DocumentView.Selection.Search)
+            return selector.Length <= 40 && !selector.Contains('?') && selector.Split(' ').Length <= 4 ? $"Suche in {name}: {selector}" : $"{verb} {name}";
+        return $"{verb} {name}, {selector}";
+    }
+}
+
+/// <summary>Die zuletzt gelesenen Dinge (Dateien, Webseiten) – blättern und suchen liest nicht jedes Mal neu.</summary>
+/// <param name="lifetime">So lange gilt ein Eintrag höchstens (Webseiten ändern sich) – null = bis er verdrängt wird.</param>
+internal sealed class RecentCache<T>(int size = 4, TimeSpan? lifetime = null) where T : class
+{
+    private readonly LinkedList<(string Key, DateTime Added, T Value)> _entries = new();
+    private readonly object _lock = new();
+
+    /// <summary>Der gemerkte Wert – sonst wird er geladen (scheitert das Laden, wird nichts gemerkt).</summary>
+    public T Get(string key, Func<T> load) => TryGet(key) ?? Add(key, load());
+
+    public async Task<T> GetAsync(string key, Func<Task<T>> load) => TryGet(key) ?? Add(key, await load());
+
+    private T? TryGet(string key)
+    {
+        lock (_lock)
+        {
+            for (var node = _entries.First; node is not null; node = node.Next)
+            {
+                if (node.Value.Key != key)
+                    continue;
+                _entries.Remove(node);
+                if (lifetime is { } life && DateTime.UtcNow - node.Value.Added > life)
+                    return null;
+                _entries.AddFirst(node);
+                return node.Value.Value;
+            }
+        }
+        return null;
+    }
+
+    private T Add(string key, T value)
+    {
+        lock (_lock)
+        {
+            _entries.AddFirst((key, DateTime.UtcNow, value));
+            while (_entries.Count > size)
+                _entries.RemoveLast();
+        }
+        return value;
     }
 }

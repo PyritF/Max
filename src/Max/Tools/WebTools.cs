@@ -84,34 +84,57 @@ internal sealed partial class WebSearchTool(HttpClient http) : ITool
     private static partial Regex SnippetRegex();
 }
 
-/// <summary>Liest eine Webseite und liefert ihren Text – ohne Menüs, Skripte und Formatierung.</summary>
+/// <summary>
+/// Liest eine Webseite und liefert ihren Text – ohne Menüs, Skripte und Formatierung. Lange Seiten wie Dokumente:
+/// der Anfang, mit " | Suchbegriff" die passenden Stellen, mit " | Teil 3" weiter hinten (siehe <see cref="Documents.DocumentView"/>).
+/// </summary>
 internal sealed class ReadWebPageTool(HttpClient http) : ITool
 {
     /// <summary>Mehr wird nicht geladen.</summary>
     internal const int MaxBytes = 2 * 1024 * 1024;
 
+    // Eine Seite, in der Max gerade blättert, nicht jedes Mal neu laden – aber nach ein paar Minuten schon.
+    private readonly RecentCache<WebDocument> _recent = new(4, TimeSpan.FromMinutes(10));
+
+    private sealed record WebDocument(string Title, Documents.Document Document);
+
     public string Name => "webseite";
-    public string? Argument => "Adresse, z. B. https://…";
-    public string Description => "Liest den Text einer Webseite – z. B. einen Treffer aus der Websuche, um Genaueres zu erfahren.";
-    public string Describe(string argument) => $"Lese {argument}";
+    public string? Argument => "Adresse, optional mit | Suchbegriff oder | Teil 2";
+    public string Description => "Liest den Text einer Webseite – z. B. einen Treffer aus der Websuche, um Genaueres zu erfahren. Lange Seiten: „| Suchbegriff“ zeigt die passenden Stellen.";
+    public string Describe(string argument) => ReadFileTool.Describe("Lese", argument);
 
     public async Task<string> RunAsync(string argument, CancellationToken ct)
     {
-        var address = argument.Trim().Trim('<', '>', '"');
+        var (target, selector) = ReadFileTool.Split(argument);
+        var address = target.Trim().Trim('<', '>', '"');
         if (!address.Contains("://", StringComparison.Ordinal))
             address = "https://" + address;
         if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
-            return $"\"{argument}\" ist keine Webadresse.";
+            return $"\"{target}\" ist keine Webadresse.";
 
+        WebDocument page;
+        try
+        {
+            page = await _recent.GetAsync(uri.ToString(), () => LoadAsync(uri, ct));
+        }
+        catch (Documents.DocumentException e)
+        {
+            return e.Message;
+        }
+        return await Documents.DocumentView.RenderAsync(page.Document, page.Title, $"{Name}: {target}", selector, ct);
+    }
+
+    private async Task<WebDocument> LoadAsync(Uri uri, CancellationToken ct)
+    {
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
         request.Headers.TryAddWithoutValidation("User-Agent", WebPage.UserAgent);
         request.Headers.TryAddWithoutValidation("Accept-Language", "de-DE,de;q=0.9,en;q=0.5");
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
         if (!response.IsSuccessStatusCode)
-            return $"Die Seite antwortet mit Fehler {(int)response.StatusCode}.";
+            throw new Documents.DocumentException($"Die Seite antwortet mit Fehler {(int)response.StatusCode}.");
         var type = response.Content.Headers.ContentType?.MediaType ?? "";
         if (type.Length > 0 && !type.StartsWith("text/", StringComparison.Ordinal) && !type.Contains("html") && !type.Contains("json") && !type.Contains("xml"))
-            return $"Die Adresse liefert keinen Text, sondern {type}.";
+            throw new Documents.DocumentException($"Die Adresse liefert keinen Text, sondern {type}.");
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         var buffer = new byte[MaxBytes];
@@ -120,16 +143,21 @@ internal sealed class ReadWebPageTool(HttpClient http) : ITool
             read += n;
         var encoding = response.Content.Headers.ContentType?.CharSet is { Length: > 0 } charset ? TryEncoding(charset) : Encoding.UTF8;
         var content = encoding.GetString(buffer, 0, read);
+        var address = response.RequestMessage?.RequestUri ?? uri;
         if (!type.Contains("html") && !content.TrimStart().StartsWith('<'))
-            return $"Seite {response.RequestMessage?.RequestUri ?? uri}:\n{content}";
+            return new WebDocument($"Webseite {address}", Documents.DocumentReader.Chunked("Webseite", Documents.DocumentReader.SplitLines(content)));
         var (title, text) = WebPage.ToText(content);
-        return $"Seite {response.RequestMessage?.RequestUri ?? uri}{(title.Length > 0 ? $" – {title}" : "")}:\n{text}";
+        if (text.Trim().Length == 0)
+            throw new Documents.DocumentException($"Auf {address} steht kein lesbarer Text (vermutlich baut erst ein Skript die Seite auf).");
+        return new WebDocument($"Webseite {address}{(title.Length > 0 ? $" („{title}“)" : "")}",
+            Documents.DocumentReader.Chunked("Webseite", Documents.DocumentReader.SplitLines(text)));
     }
 
     private static Encoding TryEncoding(string name)
     {
         try
         {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             return Encoding.GetEncoding(name.Trim('"'));
         }
         catch (ArgumentException)
