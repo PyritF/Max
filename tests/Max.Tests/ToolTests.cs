@@ -696,6 +696,13 @@ public class ClipboardTests
     }
 
     [Fact]
+    public void ClipboardText_EndsAtTheFirstNull()
+    {
+        Assert.Equal("Hallo", SystemClipboard.UntilNull("Hallo\0\0Rest vom Speicher"));
+        Assert.Equal("Hallo", SystemClipboard.UntilNull("Hallo"));
+    }
+
+    [Fact]
     public void WindowsBitmap_BecomesABmpFile()
     {
         // 2×2 Pixel, 24 Bit: Kopf (40 Bytes) + zwei Zeilen à 8 Bytes (6 + 2 Füllbytes).

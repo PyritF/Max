@@ -35,6 +35,9 @@ internal sealed class SystemClipboard : IClipboard
         throw new InvalidOperationException("Die Zwischenablage kann ich auf diesem System nicht lesen.");
     }
 
+    /// <summary>Text aus der Zwischenablage: Der Speicherblock kann größer sein – nach der ersten Null kommt nur noch Rest.</summary>
+    internal static string UntilNull(string text) => text.IndexOf('\0') is var end and >= 0 ? text[..end] : text;
+
     /// <summary>Eine Windows-Bitmap aus der Zwischenablage (DIB, ohne Dateikopf) → BMP-Datei.</summary>
     internal static byte[] DibToBmp(byte[] dib)
     {
@@ -81,7 +84,7 @@ internal sealed class SystemClipboard : IClipboard
                     if (IsClipboardFormatAvailable(format) && Bytes(format) is { } dib)
                         return ClipboardContent.Empty with { Image = DibToBmp(dib), ImageExtension = ".bmp" };
                 if (IsClipboardFormatAvailable(UnicodeText) && Bytes(UnicodeText) is { } text)
-                    return ClipboardContent.Empty with { Text = Encoding.Unicode.GetString(text).TrimEnd('\0') };
+                    return ClipboardContent.Empty with { Text = UntilNull(Encoding.Unicode.GetString(text)) };
                 return ClipboardContent.Empty;
             }
             finally

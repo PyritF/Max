@@ -144,6 +144,16 @@ def check_call(text: str, name: str):
         raise Problem(f"{name}: '{tool}' {'braucht keine' if tool in NO_ARGUMENT else 'braucht eine'} Angabe")
 
 
+def check_result(call: str, result: str, name: str):
+    """Ergebnisse, deren Form feststeht, so wie das Werkzeug sie liefert (src/Max/Tools/CalculatorTool.cs)."""
+    tool, _, argument = call.strip().split("\n")[1].partition(": ")
+    if tool == "rechnen" and not (result.startswith(f"{argument} = ") or result.startswith("Das kann ich so nicht rechnen:")
+                                  or result == "Division durch null."):
+        raise Problem(f"{name}: rechnen liefert \"{argument} = …\" – das Ergebnis sieht anders aus")
+    if tool == "rechnen" and result.startswith(f"{argument} = ") and re.search(r"\d,\d", result.split(" = ", 1)[1]):
+        raise Problem(f"{name}: rechnen schreibt Kommazahlen mit Punkt (\"22.5\")")
+
+
 def validate(example):
     name, parts = example["name"], example["parts"]
     if not parts or parts[0][0] != "nutzer":
@@ -172,6 +182,7 @@ def validate(example):
                 check_call(text, name)
                 if index + 1 >= len(parts) or parts[index + 1][0] != "ergebnis":
                     raise Problem(f"{name}: nach einem Werkzeug-Aufruf kommt @ergebnis")
+                check_result(text, parts[index + 1][1], name)
             else:
                 check_answer(text, name, last=index == len(parts) - 1 or parts[index + 1][0] == "nutzer")
         if role == "ergebnis" and not (previous == "max" and parts[index - 1][1].strip().startswith("```werkzeug")):
