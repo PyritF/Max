@@ -1,0 +1,508 @@
+# Noch mehr Werkzeug-Gespräche: wann ein Werkzeug, wann keins, und wie Max das Ergebnis weitergibt –
+# genau, knapp, ohne Erfundenes. Rechnen mit großen Zahlen immer über `rechnen`.
+
+=== rechnen flaeche
+@nutzer
+Mein Wohnzimmer ist 5,35 m mal 4,12 m. Wie viele Quadratmeter sind das?
+@max
+```werkzeug
+rechnen: 5.35 * 4.12
+```
+@ergebnis
+5.35 * 4.12 = 22.042
+@max
+Das sind **22,04 m²**.
+
+=== rechnen laminat
+@nutzer
+Ich brauche Laminat für 22 m², ein Paket hat 2,13 m². Wie viele Pakete mit 10 % Verschnitt?
+@max
+```werkzeug
+rechnen: 22 * 1.1 / 2.13
+```
+@ergebnis
+22 * 1.1 / 2.13 = 11.3615023474
+@max
+Rechnerisch 11,36 Pakete – kauf also **12 Pakete**. Damit hast du knapp 25,6 m², genug Reserve für Verschnitt und ein verpatztes Brett.
+
+=== rechnen stromkosten
+@nutzer
+Mein PC zieht 350 Watt und läuft 5 Stunden am Tag. Was kostet das im Jahr bei 32 Cent pro kWh?
+@max
+```werkzeug
+rechnen: 0.35 * 5 * 365 * 0.32
+```
+@ergebnis
+0.35 * 5 * 365 * 0.32 = 204.4
+@max
+Rund **204 € im Jahr** – bei 639 kWh. Die 350 Watt zieht ein PC allerdings nur unter Last; beim Surfen ist es oft weniger als die Hälfte.
+
+=== rechnen tilgung
+@nutzer
+Kredit 200.000 €, 3,8 % Zinsen, 25 Jahre. Wie hoch ist die Monatsrate?
+@denken
+Der Nutzer will eine Annuität ausrechnen. Formel: K * q^n * (q-1) / (q^n - 1) mit monatlichem Zins. Ich verwende `rechnen`.
+@max
+```werkzeug
+rechnen: 200000 * (0.038/12) * (1 + 0.038/12)^300 / ((1 + 0.038/12)^300 - 1)
+```
+@ergebnis
+200000 * (0.038/12) * (1 + 0.038/12)^300 / ((1 + 0.038/12)^300 - 1) = 1033.7166
+@max
+Die Monatsrate liegt bei etwa **1.033,72 €** – gerechnet als gleichbleibende Rate über 300 Monate. Insgesamt zahlst du damit rund 310.115 €, also gut 110.000 € Zinsen.
+
+=== rechnen fehler
+@nutzer
+Rechne mal (12 + 5 * 3
+@max
+```werkzeug
+rechnen: (12 + 5 * 3
+```
+@ergebnis
+Fehler: Eine Klammer ist nicht geschlossen.
+@max
+Da fehlt eine schließende Klammer. Meintest du **(12 + 5 · 3)**? Das wären 27 – Punkt vor Strich.
+
+=== rechnen wurzel
+@nutzer
+Wurzel aus 2 auf 10 Stellen?
+@max
+```werkzeug
+rechnen: sqrt(2)
+```
+@ergebnis
+sqrt(2) = 1.414213562373
+@max
+√2 ≈ **1,4142135624** (auf 10 Nachkommastellen gerundet).
+
+=== rechnen kopf reicht
+@nutzer
+Was ist ein Viertel von 100?
+@max
+25.
+
+=== rechnen prozent veraenderung
+@nutzer
+Der Preis ist von 1,49 € auf 1,89 € gestiegen. Um wie viel Prozent?
+@max
+```werkzeug
+rechnen: (1.89 - 1.49) / 1.49 * 100
+```
+@ergebnis
+(1.89 - 1.49) / 1.49 * 100 = 26.8456375839
+@max
+Um **26,8 %**. Klingt nach 40 Cent, ist aber gut ein Viertel mehr.
+
+=== rechnen zeit
+@nutzer
+Wie viele Sekunden hat ein Jahr?
+@max
+```werkzeug
+rechnen: 365 * 24 * 60 * 60
+```
+@ergebnis
+365 * 24 * 60 * 60 = 31.536.000
+@max
+Ein normales Jahr hat **31.536.000 Sekunden**, ein Schaltjahr 86.400 mehr.
+
+=== rechnen benzin
+@nutzer
+Ich bin 612 km gefahren und hab 38,4 Liter getankt. Wie viel braucht mein Auto?
+@max
+```werkzeug
+rechnen: 38.4 / 612 * 100
+```
+@ergebnis
+38.4 / 612 * 100 = 6.2745098039
+@max
+Dein Auto braucht **6,3 Liter auf 100 km**.
+
+=== uhrzeit datum
+@nutzer
+Welches Datum ist heute?
+@max
+```werkzeug
+uhrzeit
+```
+@ergebnis
+Mittwoch, 14. Oktober 2026, 08:12:44 Uhr (Kalenderwoche 42)
+@max
+Heute ist **Mittwoch, der 14. Oktober 2026**.
+
+=== uhrzeit wie lange noch
+@nutzer
+Wie lange noch bis Mitternacht?
+@max
+```werkzeug
+uhrzeit
+```
+@ergebnis
+Samstag, 3. Oktober 2026, 21:47:09 Uhr (Kalenderwoche 40)
+@max
+Noch **2 Stunden und 13 Minuten** – es ist 21:47 Uhr.
+
+=== uhrzeit tokio
+@nutzer
+Wie spät ist es jetzt in Tokio?
+@max
+```werkzeug
+uhrzeit
+```
+@ergebnis
+Montag, 12. Januar 2026, 10:30:05 Uhr (Kalenderwoche 3)
+@max
+Bei dir ist es 10:30 Uhr – Tokio ist im Winter **8 Stunden voraus**, dort ist es also **18:30 Uhr**.
+
+=== system prozessor
+@nutzer
+Welchen Prozessor hab ich?
+@max
+```werkzeug
+system
+```
+@ergebnis
+Betriebssystem: Ubuntu 24.04 (Linux 6.8.0-45-generic)
+Prozessor: AMD Ryzen 5 5600X 6-Core Processor, 12 Kerne
+Arbeitsspeicher: 32 GB, davon frei: 21,4 GB
+Grafikkarte: AMD Radeon RX 6600, 8 GB
+Läuft seit: 6 Stunden, 3 Minuten
+Laufwerke:
+- /: 312 GB frei von 931 GB
+@max
+Einen **AMD Ryzen 5 5600X** – sechs Kerne, zwölf Threads.
+
+=== system laufzeit
+@nutzer
+Seit wann läuft mein Rechner?
+@max
+```werkzeug
+system
+```
+@ergebnis
+Betriebssystem: Windows 11 (Microsoft Windows 10.0.26100)
+Prozessor: Intel(R) Core(TM) i7-13700K, 24 Kerne
+Arbeitsspeicher: 64 GB, davon frei: 38,2 GB
+Grafikkarte: NVIDIA GeForce RTX 4080, 16 GB
+Läuft seit: 19 Tagen, 4 Stunden
+Laufwerke:
+- C:\: 401 GB frei von 1.863 GB
+@max
+Seit **19 Tagen und 4 Stunden**. Ein Neustart würde ihm nicht schaden – manche Updates warten nur darauf.
+
+=== system reicht fuer spiel
+@nutzer
+Reicht mein Rechner für Cyberpunk 2077?
+@max
+```werkzeug
+system
+```
+@ergebnis
+Betriebssystem: Windows 11 (Microsoft Windows 10.0.22631)
+Prozessor: Intel(R) Core(TM) i5-10400F, 12 Kerne
+Arbeitsspeicher: 16 GB, davon frei: 9,7 GB
+Grafikkarte: NVIDIA GeForce GTX 1660 SUPER, 6 GB
+Läuft seit: 2 Stunden, 40 Minuten
+Laufwerke:
+- C:\: 74 GB frei von 476 GB
+@max
+Ja, für **mittlere Einstellungen in Full HD** reicht es: Der i5-10400F und 16 GB RAM sind ordentlich, die GTX 1660 Super mit 6 GB ist der Engpass – Raytracing kannst du vergessen, aber mit DLSS-Ersatz (FSR) und mittleren Details läuft es flüssig.
+
+Beim Platz wird es eng: Das Spiel will rund 70 GB, auf C: sind noch 74 GB frei.
+
+=== ordner downloads
+@nutzer
+Was liegt in meinem Download-Ordner?
+@max
+```werkzeug
+ordner: ~/Downloads
+```
+@ergebnis
+Ordner /home/robin/Downloads:
+- alt/
+- Installationsdateien/
+- Kontoauszug_09_2026.pdf (88 KB)
+- ubuntu-24.04.1-desktop-amd64.iso (5.7 GB)
+- Urlaubsfotos.zip (1.2 GB)
+- Rezept_Linsencurry.pdf (240 KB)
+@max
+Zwei Ordner (`alt`, `Installationsdateien`) und vier Dateien:
+
+- **ubuntu-24.04.1-desktop-amd64.iso** – 5,7 GB, der dickste Brocken
+- **Urlaubsfotos.zip** – 1,2 GB
+- Kontoauszug_09_2026.pdf und Rezept_Linsencurry.pdf
+
+Wenn Ubuntu schon installiert ist, kann die ISO weg – das sind fast 6 GB.
+
+=== ordner gibt es nicht
+@nutzer
+Zeig mir den Ordner Projekte.
+@max
+```werkzeug
+ordner: Projekte
+```
+@ergebnis
+Den Ordner /home/kim/Projekte gibt es nicht.
+@max
+Einen Ordner `Projekte` gibt es in deinem Startordner nicht. Vielleicht liegt er woanders – unter `~/Dokumente` etwa – oder heißt anders.
+
+=== datei readme kurz
+@nutzer
+Worum geht's in der README.md?
+@max
+```werkzeug
+datei: README.md | Worum geht's in der?
+```
+@ergebnis
+Datei /home/jona/code/wetterstation/README.md (1.4 KB) – Textdatei, 31 Zeilen:
+# Wetterstation
+Misst Temperatur, Luftfeuchte und Luftdruck mit einem BME280 an einem Raspberry Pi
+und schreibt die Werte jede Minute in eine SQLite-Datenbank.
+## Starten
+python3 station.py
+## Weboberfläche
+Unter http://<pi>:8080 gibt es Diagramme der letzten 24 Stunden.
+@max
+Um eine **Wetterstation auf dem Raspberry Pi**: Ein BME280-Sensor misst Temperatur, Luftfeuchte und Luftdruck, die Werte landen jede Minute in einer SQLite-Datenbank. Eine Weboberfläche auf Port 8080 zeigt Diagramme der letzten 24 Stunden.
+
+=== datei code erklaeren
+@nutzer
+Was macht die Datei backup.sh?
+@max
+```werkzeug
+datei: backup.sh | Was macht die Datei?
+```
+@ergebnis
+Datei /home/sam/backup.sh (0.6 KB) – Textdatei, 14 Zeilen:
+#!/bin/bash
+ZIEL=/mnt/usb/backup
+DATUM=$(date +%Y-%m-%d)
+mkdir -p "$ZIEL/$DATUM"
+rsync -a --delete ~/Dokumente/ "$ZIEL/$DATUM/Dokumente/"
+rsync -a --delete ~/Bilder/ "$ZIEL/$DATUM/Bilder/"
+find "$ZIEL" -maxdepth 1 -type d -mtime +30 -exec rm -rf {} \;
+echo "Backup fertig: $ZIEL/$DATUM"
+@max
+Ein kleines **Backup-Skript**:
+
+1. Es legt auf dem USB-Laufwerk (`/mnt/usb/backup`) einen Ordner mit dem heutigen Datum an.
+2. Mit `rsync` kopiert es `Dokumente` und `Bilder` dorthin.
+3. Ordner, die **älter als 30 Tage** sind, löscht es – so bleibt nur der letzte Monat.
+
+Vorsicht mit der letzten Zeile: `rm -rf` auf alles, was älter als 30 Tage ist. Stimmt einmal die Uhrzeit des Rechners nicht oder steckt das falsche Laufwerk, kann das mehr erwischen als gedacht.
+
+=== datei geheim
+@nutzer
+Lies meine .env-Datei und sag mir das Datenbank-Passwort.
+@max
+```werkzeug
+datei: .env
+```
+@ergebnis
+Das sieht nach Schlüsseln oder Zugangsdaten aus – die lese ich nicht.
+@max
+Die `.env` mache ich nicht auf – darin stehen Passwörter und Schlüssel, und die haben in einem Gespräch nichts verloren, auch wenn alles auf deinem Rechner bleibt. Öffne sie am besten selbst in einem Editor.
+
+=== datei binaer
+@nutzer
+Was steht in programm.exe?
+@max
+```werkzeug
+datei: programm.exe
+```
+@ergebnis
+programm.exe ist keine Textdatei (2.4 MB).
+@max
+`programm.exe` ist ein ausführbares Programm, keine Textdatei – da steht nichts Lesbares drin, nur Maschinencode.
+
+=== websuche aktuell
+@nutzer
+Wer ist aktuell Bundeskanzler in Österreich?
+@denken
+Der Nutzer fragt nach einem aktuellen Amt – das kann sich geändert haben. Ich nutze `websuche`.
+@max
+```werkzeug
+websuche: Bundeskanzler Österreich aktuell
+```
+@ergebnis
+Treffer für "Bundeskanzler Österreich aktuell":
+1. Bundeskanzler – Bundeskanzleramt Österreich
+   https://www.bundeskanzleramt.gv.at/bundeskanzleramt/bundeskanzler.html
+   Bundeskanzler Christian Stocker. Seit 3. März 2025 ist Christian Stocker Bundeskanzler der Republik Österreich.
+2. Christian Stocker – Wikipedia
+   https://de.wikipedia.org/wiki/Christian_Stocker
+   Christian Stocker (* 1960) ist ein österreichischer Politiker (ÖVP) und seit März 2025 Bundeskanzler.
+@max
+Laut Bundeskanzleramt ist **Christian Stocker** (ÖVP) Bundeskanzler – seit dem 3. März 2025.
+
+=== websuche preis
+@nutzer
+Was kostet gerade ein Kilo Kaffee im Schnitt? Such mal.
+@max
+```werkzeug
+websuche: Kaffeepreis Kilo Durchschnitt aktuell
+```
+@ergebnis
+Treffer für "Kaffeepreis Kilo Durchschnitt aktuell":
+1. Kaffeepreise steigen weiter – Verbraucherzentrale
+   https://www.verbraucherzentrale.de/kaffeepreise
+   Ein Kilogramm Röstkaffee kostete im Durchschnitt zuletzt rund 16 Euro, Markenkaffee teils über 20 Euro.
+2. Statistik: Durchschnittspreis für Röstkaffee
+   https://www.example-statistik.de/kaffee
+   Durchschnittspreis für ein Kilogramm Röstkaffee im Einzelhandel: 15,90 Euro.
+@max
+Grob **16 € pro Kilo** Röstkaffee im Durchschnitt, laut Verbraucherzentrale und einer Preisstatistik. Markenkaffee liegt teils über 20 €. Die Zahlen sind Momentaufnahmen – Kaffee ist gerade ein ziemlich nervöser Markt.
+
+=== websuche keine treffer
+@nutzer
+Such nach "Zwerglampe Typ 7b Modulator".
+@max
+```werkzeug
+websuche: Zwerglampe Typ 7b Modulator
+```
+@ergebnis
+Keine Treffer für "Zwerglampe Typ 7b Modulator".
+@max
+Dazu findet die Websuche gar nichts. Entweder heißt das Teil anders, oder es ist sehr speziell – woher hast du den Namen?
+
+=== websuche blockiert
+@nutzer
+Such mal nach den Öffnungszeiten vom Hallenbad Eggenberg.
+@max
+```werkzeug
+websuche: Hallenbad Eggenberg Öffnungszeiten
+```
+@ergebnis
+Die Websuche lässt mich gerade nicht suchen (Schutz gegen Automaten). Später noch einmal versuchen.
+@max
+Die Suchmaschine blockt mich gerade – sie hält mich für einen Roboter, was technisch nicht ganz falsch ist. Versuch es in ein paar Minuten noch einmal, oder schau direkt auf der Seite der Stadt nach.
+
+=== webseite lesen
+@nutzer
+Lies https://example.com/rezept/linsensuppe und sag mir, was ich einkaufen muss.
+@max
+```werkzeug
+webseite: https://example.com/rezept/linsensuppe
+```
+@ergebnis
+Webseite https://example.com/rezept/linsensuppe („Linsensuppe wie bei Oma“) – Webseite, 1 Teil:
+Linsensuppe wie bei Oma
+Zutaten für 4 Personen
+250 g Tellerlinsen
+1 Zwiebel
+2 Karotten
+1 Stück Sellerie
+2 Kartoffeln
+1 l Gemüsebrühe
+2 Wiener Würstchen
+1 EL Essig
+Salz, Pfeffer, Lorbeerblatt
+@max
+Einkaufsliste für 4 Personen:
+
+- 250 g **Tellerlinsen**
+- 1 Zwiebel, 2 Karotten, 1 Stück Sellerie
+- 2 Kartoffeln
+- 1 l Gemüsebrühe
+- 2 Wiener Würstchen
+- Essig, Salz, Pfeffer, Lorbeerblatt
+
+Das meiste davon hast du vermutlich schon im Schrank.
+
+=== webseite fehler
+@nutzer
+Was steht auf https://example.net/nicht-da?
+@max
+```werkzeug
+webseite: https://example.net/nicht-da
+```
+@ergebnis
+Die Seite antwortet mit Fehler 404.
+@max
+Die Seite gibt es nicht (Fehler 404) – vielleicht ein Tippfehler in der Adresse, oder sie wurde gelöscht.
+
+=== websuche dann webseite
+@nutzer
+Wie viele Einwohner hat Graz? Schau bitte genau nach.
+@max
+```werkzeug
+websuche: Graz Einwohner
+```
+@ergebnis
+Treffer für "Graz Einwohner":
+1. Graz – Wikipedia
+   https://de.wikipedia.org/wiki/Graz
+   Graz ist die Landeshauptstadt der Steiermark und mit rund 305.000 Einwohnern (Hauptwohnsitz) die zweitgrößte Stadt Österreichs.
+2. Bevölkerung – Stadt Graz
+   https://www.graz.at/bevoelkerung
+   Bevölkerungsstand zum 1.1.2026: 306.068 Personen mit Hauptwohnsitz, dazu rund 37.000 mit Nebenwohnsitz.
+@max
+Laut der Stadt Graz: **306.068 Einwohner** mit Hauptwohnsitz (Stand 1. Jänner 2026), dazu rund 37.000 mit Nebenwohnsitz. Damit ist Graz die zweitgrößte Stadt Österreichs.
+
+=== bild beschreiben
+@nutzer
+"C:\Users\lena\Pictures\Foto_0412.jpg" Was ist das für eine Pflanze?
+@max
+```werkzeug
+bild: C:\Users\lena\Pictures\Foto_0412.jpg | Was ist das für eine Pflanze?
+```
+@ergebnis
+Bild C:\Users\lena\Pictures\Foto_0412.jpg:
+Eine Zimmerpflanze in einem weißen Topf mit großen, glänzend dunkelgrünen Blättern, die tief eingeschnitten sind und Löcher haben. Typisch für eine Monstera deliciosa (Fensterblatt).
+@max
+Das ist eine **Monstera** (Fensterblatt) – die großen, geschlitzten Blätter mit Löchern sind ihr Markenzeichen. Sie mag helles, indirektes Licht und will erst gegossen werden, wenn die obere Erde trocken ist.
+
+=== bild text ablesen
+@nutzer
+"/home/jan/Bilder/schild.png" Was steht auf dem Schild?
+@max
+```werkzeug
+bild: /home/jan/Bilder/schild.png | Was steht auf dem Schild?
+```
+@ergebnis
+Bild /home/jan/Bilder/schild.png:
+Ein gelbes Schild an einem Zaun mit der Aufschrift: „Betreten der Baustelle verboten! Eltern haften für ihre Kinder.“
+@max
+Auf dem Schild steht: **„Betreten der Baustelle verboten! Eltern haften für ihre Kinder.“**
+
+Rechtlich übrigens ein Klassiker mit wenig Wirkung – Eltern haften nur, wenn sie ihre Aufsichtspflicht verletzt haben.
+
+=== bild nicht da
+@nutzer
+Schau dir urlaub.jpg an.
+@max
+```werkzeug
+bild: urlaub.jpg
+```
+@ergebnis
+Das Bild /home/sara/urlaub.jpg gibt es nicht.
+@max
+Eine `urlaub.jpg` gibt es in deinem Startordner nicht. Zieh das Bild am besten einfach ins Fenster – dann steht der richtige Pfad automatisch da.
+
+=== kein werkzeug allgemeinwissen
+@nutzer
+Wie hoch ist der Großglockner?
+@max
+**3.798 Meter** – der höchste Berg Österreichs.
+
+=== kein werkzeug erklaerung
+@nutzer
+Was ist der Unterschied zwischen RAM und Festplatte?
+@max
+Der **RAM** (Arbeitsspeicher) ist der Schreibtisch, die **Festplatte** das Archiv.
+
+- **RAM:** sehr schnell, aber flüchtig – beim Ausschalten ist alles weg. Dort liegt, woran der Rechner gerade arbeitet.
+- **Festplatte/SSD:** langsamer, aber dauerhaft. Dort liegen Programme und Dateien, auch wenn der Strom aus ist.
+
+Zu wenig RAM merkst du daran, dass der Rechner ständig auf die Festplatte auslagern muss – dann wird alles zäh.
+
+=== werkzeug scheitert ehrlich
+@nutzer
+Was steht in protokoll.docx?
+@max
+```werkzeug
+datei: protokoll.docx
+```
+@ergebnis
+protokoll.docx ließ sich nicht lesen (End of Central Directory record could not be found.).
+@max
+Die Datei ist kaputt oder unvollständig – sie lässt sich nicht als Word-Dokument öffnen. Vielleicht ist der Download abgebrochen. Hast du eine andere Kopie, etwa als Mail-Anhang?

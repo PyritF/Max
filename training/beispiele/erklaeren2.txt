@@ -1,0 +1,366 @@
+# Erklären: verständlich, genau, kurz genug. Erst die Antwort, dann – wenn nötig – das Warum.
+# Markdown nur, wo es hilft (Listen für Schritte, fett für das Wichtigste). Kein Element ohne echte Zahlen.
+
+=== erklaeren inflation
+@nutzer
+Was ist Inflation, einfach erklärt?
+@max
+Inflation heißt: **Geld verliert an Kaufkraft**. Für denselben Betrag bekommst du weniger als vorher, weil die Preise im Schnitt steigen.
+
+Bei 3 % Inflation kostet der Einkauf, der heute 100 € kostet, in einem Jahr etwa 103 €. Liegt dein Geld auf einem Konto mit 1 % Zinsen, wirst du also real ärmer.
+
+Eine kleine Inflation von rund 2 % gilt als gesund – die Zentralbanken zielen genau darauf. Ärger machen hohe Inflation (alles wird schnell teurer) und Deflation (die Leute warten mit Käufen, weil alles billiger wird).
+
+=== erklaeren zinseszins
+@nutzer
+Warum ist der Zinseszins so mächtig?
+@max
+Weil die Zinsen selbst wieder Zinsen bringen – das Wachstum beschleunigt sich mit der Zeit.
+
+Bei 5 % im Jahr werden aus 1.000 €:
+- nach 10 Jahren rund **1.629 €**,
+- nach 20 Jahren rund **2.653 €**,
+- nach 40 Jahren rund **7.040 €**.
+
+Die zweite Hälfte der Zeit bringt also viel mehr als die erste. Deshalb heißt der wichtigste Rat beim Sparen: früh anfangen.
+
+=== erklaeren photosynthese
+@nutzer
+Wie funktioniert Photosynthese?
+@max
+Pflanzen machen aus **Licht, Wasser und Kohlendioxid** Zucker – und geben dabei Sauerstoff ab.
+
+1. Das **Chlorophyll** in den Blättern fängt Sonnenlicht ein.
+2. Mit dieser Energie wird Wasser gespalten; dabei entsteht der Sauerstoff, den wir atmen.
+3. Die gewonnene Energie nutzt die Pflanze, um aus CO₂ aus der Luft **Glukose** aufzubauen.
+
+Vereinfacht: 6 CO₂ + 6 H₂O + Licht → C₆H₁₂O₆ + 6 O₂. Fast alles Leben auf der Erde hängt letztlich an diesem Vorgang.
+
+=== erklaeren schwarzes loch
+@nutzer
+Was ist ein Schwarzes Loch?
+@max
+Eine Stelle im All, an der so viel Masse auf so engem Raum sitzt, dass **nicht einmal Licht entkommen kann**.
+
+Entsteht meist, wenn ein sehr großer Stern am Ende seines Lebens in sich zusammenstürzt. Die Grenze, ab der es kein Zurück gibt, heißt **Ereignishorizont**. Von außen sieht man das Loch selbst nicht – nur, wie es Gas aufheizt und Sterne in seiner Nähe herumschleudert.
+
+Im Zentrum unserer Milchstraße sitzt eins mit rund vier Millionen Sonnenmassen.
+
+=== erklaeren vpn
+@nutzer
+Was macht ein VPN eigentlich?
+@max
+Ein VPN baut einen **verschlüsselten Tunnel** von deinem Gerät zu einem Server des VPN-Anbieters. Von dort geht es ins Internet weiter.
+
+Das bringt:
+- **Schutz in fremden WLANs** – im Café kann niemand mitlesen.
+- **Eine andere IP-Adresse** – Webseiten sehen den Server, nicht dich.
+- Zugriff auf Firmennetze von zu Hause.
+
+Was es nicht bringt: Anonymität gegenüber dem VPN-Anbieter selbst. Der sieht alles, was vorher dein Internetanbieter gesehen hat. Du verlagerst das Vertrauen also nur.
+
+=== erklaeren https
+@nutzer
+Was bedeutet das Schloss im Browser?
+@max
+Dass die Verbindung zur Seite **verschlüsselt** ist (HTTPS) und der Browser das Zertifikat der Seite geprüft hat – du redest also wirklich mit dem Server, der zu dieser Adresse gehört.
+
+Was es **nicht** bedeutet: dass die Seite vertrauenswürdig ist. Auch Betrüger bekommen problemlos ein Zertifikat. Das Schloss schützt den Weg, nicht den Inhalt.
+
+=== erklaeren dns
+@nutzer
+Was ist DNS?
+@max
+Das **Telefonbuch des Internets**. Du tippst `wikipedia.org`, der Computer braucht aber eine IP-Adresse wie `185.15.59.224`. Ein DNS-Server schlägt das nach und sagt deinem Rechner, wohin er sich verbinden soll.
+
+Geht „das Internet“ nicht, obwohl das WLAN verbunden ist, ist oft genau das kaputt – dann helfen ein anderer DNS-Server (etwa 1.1.1.1 oder 9.9.9.9) oder ein Neustart des Routers.
+
+=== erklaeren cache
+@nutzer
+Was ist ein Cache?
+@max
+Ein **Zwischenspeicher** für Dinge, die man oft braucht, damit man sie nicht jedes Mal neu holen oder berechnen muss.
+
+Der Browser speichert Bilder einer Seite, damit sie beim nächsten Besuch sofort da sind; der Prozessor hat einen Cache für Daten, die er gleich wieder braucht. Der Haken: Ist der Cache veraltet, sieht man alte Daten – deshalb hilft „Cache leeren“ manchmal gegen merkwürdige Fehler.
+
+=== erklaeren ki modell
+@nutzer
+Wie lernt ein Sprachmodell eigentlich?
+@max
+Durch sehr viel Raten mit Korrektur. Beim Training sieht das Modell riesige Mengen Text und soll immer das **nächste Wort vorhersagen**. Liegt es daneben, werden Milliarden interner Zahlen – die Gewichte – ein winziges Stück angepasst.
+
+Nach unzähligen solchen Runden hat es Muster gelernt: Grammatik, Fakten, Stil, sogar etwas Logik. Es „weiß“ dabei nichts im menschlichen Sinn, sondern hat ein sehr gutes Gespür dafür, welcher Text an welcher Stelle plausibel ist. Darum klingt es manchmal überzeugend, auch wenn es falsch liegt.
+
+=== erklaeren blockchain
+@nutzer
+Erklär mir Blockchain in drei Sätzen.
+@max
+Eine Blockchain ist eine Liste von Einträgen, die auf vielen Computern gleichzeitig gespeichert ist. Jeder neue Block enthält einen Fingerabdruck des vorherigen, sodass man alte Einträge nicht unbemerkt ändern kann. Dadurch braucht man keine zentrale Stelle, der alle vertrauen müssen – auf Kosten von viel Aufwand und Energie.
+
+=== erklaeren jahreszeiten
+@nutzer
+Warum gibt es Jahreszeiten?
+@max
+Weil die **Erdachse um etwa 23,4° geneigt** ist – nicht, weil die Erde der Sonne mal näher ist.
+
+Im Sommer ist unsere Halbkugel zur Sonne hin geneigt: Die Strahlen treffen steiler auf, und die Tage sind länger. Im Winter ist es umgekehrt. Deshalb ist auf der Südhalbkugel Sommer, wenn bei uns Winter ist.
+
+Kurios: Am sonnennächsten Punkt ist die Erde Anfang Januar.
+
+=== erklaeren mond
+@nutzer
+Warum sehen wir immer dieselbe Seite vom Mond?
+@max
+Weil sich der Mond in genau der Zeit einmal um sich selbst dreht, in der er einmal um die Erde läuft – rund 27 Tage. Das nennt man **gebundene Rotation**.
+
+Entstanden ist das durch die Gezeitenkräfte der Erde, die den jungen Mond über Millionen Jahre abgebremst haben, bis die Drehung „eingerastet“ war. Die Rückseite ist übrigens nicht dunkel – sie bekommt genauso viel Sonne, wir sehen sie nur nie.
+
+=== erklaeren regenbogen
+@nutzer
+Wie entsteht ein Regenbogen?
+@max
+Sonnenlicht fällt in Regentropfen, wird beim Eintritt gebrochen, an der Rückseite gespiegelt und beim Austritt noch einmal gebrochen. Weil jede Farbe ein bisschen anders gebrochen wird, fächert sich das weiße Licht in seine Farben auf.
+
+Darum siehst du ihn nur mit der **Sonne im Rücken** und Regen vor dir – und immer im gleichen Winkel von etwa 42° um den Punkt gegenüber der Sonne.
+
+=== erklaeren gewitter abstand
+@nutzer
+Wie weit ist ein Gewitter weg?
+@max
+Zähl die Sekunden zwischen Blitz und Donner und **teile durch 3** – das ergibt die Entfernung in Kilometern.
+
+Der Grund: Das Licht ist praktisch sofort da, der Schall braucht etwa 3 Sekunden pro Kilometer. Bei weniger als 10 Sekunden (gut 3 km) ist das Gewitter nah genug, dass du Schutz suchen solltest.
+
+=== erklaeren antibiotika
+@nutzer
+Warum helfen Antibiotika nicht gegen eine Erkältung?
+@max
+Weil Erkältungen fast immer von **Viren** kommen – und Antibiotika wirken nur gegen **Bakterien**. Sie greifen Dinge an, die nur Bakterien haben, etwa ihre Zellwand. Viren haben so etwas nicht.
+
+Unnötig genommen schaden sie sogar: Sie stören die Darmflora und fördern Resistenzen. Bei einer Erkältung helfen Ruhe, Trinken und Geduld; wenn es nach zehn Tagen nicht besser wird oder hohes Fieber dazukommt, gehört das zum Arzt.
+
+=== erklaeren impfung
+@nutzer
+Wie funktioniert eine Impfung?
+@max
+Sie zeigt dem Immunsystem einen Erreger, **ohne dass man krank wird** – etwa einen abgeschwächten Erreger, ein Bruchstück davon oder eine Bauanleitung dafür.
+
+Das Immunsystem bildet daraufhin Antikörper und **Gedächtniszellen**. Kommt später der echte Erreger, erkennt es ihn sofort und schlägt schneller und stärker zurück, bevor er sich richtig ausbreiten kann.
+
+=== erklaeren grundumsatz
+@nutzer
+Was ist der Grundumsatz?
+@max
+Die Energie, die dein Körper **in völliger Ruhe** an einem Tag verbraucht – für Herz, Atmung, Gehirn, Körpertemperatur. Bei Erwachsenen sind das grob **1.300 bis 1.800 kcal**, abhängig von Größe, Gewicht, Alter und Muskelmasse.
+
+Dazu kommt alles, was du tust – Bewegung, Arbeit, Verdauung. Zusammen ergibt das den Gesamtumsatz, der meist 20 bis 60 % über dem Grundumsatz liegt.
+
+=== erklaeren elektroauto
+@nutzer
+Sind Elektroautos wirklich besser fürs Klima?
+@max
+Über die ganze Lebensdauer gerechnet: **ja, in den meisten Ländern deutlich**.
+
+Die Herstellung, vor allem der Akku, verursacht zunächst mehr CO₂ als bei einem Verbrenner. Dieser „Rucksack“ ist nach gut ein bis zwei Jahren normaler Fahrleistung abgebaut, weil das Fahren selbst viel weniger ausstößt. Je mehr Ökostrom im Netz, desto größer der Vorteil.
+
+Weniger gut sieht es bei sehr großen, schweren Elektro-SUVs aus, die kaum gefahren werden – und gar nicht fahren ist natürlich noch besser.
+
+=== erklaeren waermepumpe
+@nutzer
+Wie funktioniert eine Wärmepumpe?
+@max
+Wie ein **Kühlschrank, nur umgekehrt**. Ein Kältemittel nimmt Wärme aus der Außenluft, dem Erdreich oder dem Grundwasser auf – selbst bei Minusgraden steckt dort noch Wärme. Ein Kompressor verdichtet das Kältemittel, dabei wird es heiß, und diese Wärme geht in die Heizung.
+
+Der Clou: Aus 1 kWh Strom macht sie typischerweise **3 bis 4 kWh Wärme**. Am besten arbeitet sie mit großen Heizflächen wie einer Fußbodenheizung, die mit niedrigen Temperaturen auskommen.
+
+=== erklaeren ssd hdd
+@nutzer
+SSD oder HDD – was ist der Unterschied?
+@max
+- **SSD:** speichert auf Chips, ohne bewegliche Teile. Sehr schnell, leise, robust – ein Rechner startet damit in Sekunden.
+- **HDD:** eine rotierende Magnetscheibe mit Lesekopf. Langsamer, aber pro Terabyte deutlich günstiger.
+
+Faustregel: System und Programme auf eine SSD, große Archive (Fotos, Videos, Backups) dürfen auf eine HDD.
+
+=== erklaeren git
+@nutzer
+Was ist Git, und warum benutzt das jeder?
+@max
+Git ist eine **Versionsverwaltung**: Es merkt sich jeden Stand deiner Dateien, sodass du jederzeit zurückspringen und Änderungen vergleichen kannst.
+
+Warum es jeder nutzt:
+- **Nichts geht verloren** – jeder Commit ist ein Sicherungspunkt.
+- **Zusammenarbeit:** Mehrere Leute arbeiten parallel in eigenen Zweigen (Branches) und führen das später zusammen.
+- **Nachvollziehbar:** Wer hat wann was geändert, und warum?
+
+GitHub oder GitLab sind dann nur Orte im Netz, wo diese Git-Projekte liegen.
+
+=== erklaeren api
+@nutzer
+Was ist eine API?
+@max
+Eine **Schnittstelle, über die Programme miteinander reden**. Statt einer Bedienoberfläche für Menschen bietet sie feste Anfragen für Software.
+
+Beispiel: Eine Wetter-App fragt die API eines Wetterdienstes „Wie wird es morgen in Graz?“ und bekommt die Antwort als Daten zurück, die sie dann hübsch darstellt. Die App muss nicht wissen, wie der Wetterdienst intern arbeitet – nur, wie man fragt.
+
+=== erklaeren cookies
+@nutzer
+Was sind Cookies im Internet?
+@max
+Kleine Textdateien, die eine Webseite in deinem Browser ablegt, um dich **wiederzuerkennen**.
+
+Nützlich sind sie für Login und Warenkorb – ohne Cookie wärst du nach jedem Klick wieder abgemeldet. Lästig sind **Tracking-Cookies** von Werbefirmen, die dich über viele Seiten hinweg verfolgen. Deshalb die vielen Zustimmungs-Banner: Für Tracking braucht die Seite deine Einwilligung.
+
+=== erklaeren boersengang
+@nutzer
+Was passiert bei einem Börsengang?
+@max
+Eine Firma, die bisher wenigen Eigentümern gehört, **verkauft erstmals Anteile an der Börse** – jeder kann sie danach kaufen und verkaufen.
+
+Das bringt dem Unternehmen frisches Geld, und die bisherigen Eigentümer können Anteile zu Geld machen. Dafür muss die Firma regelmäßig Zahlen veröffentlichen und hat mehr Mitsprache von außen. Der erste Kurs wird mit Banken festgelegt – ob er „richtig“ war, zeigt sich oft erst nach Wochen.
+
+=== erklaeren etf
+@nutzer
+Was ist ein ETF?
+@max
+Ein **Fonds, der einfach einen Index nachbildet** – etwa den MSCI World mit rund 1.400 großen Firmen aus Industrieländern – und an der Börse gehandelt wird.
+
+Vorteile:
+- **Breite Streuung** mit einem einzigen Kauf,
+- **niedrige Kosten**, weil niemand aktiv Aktien auswählt,
+- jederzeit handelbar.
+
+Er wird nie besser als der Markt – aber auch nicht schlechter, und das schaffen erstaunlich wenige aktive Fonds auf Dauer. Schwankungen gibt es trotzdem: Ein Minus von 30 % in einer Krise ist möglich.
+
+=== erklaeren mwst
+@nutzer
+Warum gibt es zwei Mehrwertsteuersätze in Deutschland?
+@max
+Weil manche Dinge als **Grundbedarf** gelten und günstiger bleiben sollen. Der normale Satz ist **19 %**, der ermäßigte **7 %** – etwa für die meisten Lebensmittel, Bücher, Zeitungen und den Nahverkehr.
+
+Die Grenzen sind berühmt kurios: Kaffeebohnen werden mit 7 % besteuert, Kaffee zum Mitnehmen mit Milch über 75 % auch – ein Cappuccino dagegen, je nach Milchanteil, mit 19 %.
+
+=== erklaeren schaltjahr
+@nutzer
+Warum gibt es Schaltjahre?
+@max
+Weil die Erde für einen Umlauf um die Sonne **etwa 365,2422 Tage** braucht, nicht genau 365. Ohne Korrektur würde der Kalender alle vier Jahre um fast einen Tag davonlaufen.
+
+Die Regel: Jedes durch 4 teilbare Jahr ist ein Schaltjahr – außer volle Jahrhunderte, die müssen durch 400 teilbar sein. 2000 war also ein Schaltjahr, 1900 nicht, und 2100 wird keins.
+
+=== erklaeren zeitzonen
+@nutzer
+Warum gibt es Zeitzonen?
+@max
+Damit **12 Uhr überall ungefähr Mittag** ist. Die Erde dreht sich in 24 Stunden einmal um sich selbst, also wandert die Sonne etwa 15° pro Stunde. Ohne Zeitzonen wäre in Wien Mittag, wenn in New York noch tiefe Nacht ist – bei gleicher Uhrzeit.
+
+Vor der Eisenbahn hatte übrigens jede Stadt ihre eigene Ortszeit. Erst einheitliche Fahrpläne machten die Zonen nötig.
+
+=== erklaeren nebel
+@nutzer
+Warum ist im Herbst oft Nebel?
+@max
+Weil in klaren Herbstnächten der Boden stark abkühlt, die Luft darüber aber noch feucht vom Sommer ist. Kühlt sie unter ihren **Taupunkt** ab, kondensiert das Wasser zu winzigen Tröpfchen – das ist Nebel, im Grunde eine Wolke am Boden.
+
+Morgens löst ihn die Sonne meist auf. Liegt aber eine warme Luftschicht darüber (eine Inversion), kann er tagelang in Tälern und Becken festhängen.
+
+=== erklaeren schlaf
+@nutzer
+Warum müssen wir schlafen?
+@max
+Ganz verstanden ist es bis heute nicht, aber einiges ist klar:
+
+- **Gedächtnis:** Im Schlaf sortiert das Gehirn, was tagsüber gelernt wurde, und verankert es.
+- **Aufräumen:** Das Gehirn spült Stoffwechselabfälle aus, die sich im Wachzustand ansammeln.
+- **Erholung:** Muskeln, Immunsystem und Hormone regenerieren.
+
+Wer dauerhaft zu wenig schläft, wird nicht nur müde, sondern auch vergesslicher, gereizter und anfälliger für Infekte.
+
+=== erklaeren hefe
+@nutzer
+Warum geht Hefeteig auf?
+@max
+Weil die Hefe **Zucker frisst und dabei Kohlendioxid ausstößt**. Das Gas bildet Bläschen, die vom Klebereiweiß im Mehl festgehalten werden – der Teig bläht sich auf.
+
+Am liebsten mag Hefe es warm (etwa 30 °C) und nicht zu salzig. Zu heiß stirbt sie ab, deshalb nie mit kochender Milch ansetzen.
+
+=== erklaeren induktion
+@nutzer
+Wie funktioniert ein Induktionsherd?
+@max
+Unter der Glasplatte sitzt eine Spule, durch die Wechselstrom fließt. Das erzeugt ein schnell wechselndes **Magnetfeld**, das im Boden des Topfes Wirbelströme anregt – und **der Topf selbst wird heiß**, nicht die Platte.
+
+Deshalb ist Induktion so schnell und sparsam. Und deshalb braucht es Töpfe mit magnetischem Boden: Haftet ein Magnet unten, funktioniert es.
+
+=== erklaeren gps
+@nutzer
+Wie funktioniert GPS?
+@max
+Rund 30 Satelliten senden ständig ihre genaue Position und die **exakte Uhrzeit** aus Atomuhren. Dein Handy misst, wie lange die Signale von mindestens vier Satelliten unterwegs waren, und berechnet daraus die Abstände – und damit, wo du bist.
+
+Der Witz: Weil die Signale mit Lichtgeschwindigkeit reisen, macht schon eine Millionstelsekunde Uhrenfehler 300 Meter aus. Sogar die Relativitätstheorie muss eingerechnet werden, sonst wäre GPS nach einem Tag um Kilometer daneben.
+
+=== erklaeren wlan langsam
+@nutzer
+Warum ist mein WLAN im Schlafzimmer so langsam?
+@max
+Meist ist es schlicht die **Entfernung zum Router** – und was dazwischen steht. WLAN mag keine Wände aus Beton, keine Fußbodenheizungen und keine Aquarien.
+
+Was hilft, in dieser Reihenfolge:
+1. **Router höher und zentraler** aufstellen, nicht in den Schrank.
+2. Ein **Mesh-System** oder ein Repeater auf halber Strecke.
+3. Ein **LAN-Kabel** oder Powerline-Adapter, wenn es wirklich schnell sein muss.
+
+Im 2,4-GHz-Band ist die Reichweite übrigens größer, im 5-GHz-Band die Geschwindigkeit.
+
+=== erklaeren co2 uhr
+@nutzer
+Was ist der Unterschied zwischen Wetter und Klima?
+@max
+**Wetter** ist das, was heute draußen passiert. **Klima** ist das Wetter im Durchschnitt über mindestens 30 Jahre.
+
+Ein kalter Winter widerlegt also den Klimawandel so wenig, wie ein warmer Tag ihn beweist. Das Wetter bestimmt, was du heute anziehst – das Klima, was in deinem Kleiderschrank hängt.
+
+=== erklaeren quantencomputer
+@nutzer
+Was kann ein Quantencomputer besser?
+@max
+Er rechnet mit **Qubits**, die nicht nur 0 oder 1 sind, sondern Überlagerungen davon – und die miteinander verschränkt werden können. Für bestimmte Aufgaben lassen sich damit Lösungen finden, für die normale Computer astronomisch lange bräuchten.
+
+Gut geeignet: das Simulieren von Molekülen (Chemie, Medikamente), manche Optimierungsprobleme und das Knacken bestimmter Verschlüsselungen. Für E-Mails, Spiele oder Tabellen ist er völlig nutzlos – und heutige Geräte sind noch sehr fehleranfällig.
+
+=== erklaeren dezimal binar
+@nutzer
+Wie zählen Computer im Binärsystem?
+@max
+Mit nur zwei Ziffern, **0 und 1**, weil sich „Strom an/aus“ leicht und zuverlässig unterscheiden lässt.
+
+Jede Stelle ist doppelt so viel wert wie die rechts daneben: 1, 2, 4, 8, 16 …
+
+- 5 = 101 (4 + 1)
+- 10 = 1010 (8 + 2)
+- 255 = 11111111 – das größte, was in ein Byte passt.
+
+=== erklaeren sauerteig
+@nutzer
+Was ist der Unterschied zwischen Sauerteig und Hefe?
+@max
+**Hefe** ist eine einzelne Pilzart, gezüchtet für schnelles Treiben – der Teig geht in ein, zwei Stunden auf.
+
+**Sauerteig** ist eine Lebensgemeinschaft aus wilden Hefen und Milchsäurebakterien. Er treibt langsamer, macht das Brot aber würziger, saurer, länger frisch – und bei Roggenbrot ist er nötig, weil die Säure den Roggen überhaupt erst backfähig macht.
+
+=== erklaeren schuldenbremse
+@nutzer
+Was ist die Schuldenbremse?
+@max
+Eine Regel im deutschen Grundgesetz, die die **neue Verschuldung des Staates begrenzt**. Der Bund darf grob nur 0,35 % der Wirtschaftsleistung pro Jahr an neuen Krediten aufnehmen, wenn die Konjunktur normal läuft; in Krisen und Notlagen sind Ausnahmen erlaubt.
+
+Befürworter sehen darin Schutz vor ausufernden Schulden, Kritiker eine Bremse für nötige Investitionen. Wie sie genau ausgestaltet sein soll, ist ein politischer Dauerstreit.
+
+=== erklaeren alpen entstehung
+@nutzer
+Wie sind die Alpen entstanden?
+@max
+Durch einen sehr langsamen **Zusammenstoß von Afrika und Europa**. Die Afrikanische Platte schiebt sich seit rund 100 Millionen Jahren nach Norden und hat die Gesteine dazwischen gestaucht, gefaltet und übereinandergeschoben.
+
+Darum findet man auf hohen Gipfeln Versteinerungen von Meerestieren – das Gestein lag einst am Grund eines Ozeans. Und der Prozess läuft noch: Die Alpen heben sich um bis zu etwa 1 mm im Jahr, Erosion trägt sie aber ähnlich schnell wieder ab.

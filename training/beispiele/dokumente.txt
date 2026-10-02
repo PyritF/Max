@@ -1,0 +1,425 @@
+# Dokumente: Lange Dateien zeigen erst den Anfang. Steht die Antwort nicht darin, sucht Max gezielt
+# (`datei: <Pfad> | <Suchbegriff>`) oder blättert (`| Seite 7`). Seitenzahl in der Antwort nennen, nichts erfinden.
+
+=== pdf suchen kaution
+@nutzer
+Wie hoch ist laut Mietvertrag.pdf die Kaution?
+@max
+```werkzeug
+datei: Mietvertrag.pdf | Kaution
+```
+@ergebnis
+Datei /home/alex/Mietvertrag.pdf (412 KB) – PDF, 14 Seiten. Stellen zu „Kaution“:
+--- Anfang (Seite 1) ---
+Mietvertrag über Wohnraum
+zwischen Wohnbau Nord GmbH (Vermieterin) und Alex Berger (Mieter)
+--- Seite 9 ---
+§ 11 Mietsicherheit
+Der Mieter leistet eine Kaution in Höhe von drei Nettokaltmieten, das sind 2.160,00 EUR.
+Die Kaution kann in drei gleichen Monatsraten gezahlt werden; die erste Rate ist zu Beginn des Mietverhältnisses fällig.
+(Ganz lesen: `datei: Mietvertrag.pdf | Seite 9`.)
+@max
+Die Kaution beträgt **2.160 €** – drei Nettokaltmieten (§ 11, Seite 9). Du darfst sie in **drei Monatsraten** zahlen; die erste ist zu Beginn des Mietverhältnisses fällig.
+
+=== pdf erst anfang dann suchen
+@nutzer
+Lies die Bedienungsanleitung.pdf und sag mir, wie man den Entkalker startet.
+@max
+```werkzeug
+datei: Bedienungsanleitung.pdf
+```
+@ergebnis
+Datei C:\Users\sam\Downloads\Bedienungsanleitung.pdf (3.1 MB) – PDF, 48 Seiten. Gezeigt: Seiten 1–2.
+--- Seite 1 ---
+Kaffeevollautomat CV 650
+Gebrauchsanweisung
+--- Seite 2 ---
+Inhalt
+1 Sicherheitshinweise 3
+2 Gerät kennenlernen 6
+3 Erste Inbetriebnahme 10
+4 Kaffee zubereiten 14
+5 Pflege und Wartung 27
+6 Störungen beheben 39
+(Weiter mit `datei: Bedienungsanleitung.pdf | Seite 3` – oder gezielt suchen: `datei: Bedienungsanleitung.pdf | Suchbegriff`.)
+@max
+```werkzeug
+datei: Bedienungsanleitung.pdf | Entkalken
+```
+@ergebnis
+Datei C:\Users\sam\Downloads\Bedienungsanleitung.pdf (3.1 MB) – PDF, 48 Seiten. Stellen zu „Entkalken“:
+--- Anfang (Seite 1) ---
+Kaffeevollautomat CV 650
+Gebrauchsanweisung
+--- Seite 31 ---
+5.4 Entkalken
+Das Gerät meldet „Bitte entkalken“, sobald es nötig ist. Dauer: ca. 25 Minuten.
+1. Wassertank leeren, 0,5 l Wasser und eine Entkalkungstablette einfüllen.
+2. Gefäß (mind. 1 l) unter Auslauf und Milchschlauch stellen.
+3. Menü → Pflege → Entkalken wählen und mit OK bestätigen.
+4. Nach Aufforderung Tank ausspülen, mit frischem Wasser füllen, erneut OK.
+(Ganz lesen: `datei: Bedienungsanleitung.pdf | Seite 31`.)
+@max
+So startest du das Entkalken (Seite 31):
+
+1. Wassertank leeren, **0,5 l Wasser und eine Entkalkungstablette** hinein.
+2. Ein Gefäß mit mindestens 1 Liter unter Auslauf und Milchschlauch stellen.
+3. **Menü → Pflege → Entkalken**, mit OK bestätigen.
+4. Wenn die Maschine es verlangt: Tank ausspülen, frisches Wasser einfüllen, wieder OK.
+
+Das Ganze dauert etwa 25 Minuten.
+
+=== pdf seite gezielt
+@nutzer
+Was steht auf Seite 12 von bericht.pdf?
+@max
+```werkzeug
+datei: bericht.pdf | Seite 12
+```
+@ergebnis
+Datei /home/kim/bericht.pdf (2.2 MB) – PDF, 40 Seiten. Gezeigt: Seite 12.
+--- Seite 12 ---
+3.2 Ergebnisse der Befragung
+An der Befragung nahmen 418 Personen teil. 62 % bewerteten das Angebot als gut oder sehr gut,
+21 % als befriedigend, 17 % als ausreichend oder schlechter.
+Am häufigsten gelobt wurden die Öffnungszeiten, am häufigsten kritisiert die Wartezeiten.
+(Weiter mit `datei: bericht.pdf | Seite 13` – oder gezielt suchen: `datei: bericht.pdf | Suchbegriff`.)
+@max
+Seite 12 zeigt die **Ergebnisse der Befragung** (418 Teilnehmer):
+
+- 62 % fanden das Angebot gut oder sehr gut,
+- 21 % befriedigend,
+- 17 % ausreichend oder schlechter.
+
+Gelobt wurden vor allem die Öffnungszeiten, kritisiert die Wartezeiten.
+
+=== pdf nichts gefunden
+@nutzer
+Steht in der Versicherungspolice.pdf etwas über Fahrraddiebstahl?
+@max
+```werkzeug
+datei: Versicherungspolice.pdf | Fahrraddiebstahl
+```
+@ergebnis
+Datei C:\Users\jona\Documents\Versicherungspolice.pdf (640 KB) – PDF, 22 Seiten. Zu „Fahrraddiebstahl“ steht darin nichts – hier der Anfang. Gezeigt: Seiten 1–2.
+--- Seite 1 ---
+Hausratversicherung – Versicherungsschein
+Versicherungsnehmer: Jona Weiß
+Versicherungssumme: 45.000 EUR
+--- Seite 2 ---
+Versicherte Gefahren: Feuer, Leitungswasser, Sturm/Hagel, Einbruchdiebstahl, Raub, Vandalismus.
+Zusatzbausteine: keine
+(Weiter mit `datei: Versicherungspolice.pdf | Seite 3` – oder gezielt suchen: `datei: Versicherungspolice.pdf | Suchbegriff`.)
+@max
+```werkzeug
+datei: Versicherungspolice.pdf | Fahrrad
+```
+@ergebnis
+Datei C:\Users\jona\Documents\Versicherungspolice.pdf (640 KB) – PDF, 22 Seiten. Stellen zu „Fahrrad“:
+--- Anfang (Seite 1) ---
+Hausratversicherung – Versicherungsschein
+Versicherungsnehmer: Jona Weiß
+--- Seite 17 ---
+§ 9 Fahrräder
+Fahrräder sind gegen Diebstahl nur versichert, wenn dies im Versicherungsschein als Zusatzbaustein „Fahrrad“ vereinbart ist.
+(Ganz lesen: `datei: Versicherungspolice.pdf | Seite 17`.)
+@max
+Schlechte Nachricht: Laut § 9 (Seite 17) ist ein Fahrrad gegen Diebstahl **nur mit dem Zusatzbaustein „Fahrrad“** versichert – und auf Seite 2 steht bei Zusatzbausteinen: **keine**. Ein gestohlenes Rad wäre also nicht abgedeckt.
+
+Einbruchdiebstahl aus der Wohnung oder dem abgeschlossenen Keller ist zwar versichert, aber das gilt meist nicht für ein Rad, das draußen abgeschlossen war. Im Zweifel fragst du bei der Versicherung nach – und kannst den Baustein dort auch nachträglich abschließen.
+
+=== excel klein ganz
+@nutzer
+In welchem Monat hatten wir laut umsatz.xlsx am meisten Gewinn?
+@max
+```werkzeug
+datei: umsatz.xlsx | In welchem Monat hatten wir laut am meisten Gewinn?
+```
+@ergebnis
+Datei /home/noah/umsatz.xlsx (12 KB) – Excel-Tabelle, 1 Blatt:
+--- Blatt „2025“ ---
+Monat | Umsatz | Kosten | Gewinn
+Januar | 18200 | 15100 | 3100
+Februar | 17650 | 14800 | 2850
+März | 21400 | 16200 | 5200
+April | 22800 | 16900 | 5900
+Mai | 24100 | 17300 | 6800
+Juni | 23500 | 17800 | 5700
+Juli | 25900 | 18100 | 7800
+August | 22300 | 17000 | 5300
+September | 26400 | 18400 | 8000
+Oktober | 31750 | 19900 | 11850
+November | 28900 | 19300 | 9600
+Dezember | 27200 | 21000 | 6200
+@max
+Im **Oktober**: 11.850 € Gewinn bei 31.750 € Umsatz – mit Abstand der beste Monat. Auf Platz zwei folgt der November mit 9.600 €.
+
+=== excel diagramm
+@nutzer
+Zeig mir den Umsatz aus quartal.xlsx als Diagramm.
+@max
+```werkzeug
+datei: quartal.xlsx | Zeig mir den Umsatz aus als Diagramm.
+```
+@ergebnis
+Datei C:\Users\sara\quartal.xlsx (9 KB) – Excel-Tabelle, 1 Blatt:
+--- Blatt „Quartale“ ---
+Quartal | Umsatz
+Q1 | 57250
+Q2 | 70400
+Q3 | 74600
+Q4 | 87850
+@max
+Der Umsatz steigt jedes Quartal:
+
+```balken
+Q1: 57250
+Q2: 70400
+Q3: 74600
+Q4: 87850
+```
+
+Von Q1 bis Q4 sind das gut **53 % Plus**.
+
+=== excel grosse tabelle suche
+@nutzer
+Steht in der Kundenliste.xlsx eine Firma Brenner?
+@max
+```werkzeug
+datei: Kundenliste.xlsx | Brenner
+```
+@ergebnis
+Datei /home/lena/Kundenliste.xlsx (1.4 MB) – Excel-Tabelle, 2 Blätter. Stellen zu „Brenner“:
+--- Blatt „Kunden“, Zeile 1206–1208 ---
+(Kopfzeile: Nr | Firma | Ort | Ansprechpartner | Umsatz 2025)
+K-1205 | Brenner & Söhne KG | Wels | M. Huber | 48210
+K-1206 | Brenner Haustechnik | Steyr | A. Wolf | 12950
+K-1207 | Brennecke Logistik | Linz | S. Maier | 30120
+(Mehr Zusammenhang: `datei: Kundenliste.xlsx | Blatt Kunden, Zeile 1196`.)
+@max
+Sogar zwei:
+
+- **Brenner & Söhne KG** in Wels (K-1205), Ansprechpartner M. Huber – 48.210 € Umsatz 2025
+- **Brenner Haustechnik** in Steyr (K-1206), Ansprechpartner A. Wolf – 12.950 €
+
+=== excel blatt waehlen
+@nutzer
+Was steht im Blatt „Notizen“ von planung.xlsx?
+@max
+```werkzeug
+datei: planung.xlsx | Blatt Notizen
+```
+@ergebnis
+Datei C:\Users\chris\planung.xlsx (88 KB) – Excel-Tabelle, 3 Blätter. Gezeigt: Blatt „Notizen“, Zeile 1–5.
+--- Blatt „Notizen“ ---
+Offene Punkte
+Raum für den Workshop noch nicht gebucht
+Catering: Angebot von Lindner liegt vor, 18 € pro Person
+Teilnehmerliste bis 15.10. an Petra
+Beamer im Raum 2 defekt – Ersatz klären
+@max
+Im Blatt „Notizen“ stehen offene Punkte:
+
+- Der **Raum für den Workshop** ist noch nicht gebucht.
+- Catering: Angebot von Lindner, **18 € pro Person**.
+- Die **Teilnehmerliste** geht bis 15.10. an Petra.
+- Der **Beamer in Raum 2** ist kaputt – Ersatz klären.
+
+=== powerpoint zusammenfassen
+@nutzer
+"C:\Users\toni\Downloads\Projektstart.pptx" Worum geht es in der Präsentation?
+@max
+```werkzeug
+datei: C:\Users\toni\Downloads\Projektstart.pptx | Worum geht es in der Präsentation?
+```
+@ergebnis
+Datei C:\Users\toni\Downloads\Projektstart.pptx (5.4 MB) – PowerPoint, 6 Folien:
+--- Folie 1 ---
+Projekt Neue Website
+Kick-off, 6. Oktober 2026
+--- Folie 2 ---
+Ziele
+Moderneres Design
+Online-Terminbuchung
+Ladezeit unter 2 Sekunden
+--- Folie 3 ---
+Zeitplan
+Konzept bis Ende Oktober
+Umsetzung November bis Januar
+Start im Februar 2027
+--- Folie 4 ---
+Team
+Leitung: Petra
+Design: Jonas
+Technik: externe Agentur
+--- Folie 5 ---
+Budget
+48.000 € inklusive Agentur
+--- Folie 6 ---
+Nächste Schritte
+Workshop mit allen Abteilungen am 13.10.
+Notizen: Hier betonen, dass jede Abteilung ihre Wünsche vorab sammelt.
+@max
+Es ist das **Kick-off für eine neue Website** (6. Oktober 2026):
+
+- **Ziele:** moderneres Design, Online-Terminbuchung, Ladezeit unter 2 Sekunden
+- **Zeitplan:** Konzept bis Ende Oktober, Umsetzung November bis Januar, Start im **Februar 2027**
+- **Team:** Leitung Petra, Design Jonas, Technik über eine externe Agentur
+- **Budget:** 48.000 € inklusive Agentur
+- **Nächster Schritt:** Workshop mit allen Abteilungen am 13.10. – laut Sprechernotiz sollen alle ihre Wünsche vorher sammeln.
+
+=== word vertrag kuendigung
+@nutzer
+Wie lange ist die Kündigungsfrist im Arbeitsvertrag.docx?
+@max
+```werkzeug
+datei: Arbeitsvertrag.docx | Kündigungsfrist
+```
+@ergebnis
+Datei /home/mika/Dokumente/Arbeitsvertrag.docx (48 KB) – Word-Dokument, 7 Seiten. Stellen zu „Kündigungsfrist“:
+--- Anfang (Seite 1) ---
+Arbeitsvertrag
+zwischen der Muster Software GmbH und Mika Brandt
+--- Seite 5 ---
+§ 12 Beendigung des Arbeitsverhältnisses
+Nach Ablauf der Probezeit gilt beiderseits eine Kündigungsfrist von drei Monaten zum Quartalsende.
+Während der Probezeit von sechs Monaten kann das Arbeitsverhältnis mit einer Frist von zwei Wochen gekündigt werden.
+(Ganz lesen: `datei: Arbeitsvertrag.docx | Seite 5`.)
+@max
+Laut § 12 (Seite 5):
+
+- **Nach der Probezeit:** drei Monate zum Quartalsende, für beide Seiten.
+- **In der Probezeit** (sechs Monate): zwei Wochen.
+
+„Zum Quartalsende“ heißt: Wer am 15. Februar kündigt, ist erst Ende Juni draußen – die drei Monate müssen bis zum Quartalsende reichen.
+
+=== scan rechnung
+@nutzer
+Was ist der Gesamtbetrag auf rechnung_scan.pdf?
+@max
+```werkzeug
+datei: rechnung_scan.pdf | Was ist der Gesamtbetrag auf?
+```
+@ergebnis
+Datei C:\Users\jan\Downloads\rechnung_scan.pdf (892 KB) – PDF, 1 Seite. Gezeigt: Seite 1.
+--- Seite 1 ---
+(eingescannt, vom Bild abgelesen)
+RECHNUNG
+Elektro Hofer, Hauptstraße 4
+Rechnungsnummer: 2026-0731
+Arbeitszeit 2,5 Std. à 68 €   170,00 €
+Material                         46,80 €
+Summe netto                     216,80 €
+MwSt 20 %                        43,36 €
+Gesamtbetrag                    260,16 €
+@max
+Der **Gesamtbetrag ist 260,16 €** – 216,80 € netto plus 20 % Mehrwertsteuer. Die Rechnung kommt von Elektro Hofer (Nr. 2026-0731).
+
+=== scan ohne bildverstaendnis
+@nutzer
+Lies mir den Brief scan_brief.pdf vor.
+@max
+```werkzeug
+datei: scan_brief.pdf
+```
+@ergebnis
+Datei /home/sara/scan_brief.pdf (1.2 MB) – PDF, 2 Seiten. Gezeigt: Seiten 1–2.
+--- Seite 1 ---
+(eingescannt – nur ein Bild. Das Bildverständnis ist noch nicht auf diesem Rechner, deshalb kann ich die Seite nicht lesen.)
+--- Seite 2 ---
+(eingescannt – nur ein Bild. Das Bildverständnis ist noch nicht auf diesem Rechner, deshalb kann ich die Seite nicht lesen.)
+@max
+Der Brief ist eingescannt – zwei Seiten, die nur aus Bildern bestehen. Lesen kann ich die erst, wenn mein Bildverständnis fertig geladen ist; das passiert gerade im Hintergrund. Versuch es in ein paar Minuten noch einmal.
+
+=== textdatei zeilen
+@nutzer
+Was steht in log.txt ab Zeile 4000?
+@max
+```werkzeug
+datei: log.txt | Zeile 4000
+```
+@ergebnis
+Datei /var/tmp/app/log.txt (1.8 MB) – Textdatei, 18.412 Zeilen. Gezeigt: Zeile 4000–4006.
+2026-09-30 14:02:11 INFO  Anfrage /api/orders beantwortet in 84 ms
+2026-09-30 14:02:12 WARN  Verbindung zur Datenbank langsam (1.9 s)
+2026-09-30 14:02:14 ERROR Zeitüberschreitung bei /api/orders nach 30 s
+2026-09-30 14:02:14 ERROR Datenbank nicht erreichbar: connection refused (10.0.0.12:5432)
+2026-09-30 14:02:20 INFO  Neuer Verbindungsversuch
+2026-09-30 14:02:21 INFO  Verbindung zur Datenbank wiederhergestellt
+2026-09-30 14:02:23 INFO  Anfrage /api/orders beantwortet in 91 ms
+(Weiter mit `datei: log.txt | Zeile 4007` – oder gezielt suchen: `datei: log.txt | Suchbegriff`.)
+@max
+Ab Zeile 4000 sieht man einen kurzen **Datenbank-Aussetzer** am 30. September um 14:02:
+
+- erst eine langsame Verbindung (1,9 s),
+- dann eine Zeitüberschreitung bei `/api/orders` und **„connection refused“** zu `10.0.0.12:5432`,
+- nach gut sechs Sekunden stand die Verbindung wieder.
+
+Danach läuft alles normal. Wenn das öfter passiert, lohnt ein Blick in das Protokoll der Datenbank zur selben Zeit.
+
+=== textdatei fehler suchen
+@nutzer
+Such in log.txt nach Fehlern.
+@max
+```werkzeug
+datei: log.txt | ERROR
+```
+@ergebnis
+Datei /var/tmp/app/log.txt (1.8 MB) – Textdatei, 18.412 Zeilen. Stellen zu „ERROR“:
+--- Zeile 4001–4004 ---
+2026-09-30 14:02:12 WARN  Verbindung zur Datenbank langsam (1.9 s)
+2026-09-30 14:02:14 ERROR Zeitüberschreitung bei /api/orders nach 30 s
+2026-09-30 14:02:14 ERROR Datenbank nicht erreichbar: connection refused (10.0.0.12:5432)
+--- Zeile 11873–11875 ---
+2026-10-01 03:00:02 ERROR Backup fehlgeschlagen: Speicherplatz auf /backup erschöpft
+2026-10-01 03:00:02 INFO  Nächster Versuch morgen 03:00
+(Mehr Zusammenhang: `datei: log.txt | Zeile 3991`.)
+@max
+Zwei Fehlerstellen:
+
+1. **30. September, 14:02** – die Datenbank war kurz nicht erreichbar (Zeitüberschreitung, „connection refused“).
+2. **1. Oktober, 03:00** – das **Backup ist fehlgeschlagen**, weil auf `/backup` kein Platz mehr ist.
+
+Das zweite ist das ernstere Problem: Solange der Platz fehlt, scheitert jede Sicherung.
+
+=== dokument gross und alt
+@nutzer
+Lies alte_praesentation.ppt
+@max
+```werkzeug
+datei: alte_praesentation.ppt
+```
+@ergebnis
+alte_praesentation.ppt ist im alten Office-Format – das kann ich nicht lesen. Als .docx, .xlsx, .pptx oder PDF gespeichert geht es.
+@max
+Das ist noch das alte PowerPoint-Format (`.ppt`), das kann ich nicht lesen. Öffne sie in PowerPoint oder LibreOffice und speichere sie als **.pptx** oder PDF – dann klappt es.
+
+=== pdf passwort
+@nutzer
+Was steht in kontoauszug.pdf?
+@max
+```werkzeug
+datei: kontoauszug.pdf
+```
+@ergebnis
+kontoauszug.pdf ist mit einem Passwort geschützt – das kann ich nicht öffnen.
+@max
+Die Datei ist mit einem **Passwort geschützt**, da komme ich nicht hinein. Bankauszüge sind das oft; das Passwort steht meist in der Mail der Bank oder ist dein Geburtsdatum. Öffne sie selbst und speichere sie ohne Passwort, wenn ich sie lesen soll.
+
+=== webseite lang suchen
+@nutzer
+Wie lange dauert laut https://example.org/ratgeber/reisepass die Bearbeitung?
+@max
+```werkzeug
+webseite: https://example.org/ratgeber/reisepass | Bearbeitung Dauer
+```
+@ergebnis
+Webseite https://example.org/ratgeber/reisepass („Reisepass beantragen – Ratgeber“) – Webseite, 9 Teile. Stellen zu „Bearbeitung Dauer“:
+--- Anfang (Teil 1) ---
+Reisepass beantragen: Unterlagen, Kosten, Fristen
+--- Teil 6 ---
+Wie lange dauert die Bearbeitung? In der Regel drei bis vier Wochen, in der Urlaubszeit auch länger.
+Ein Express-Pass ist meist innerhalb von drei Werktagen fertig, kostet aber einen Aufschlag.
+(Ganz lesen: `webseite: https://example.org/ratgeber/reisepass | Teil 6`.)
+@max
+Laut dem Ratgeber dauert es **drei bis vier Wochen**, in der Urlaubszeit auch länger. Eilig? Ein **Express-Pass** ist meist in drei Werktagen fertig, kostet aber extra.

@@ -1,0 +1,430 @@
+# Noch mehr Code: lauffähig, in einem Block mit Sprache, kurz erklärt – das Warum in ein, zwei Sätzen.
+# Fehler im Code des Nutzers: erst sagen, was falsch ist, dann die korrigierte Fassung.
+
+=== csharp json lesen
+@nutzer
+Wie lese ich in C# eine JSON-Datei in eine Klasse ein?
+@max
+Mit `System.Text.Json` – ist in .NET schon dabei:
+
+```csharp
+using System.Text.Json;
+
+var json = File.ReadAllText("einstellungen.json");
+var einstellungen = JsonSerializer.Deserialize<Einstellungen>(json,
+    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+Console.WriteLine(einstellungen?.Sprache);
+
+record Einstellungen(string Sprache, int Schriftgroesse);
+```
+
+`PropertyNameCaseInsensitive` sorgt dafür, dass `"sprache"` in der Datei trotzdem zu `Sprache` passt.
+
+=== csharp async
+@nutzer
+Was ist der Unterschied zwischen Task.Run und async/await?
+@max
+- **`async/await`** wartet, ohne einen Thread zu blockieren – ideal für Dinge, die *von außen* dauern: Netz, Datei, Datenbank.
+- **`Task.Run`** schiebt Arbeit auf einen anderen Thread – sinnvoll für Rechenarbeit, die sonst die Oberfläche einfrieren würde.
+
+```csharp
+// Warten aufs Netz: kein Task.Run nötig
+var text = await http.GetStringAsync(url);
+
+// Schwere Rechnung: auf einen anderen Thread
+var summe = await Task.Run(() => BerechneAllesNeu(daten));
+```
+
+Ein häufiger Fehler ist `Task.Run(async () => await …)` um I/O herum – das bringt nichts außer einem zusätzlichen Thread.
+
+=== csharp linq gruppieren
+@nutzer
+Wie gruppiere ich mit LINQ Bestellungen nach Kunde und summiere den Betrag?
+@max
+```csharp
+var summen = bestellungen
+    .GroupBy(b => b.Kunde)
+    .Select(g => new { Kunde = g.Key, Summe = g.Sum(b => b.Betrag) })
+    .OrderByDescending(x => x.Summe);
+
+foreach (var s in summen)
+    Console.WriteLine($"{s.Kunde}: {s.Summe:C}");
+```
+
+`GroupBy` liefert je Kunde eine Gruppe, `g.Key` ist der Kunde selbst. `:C` formatiert den Betrag als Währung in der aktuellen Sprache.
+
+=== csharp null fehler
+@nutzer
+Ich bekomme eine NullReferenceException bei `var laenge = name.Length;`. Warum?
+@max
+Weil `name` an dieser Stelle **`null`** ist – und auf `null` gibt es keine Eigenschaft `Length`.
+
+Je nachdem, was du willst:
+
+```csharp
+var laenge = name?.Length ?? 0;     // null → 0
+```
+
+oder früher prüfen und abbrechen:
+
+```csharp
+ArgumentNullException.ThrowIfNull(name);
+```
+
+Die eigentliche Frage ist meist: Warum ist `name` null? Mit `<Nullable>enable</Nullable>` im Projekt warnt dich der Compiler schon vorher an solchen Stellen.
+
+=== python csv
+@nutzer
+Wie lese ich in Python eine CSV-Datei mit Semikolon als Trennzeichen?
+@max
+```python
+import csv
+
+with open("daten.csv", encoding="utf-8", newline="") as datei:
+    for zeile in csv.DictReader(datei, delimiter=";"):
+        print(zeile["Name"], zeile["Betrag"])
+```
+
+`DictReader` nimmt die erste Zeile als Spaltennamen. Kommt die Datei aus einem deutschen Excel, ist das Encoding oft `cp1252` statt `utf-8` – dann sieht man an den Umlauten, dass etwas nicht stimmt.
+
+=== python fehler einrueckung
+@nutzer
+```python
+def gruss(name):
+print("Hallo", name)
+```
+Warum geht das nicht?
+@max
+Die Zeile mit `print` ist **nicht eingerückt**. In Python gehört zum Rumpf einer Funktion nur, was eingerückt ist:
+
+```python
+def gruss(name):
+    print("Hallo", name)
+```
+
+Die Fehlermeldung dazu lautet *IndentationError: expected an indented block*. Üblich sind vier Leerzeichen.
+
+=== python dateien umbenennen
+@nutzer
+Wie benenne ich in Python alle .jpeg-Dateien in einem Ordner in .jpg um?
+@max
+```python
+from pathlib import Path
+
+for datei in Path("Bilder").glob("*.jpeg"):
+    datei.rename(datei.with_suffix(".jpg"))
+```
+
+`with_suffix` tauscht nur die Endung aus. Vorher einmal ohne `rename` laufen lassen und die Namen ausgeben, wenn du sicher sein willst – umbenennen lässt sich schlecht rückgängig machen.
+
+=== python liste duplikate
+@nutzer
+Wie entferne ich Duplikate aus einer Liste, aber die Reihenfolge soll bleiben?
+@max
+```python
+werte = [3, 1, 3, 2, 1]
+ohne_doppelte = list(dict.fromkeys(werte))
+print(ohne_doppelte)  # [3, 1, 2]
+```
+
+Ein `dict` merkt sich die Einfügereihenfolge und hat jeden Schlüssel nur einmal. `list(set(werte))` ginge auch, würfelt aber die Reihenfolge durcheinander.
+
+=== python requests
+@nutzer
+Wie hole ich in Python eine Webseite und prüfe den Statuscode?
+@max
+```python
+import requests
+
+antwort = requests.get("https://example.com", timeout=10)
+if antwort.status_code == 200:
+    print(antwort.text[:200])
+else:
+    print("Fehler:", antwort.status_code)
+```
+
+Das `timeout` ist wichtig – ohne wartet `requests` im Zweifel ewig. Installieren mit `pip install requests`.
+
+=== javascript array filter
+@nutzer
+Wie filtere ich in JavaScript alle Personen über 30 aus einem Array?
+@max
+```javascript
+const personen = [
+  { name: "Anna", alter: 28 },
+  { name: "Ben", alter: 35 },
+  { name: "Cem", alter: 41 },
+];
+
+const ueber30 = personen.filter(p => p.alter > 30);
+console.log(ueber30.map(p => p.name)); // ["Ben", "Cem"]
+```
+
+`filter` erzeugt ein neues Array und lässt das alte unverändert.
+
+=== javascript async fetch
+@nutzer
+Wie lade ich in JavaScript JSON von einer API?
+@max
+```javascript
+async function laden() {
+  const antwort = await fetch("https://api.example.com/daten");
+  if (!antwort.ok) {
+    throw new Error(`Fehler ${antwort.status}`);
+  }
+  return await antwort.json();
+}
+
+laden().then(daten => console.log(daten)).catch(console.error);
+```
+
+`fetch` wirft bei 404 oder 500 **keinen** Fehler – deshalb die Prüfung auf `antwort.ok`.
+
+=== sql gruppieren
+@nutzer
+SQL: Wie viele Bestellungen hat jeder Kunde, nur die mit mehr als 5?
+@max
+```sql
+SELECT kunde_id, COUNT(*) AS anzahl
+FROM bestellungen
+GROUP BY kunde_id
+HAVING COUNT(*) > 5
+ORDER BY anzahl DESC;
+```
+
+`WHERE` filtert einzelne Zeilen **vor** dem Gruppieren, `HAVING` filtert die Gruppen **danach** – darum steht die Bedingung hier im `HAVING`.
+
+=== sql join
+@nutzer
+Was ist der Unterschied zwischen INNER JOIN und LEFT JOIN?
+@max
+- **INNER JOIN:** nur Zeilen, die auf **beiden** Seiten einen Partner haben.
+- **LEFT JOIN:** **alle** Zeilen der linken Tabelle; fehlt rechts ein Partner, stehen dort `NULL`.
+
+```sql
+-- Alle Kunden, auch die ohne Bestellung
+SELECT k.name, b.id
+FROM kunden k
+LEFT JOIN bestellungen b ON b.kunde_id = k.id;
+```
+
+Mit INNER JOIN würden Kunden ohne Bestellung einfach fehlen.
+
+=== git rueckgaengig
+@nutzer
+Wie mache ich meinen letzten Git-Commit rückgängig, aber behalte die Änderungen?
+@max
+```bash
+git reset --soft HEAD~1
+```
+
+Der Commit verschwindet, deine Änderungen bleiben **gestaged** – du kannst sie anpassen und neu committen.
+
+Wurde der Commit schon gepusht, nimm lieber `git revert HEAD`: Das erzeugt einen neuen Commit, der den alten aufhebt, und bringt niemandem die Geschichte durcheinander.
+
+=== git branch
+@nutzer
+Wie lege ich einen neuen Branch an und wechsle hinein?
+@max
+```bash
+git switch -c neues-feature
+```
+
+Das legt den Branch `neues-feature` am aktuellen Stand an und wechselt sofort hinein. Die ältere Schreibweise `git checkout -b neues-feature` macht dasselbe.
+
+=== git konflikt
+@nutzer
+Was mache ich bei einem Merge-Konflikt?
+@max
+1. `git status` zeigt die Dateien mit Konflikt.
+2. In jeder Datei stehen die Stellen zwischen `<<<<<<<`, `=======` und `>>>>>>>` – oben deine Version, unten die andere. Entscheide, was bleiben soll, und lösch die Markierungen.
+3. Dann:
+
+```bash
+git add datei.cs
+git commit
+```
+
+Wenn alles schiefgeht: `git merge --abort` bringt dich zurück zum Stand vor dem Merge.
+
+=== bash speicher
+@nutzer
+Wie finde ich unter Linux heraus, welche Ordner am meisten Platz brauchen?
+@max
+```bash
+du -h --max-depth=1 ~ | sort -hr | head -15
+```
+
+Das zeigt die 15 größten Ordner in deinem Home-Verzeichnis, sortiert nach Größe. Für eine bequemere Ansicht gibt es `ncdu` – damit kannst du interaktiv durch die Ordner gehen.
+
+=== bash prozess
+@nutzer
+Wie finde und beende ich unter Linux ein hängendes Programm?
+@max
+```bash
+pgrep -a firefox     # Prozess-ID finden
+kill 12345           # höflich beenden
+kill -9 12345        # wenn es nicht hört
+```
+
+Oder in einem Schritt: `pkill firefox`. `kill -9` erst als letztes Mittel – das Programm bekommt dann keine Chance, aufzuräumen oder zu speichern.
+
+=== powershell dateien alt
+@nutzer
+Wie lösche ich mit PowerShell alle Dateien im Temp-Ordner, die älter als 30 Tage sind?
+@max
+```powershell
+Get-ChildItem $env:TEMP -Recurse -File |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) } |
+    Remove-Item -WhatIf
+```
+
+So wie er dasteht, zeigt der Befehl wegen `-WhatIf` nur, **was** er löschen würde. Passt die Liste, nimm `-WhatIf` weg. Dateien, die gerade benutzt werden, überspringt er mit einer Fehlermeldung – das ist harmlos.
+
+=== regex email
+@nutzer
+Gib mir einen regulären Ausdruck für E-Mail-Adressen.
+@max
+Für den Alltag reicht:
+
+```regex
+^[^\s@]+@[^\s@]+\.[^\s@]{2,}$
+```
+
+Das prüft: kein Leerzeichen, genau ein `@`, und dahinter ein Punkt mit Endung. Eine wirklich vollständige Prüfung nach Standard ist absurd lang – und ob es die Adresse gibt, weißt du ohnehin erst, wenn eine Mail ankommt.
+
+=== regex erklaeren
+@nutzer
+Was bedeutet `^\d{4}-\d{2}-\d{2}$`?
+@max
+Eine Zeichenkette, die **genau wie ein Datum im Format JJJJ-MM-TT** aussieht:
+
+- `^` und `$` – Anfang und Ende, nichts davor oder danach
+- `\d{4}` – vier Ziffern (Jahr)
+- `-` – ein Bindestrich
+- `\d{2}` – zwei Ziffern (Monat), dann noch einmal zwei (Tag)
+
+Passt also auf `2026-10-02`, aber auch auf `2026-99-99` – ob das Datum gültig ist, prüft der Ausdruck nicht.
+
+=== html formular
+@nutzer
+Wie mache ich ein einfaches HTML-Formular mit Name und E-Mail?
+@max
+```html
+<form action="/senden" method="post">
+  <label>Name
+    <input name="name" required>
+  </label>
+  <label>E-Mail
+    <input name="email" type="email" required>
+  </label>
+  <button type="submit">Absenden</button>
+</form>
+```
+
+`type="email"` lässt den Browser die Adresse grob prüfen, `required` verhindert leere Felder. Das ersetzt keine Prüfung auf dem Server – dort muss trotzdem alles noch einmal kontrolliert werden.
+
+=== css zentrieren
+@nutzer
+Wie zentriere ich ein Element in CSS horizontal und vertikal?
+@max
+Am einfachsten mit Flexbox am Eltern-Element:
+
+```css
+.container {
+  display: flex;
+  justify-content: center;  /* waagrecht */
+  align-items: center;      /* senkrecht */
+  min-height: 100vh;
+}
+```
+
+Mit Grid geht es noch kürzer: `display: grid; place-items: center;`.
+
+=== docker erklaerung code
+@nutzer
+Wie starte ich eine PostgreSQL-Datenbank mit Docker?
+@max
+```bash
+docker run -d --name db \
+  -e POSTGRES_PASSWORD=geheim \
+  -p 5432:5432 \
+  -v pgdaten:/var/lib/postgresql/data \
+  postgres:17
+```
+
+- `-e` setzt das Passwort für den Benutzer `postgres`,
+- `-p` macht den Port auf deinem Rechner erreichbar,
+- `-v` speichert die Daten in einem Volume, damit sie den Neustart des Containers überleben.
+
+Für mehr als Spielerei: das Passwort nicht so in die Kommandozeile schreiben, sondern in eine `.env`-Datei.
+
+=== excel formel sverweis
+@nutzer
+Wie funktioniert SVERWEIS in Excel?
+@max
+`SVERWEIS` sucht einen Wert in der **ersten Spalte** eines Bereichs und gibt einen Wert aus derselben Zeile zurück:
+
+```text
+=SVERWEIS(A2; Preise!A:C; 3; FALSCH)
+```
+
+- `A2` – wonach gesucht wird
+- `Preise!A:C` – wo gesucht wird
+- `3` – aus der dritten Spalte des Bereichs zurückgeben
+- `FALSCH` – nur exakte Treffer
+
+In neueren Excel-Versionen ist `XVERWEIS` die bessere Wahl: Die Suchspalte muss nicht ganz links stehen, und ohne Treffer gibt es einen eigenen Wert statt `#NV`.
+
+=== code review kurz
+@nutzer
+Was hältst du von dem Code?
+```csharp
+public int Summe(List<int> zahlen)
+{
+    int s = 0;
+    for (int i = 0; i <= zahlen.Count; i++)
+        s += zahlen[i];
+    return s;
+}
+```
+@max
+Ein Fehler, der sofort knallt: `i <= zahlen.Count` läuft **eine Stelle zu weit** – beim letzten Durchlauf gibt es `zahlen[zahlen.Count]` nicht, das wirft eine `ArgumentOutOfRangeException`.
+
+Richtig wäre `<`, oder gleich ohne Schleife:
+
+```csharp
+public int Summe(IEnumerable<int> zahlen) => zahlen.Sum();
+```
+
+`IEnumerable<int>` statt `List<int>` als Parameter macht die Methode nebenbei für Arrays und andere Sammlungen nutzbar.
+
+=== code was ist rekursion
+@nutzer
+Erklär mir Rekursion mit einem Beispiel.
+@max
+Eine Funktion, die **sich selbst aufruft** – mit einem kleineren Problem, bis sie bei einem ganz einfachen Fall ankommt.
+
+```python
+def fakultaet(n):
+    if n <= 1:          # Abbruch: der einfache Fall
+        return 1
+    return n * fakultaet(n - 1)
+
+print(fakultaet(5))  # 120
+```
+
+`fakultaet(5)` ruft `fakultaet(4)` auf, das `fakultaet(3)` und so weiter, bis `fakultaet(1)` einfach 1 liefert. Ohne Abbruchbedingung ruft sie sich endlos auf, bis der Speicher voll ist – der berühmte *Stack Overflow*.
+
+=== code big o
+@nutzer
+Was bedeutet O(n log n)?
+@max
+Es beschreibt, wie **schnell die Laufzeit wächst**, wenn die Datenmenge `n` größer wird.
+
+- **O(n):** doppelt so viele Daten → doppelt so lang.
+- **O(n log n):** etwas mehr als doppelt – typisch für gute Sortierverfahren wie Mergesort.
+- **O(n²):** doppelt so viele Daten → viermal so lang. Bei großen Mengen schnell unbrauchbar.
+
+Bei einer Million Einträgen sind das grob 20 Millionen Schritte für n log n, aber eine Billion für n².

@@ -1,0 +1,365 @@
+# Noch mehr Elemente: nur mit echten Zahlen oder echter Struktur, höchstens eins, Format genau einhalten.
+# Danach ein, zwei Sätze, was man daran sieht – keine Wiederholung der Zahlen in Prosa.
+
+=== balken laender einwohner
+@nutzer
+Vergleich die Einwohnerzahlen von Deutschland, Österreich und der Schweiz in einem Diagramm.
+@max
+```balken
+Titel: Einwohner (Millionen, gerundet)
+Deutschland: 83.5
+Österreich: 9.2
+Schweiz: 9.0
+```
+
+Deutschland hat rund neunmal so viele Einwohner wie Österreich oder die Schweiz – die beiden liegen fast gleichauf.
+
+=== anteile strommix
+@nutzer
+Zeig mir grob, woher der Strom in Österreich kommt.
+@max
+```anteile
+Titel: Stromerzeugung Österreich, grob
+Wasserkraft: 60
+Wind: 12
+Gas: 10
+Sonne: 8
+Biomasse und Sonstiges: 10
+```
+
+Wasserkraft ist die große Stütze – dank der Alpen und der Donau. Die Anteile schwanken je nach Jahr und Niederschlag um ein paar Prozentpunkte.
+
+=== anteile budget
+@nutzer
+Mein Gehalt sind 2.400 € netto. Miete 850, Essen 400, Auto 300, Sparen 300, Rest Freizeit. Mach mir eine Übersicht.
+@max
+```anteile
+Titel: Monatsbudget (€)
+Miete: 850
+Essen: 400
+Auto: 300
+Sparen: 300
+Freizeit: 550
+```
+
+Die Miete frisst gut ein Drittel des Gehalts – das liegt noch im üblichen Rahmen. Mit 300 € sparst du 12,5 %, ein solider Wert.
+
+=== kurve aktienkurs
+@nutzer
+Meine Aktie stand im Januar bei 42, Februar 45, März 39, April 47, Mai 51, Juni 49. Zeig mir den Verlauf.
+@max
+```kurve
+Titel: Kurs (€)
+Jan: 42
+Feb: 45
+Mär: 39
+Apr: 47
+Mai: 51
+Jun: 49
+```
+
+Nach dem Rücksetzer im März ging es deutlich nach oben – unterm Strich steht ein Plus von rund 17 % seit Januar.
+
+=== kurve gewicht
+@nutzer
+Mein Gewicht in den letzten Wochen: 84,2 – 83,6 – 83,9 – 82,8 – 82,1 – 81,7. Als Kurve bitte.
+@max
+```kurve
+Titel: Gewicht (kg)
+Woche 1: 84.2
+Woche 2: 83.6
+Woche 3: 83.9
+Woche 4: 82.8
+Woche 5: 82.1
+Woche 6: 81.7
+```
+
+Gut 2,5 kg in sechs Wochen, mit einer kleinen Delle in Woche 3 – ein gesundes Tempo, das sich halten lässt.
+
+=== fortschritt projekt
+@nutzer
+Projektstand: Design fertig, Backend 70 %, Frontend 40 %, Tests 10 %. Zeig mir das.
+@max
+```fortschritt
+Design: 100
+Backend: 70
+Frontend: 40
+Tests: 10
+```
+
+Das Frontend und vor allem die Tests sind der Flaschenhals. Wer Tests erst am Ende schreibt, findet die Fehler auch erst am Ende.
+
+=== fortschritt lesen
+@nutzer
+Ich lese gerade drei Bücher: eins mit 320 Seiten, bin bei 240; eins mit 500, bin bei 100; eins mit 180, bin bei 170.
+@max
+```fortschritt
+Buch 1: 75
+Buch 2: 20
+Buch 3: 94
+```
+
+Das dritte hast du fast durch – zehn Seiten, ein Abend. Das zweite ist mit 400 Seiten Rest das eigentliche Projekt.
+
+=== baum projektordner python
+@nutzer
+Wie sollte ein kleines Python-Projekt aufgebaut sein?
+@max
+```baum
+mein-projekt/
+  src/
+    mein_projekt/
+      __init__.py
+      main.py
+  tests/
+    test_main.py
+  pyproject.toml
+  README.md
+  .gitignore
+```
+
+Der Code liegt unter `src/`, damit Tests wirklich gegen das installierte Paket laufen. Abhängigkeiten und Metadaten stehen in der `pyproject.toml`.
+
+=== baum website
+@nutzer
+Wie gliedere ich die Seiten für die Website meines Fotostudios?
+@max
+```baum
+Startseite/
+  Portfolio/
+    Hochzeiten
+    Porträts
+    Business
+  Preise
+  Über mich
+  Kontakt/
+    Termin buchen
+```
+
+Flach halten: Jeder Inhalt sollte mit höchstens zwei Klicks erreichbar sein. Und „Termin buchen“ gehört zusätzlich als Knopf auf jede Seite – dafür kommen die Leute.
+
+=== kasten tipp
+@nutzer
+Wie spare ich am meisten Energie im Haushalt?
+@max
+Die größten Hebel, grob nach Wirkung:
+
+1. **Heizung:** 1 °C weniger spart rund 6 % Heizenergie.
+2. **Warmwasser:** kürzer duschen, Sparduschkopf.
+3. **Standby:** Steckdosenleisten zum Abschalten.
+4. **Alte Geräte:** Kühlschränke von vor 2010 sind oft echte Stromfresser.
+
+```kasten
+Titel: Faustregel
+Farbe: grün
+Was Wärme erzeugt, kostet am meisten – Heizung, Warmwasser, Trockner, Backofen.
+```
+
+=== kasten warnung strom
+@nutzer
+Kann ich die Steckdose selbst austauschen?
+@max
+Technisch ist das keine Raketenwissenschaft – aber in Deutschland und Österreich dürfen Arbeiten an der festen Elektroinstallation eigentlich nur Elektrofachkräfte machen.
+
+```kasten
+Titel: Wenn doch
+Farbe: rot
+Sicherung raus, mit einem Spannungsprüfer an allen Adern prüfen, dass wirklich nichts mehr anliegt – erst dann anfassen.
+```
+
+Bei Fehlern haftet im Zweifel die Versicherung nicht. Ein Elektriker braucht dafür meist eine Viertelstunde.
+
+=== spalten windows linux
+@nutzer
+Windows oder Linux für einen alten Laptop?
+@max
+```spalten
+Windows
+Läuft jede gängige Software.
+Auf alter Hardware oft zäh.
+Windows 11 braucht neuere Prozessoren.
+---
+Linux
+Läuft auch auf alter Hardware flott.
+Kostenlos, mit Updates für Jahre.
+Manche Programme (Office, Spiele) fehlen.
+```
+
+Für einen alten Laptop, auf dem du vor allem surfst und schreibst, ist ein leichtes Linux wie **Linux Mint** meist die bessere Wahl – er wird sich wie neu anfühlen.
+
+=== spalten pro contra homeoffice
+@nutzer
+Homeoffice: Vor- und Nachteile?
+@max
+```spalten
+Vorteile
+Kein Pendeln – Zeit und Geld gespart.
+Ruhe für konzentrierte Arbeit.
+Mehr Flexibilität im Alltag.
+---
+Nachteile
+Weniger spontaner Austausch.
+Arbeit und Freizeit verschwimmen.
+Einsamkeit bei Dauer-Homeoffice.
+```
+
+Am besten funktioniert für viele eine Mischung: Konzentriertes zu Hause, Abstimmung im Büro.
+
+=== kalender urlaub
+@nutzer
+Ich hab vom 10. bis 14. August 2026 Urlaub. Zeig mir das im Kalender.
+@max
+```kalender
+Titel: Urlaub
+Monat: 2026-08
+Markiert: 10, 11, 12, 13, 14
+```
+
+Montag bis Freitag – mit den Wochenenden davor und danach sind das neun freie Tage am Stück für fünf Urlaubstage.
+
+=== kalender muell
+@nutzer
+Die Müllabfuhr kommt im November 2026 am 4. und 18., die gelbe Tonne am 11. und 25. Zeig alle Termine.
+@max
+```kalender
+Titel: Müllabfuhr November
+Monat: 2026-11
+Markiert: 4, 11, 18, 25
+```
+
+Jeden Mittwoch etwas: abwechselnd Restmüll (4., 18.) und gelbe Tonne (11., 25.).
+
+=== titel geburtstag
+@nutzer
+Mach einen großen bunten Schriftzug "Happy Birthday" für Lena.
+@max
+```titel
+Text: Happy Birthday Lena
+Schrift: big
+Verlauf: pink-orange
+```
+
+=== titel kurz
+@nutzer
+Schreib "MAX" ganz groß.
+@max
+```titel
+Text: MAX
+Schrift: block
+Farbe: rot
+```
+
+=== frage urlaubsziel
+@nutzer
+Wo soll ich im Herbst Urlaub machen?
+@denken
+Der Nutzer will einen Urlaubstipp, aber die Vorlieben sind offen. Eine Rückfrage mit Auswahl hilft hier wirklich.
+@max
+Hängt sehr davon ab, worauf du Lust hast:
+
+```frage
+Frage: Was soll der Urlaub vor allem bieten?
+- Sonne und Meer
+- Städte und Kultur
+- Wandern in den Bergen
+- Einfach Ruhe
+```
+
+=== frage laptop
+@nutzer
+Ich brauche einen neuen Laptop.
+@max
+Bevor ich etwas empfehle, die wichtigste Frage zuerst:
+
+```frage
+Frage: Wofür brauchst du ihn hauptsächlich?
+- Office, Surfen, Streaming
+- Programmieren
+- Fotos und Videos bearbeiten
+- Spielen
+```
+
+=== frage antwort laptop
+@nutzer
+Ich brauche einen neuen Laptop.
+@max
+Bevor ich etwas empfehle, die wichtigste Frage zuerst:
+
+```frage
+Frage: Wofür brauchst du ihn hauptsächlich?
+- Office, Surfen, Streaming
+- Programmieren
+- Fotos und Videos bearbeiten
+- Spielen
+```
+@nutzer
+Programmieren
+@max
+Dann zählen vor allem drei Dinge:
+
+- **Arbeitsspeicher:** mindestens 16 GB, besser 32 GB – IDE, Browser und Docker fressen gemeinsam einiges.
+- **Bildschirm und Tastatur:** du schaust stundenlang drauf und tippst stundenlang drauf. 14 bis 16 Zoll, gute Auflösung, angenehme Tasten.
+- **Prozessor:** ein aktueller Mittelklasse-Chip reicht völlig, eine dicke Grafikkarte brauchst du nicht – außer für KI-Experimente.
+
+Solide Kandidaten sind Business-Geräte wie ThinkPad oder EliteBook, und unter macOS ein MacBook Air oder Pro mit genug Speicher.
+
+=== tabelle vergleich tarif
+@nutzer
+Vergleich zwei Handytarife: A kostet 15 € mit 20 GB, B kostet 22 € mit 50 GB.
+@max
+| | Tarif A | Tarif B |
+|---|---|---|
+| **Preis** | 15 € | 22 € |
+| **Daten** | 20 GB | 50 GB |
+| **Preis pro GB** | 0,75 € | 0,44 € |
+
+Pro Gigabyte ist **B** günstiger, aber das zählt nur, wenn du mehr als 20 GB brauchst. Schau in deinen Verbrauch der letzten Monate: Liegst du darunter, sparst du mit A jedes Jahr 84 €.
+
+=== kein element einzelzahl
+@nutzer
+Wie viel Prozent der Erdoberfläche sind Wasser?
+@max
+Etwa **71 %**.
+
+=== kein element ohne zahlen
+@nutzer
+Zeig mir als Diagramm, wie beliebt Katzen und Hunde sind.
+@max
+Ohne verlässliche Zahlen zeichne ich lieber nichts – sonst sieht es genauer aus, als es ist. In Deutschland leben laut Heimtier-Statistiken grob **15 Millionen Katzen** und **10 Millionen Hunde**; gemessen an Tieren liegen die Katzen also vorn, gemessen an Haushalten ist es knapper.
+
+=== balken mit einheit
+@nutzer
+Wie viel Koffein haben Espresso, Filterkaffee, Cola und Energydrink?
+@max
+```balken
+Titel: Koffein pro Portion
+Einheit: mg
+Espresso (30 ml): 65
+Filterkaffee (200 ml): 90
+Cola (330 ml): 32
+Energydrink (250 ml): 80
+```
+
+Ein Becher Filterkaffee schlägt den Espresso – der ist nur konzentrierter, nicht stärker. Als unbedenklich gelten für Erwachsene bis etwa 400 mg am Tag.
+
+=== trennlinien uebersicht
+@nutzer
+Was gehört alles in eine Notfall-Hausapotheke?
+@max
+--- Verbandsmaterial ---
+
+- Pflaster in verschiedenen Größen, Mullbinden, Kompressen
+- Dreiecktuch, Schere, Pinzette, Einmalhandschuhe
+
+--- Medikamente ---
+
+- Schmerz- und Fiebermittel (Paracetamol oder Ibuprofen)
+- Mittel gegen Durchfall und Elektrolytpulver
+- Antiallergikum, Wund- und Brandsalbe
+
+--- Sonstiges ---
+
+- Fieberthermometer, Desinfektionsmittel
+- Liste mit Notrufnummern und eigenen Medikamenten
+
+Einmal im Jahr das Ablaufdatum prüfen – abgelaufene Medikamente gehören in die Apotheke, nicht in den Hausmüll.

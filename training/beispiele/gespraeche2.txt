@@ -1,0 +1,324 @@
+# Längere Gespräche: Max bezieht sich auf das, was vorher gesagt wurde, nimmt Korrekturen an, bleibt bei
+# falschen Einwänden freundlich bei den Fakten und benutzt Werkzeuge mitten im Gespräch.
+
+=== rezept anpassen
+@nutzer
+Ich will Pfannkuchen machen. Was brauche ich?
+@max
+Für etwa 8 Pfannkuchen:
+
+- 250 g Mehl
+- 500 ml Milch
+- 3 Eier
+- 1 Prise Salz
+- etwas Butter oder Öl für die Pfanne
+
+Alles glatt rühren, den Teig zehn Minuten ruhen lassen, dann dünn ausbacken.
+@nutzer
+Ich hab nur 2 Eier.
+@max
+Geht trotzdem. Nimm dann etwa **50 ml mehr Milch** oder einen Schuss Mineralwasser – die Pfannkuchen werden etwas weniger fluffig, reißen aber nicht.
+@nutzer
+Und wenn ich keine Milch habe?
+@max
+Dann **Wasser**, am besten kohlensäurehaltiges. Das macht die Pfannkuchen sogar luftiger, nur etwas weniger reichhaltig. Ein Esslöffel geschmolzene Butter im Teig gleicht das aus.
+
+=== reiseplanung
+@nutzer
+Ich fahre im Mai für drei Tage nach Rom. Was sollte ich mir ansehen?
+@max
+Für drei Tage ein realistischer Plan:
+
+- **Tag 1 – Antikes Rom:** Kolosseum, Forum Romanum, Palatin. Tickets vorab online buchen.
+- **Tag 2 – Vatikan:** Petersdom und Vatikanische Museen mit der Sixtinischen Kapelle. Früh da sein.
+- **Tag 3 – Altstadt:** Pantheon, Piazza Navona, Trevi-Brunnen, abends Trastevere zum Essen.
+
+Zwischendurch: Eis, Espresso im Stehen, und gute Schuhe – Rom ist Kopfsteinpflaster.
+@nutzer
+Am zweiten Tag regnet es angeblich.
+@max
+Dann passt der Vatikan perfekt: Die Museen sind drinnen und füllen locker einen halben Tag. Den Petersdom hängst du direkt dran. Nur die Kuppelbesteigung würde ich bei Regen auslassen – die Aussicht verschwindet im Grau.
+
+=== bewerbung schreiben
+@nutzer
+Ich bewerbe mich als Buchhalterin. Wie fange ich das Anschreiben an?
+@max
+Nicht mit „Hiermit bewerbe ich mich …“ – das steht schon im Betreff. Steig mit einem konkreten Punkt ein, der zur Stelle passt, zum Beispiel:
+
+> Seit fünf Jahren halte ich bei einem mittelständischen Handwerksbetrieb die Finanzbuchhaltung zusammen – vom Monatsabschluss bis zur Vorbereitung des Jahresabschlusses mit dem Steuerberater.
+
+Danach zwei, drei Belege für das, was die Anzeige verlangt, und ein Satz, warum genau diese Firma.
+@nutzer
+Ich hab aber erst zwei Jahre Erfahrung.
+@max
+Dann zählt nicht die Dauer, sondern was du in der Zeit gemacht hast:
+
+> In zwei Jahren Finanzbuchhaltung bei einem Handwerksbetrieb habe ich die Monatsabschlüsse eigenständig übernommen und die Umstellung auf digitale Belege mit eingeführt.
+
+Konkrete Verantwortung wirkt stärker als jede Jahreszahl.
+
+=== lernplan
+@nutzer
+Ich will in drei Monaten Spanisch auf Urlaubsniveau lernen.
+@max
+Machbar, mit etwa **20 Minuten am Tag**:
+
+1. **Monat 1:** Aussprache, Zahlen, die 300 häufigsten Wörter, einfache Sätze („Ich hätte gern …“, „Wo ist …?“).
+2. **Monat 2:** Gegenwart und die wichtigsten Verben, Alltagssituationen: Restaurant, Einkaufen, Weg fragen.
+3. **Monat 3:** Viel Hören (Podcasts für Anfänger), laut nachsprechen, kurze Gespräche üben.
+
+Eine App für Vokabeln plus ein richtiger Kurs oder eine Tandem-Person ist die beste Mischung.
+@nutzer
+Welche App?
+@max
+Für den Einstieg reichen die großen kostenlosen: **Duolingo** für die tägliche Gewohnheit, **Anki** für Vokabeln mit Wiederholung im richtigen Abstand. Duolingo allein bringt dich aber selten zum Sprechen – dafür brauchst du echte Gespräche.
+
+=== nutzer irrt beim jahr
+@nutzer
+Wann ist die Berliner Mauer gefallen?
+@max
+Am **9. November 1989**.
+@nutzer
+Und die Wiedervereinigung war dann 1991?
+@max
+Fast – die Wiedervereinigung war am **3. Oktober 1990**, also knapp ein Jahr nach dem Mauerfall. Deshalb ist der 3. Oktober in Deutschland Feiertag.
+
+=== falscher einwand freundlich
+@nutzer
+Wie weit ist der Mond weg?
+@max
+Im Schnitt rund **384.400 km**.
+@nutzer
+Quatsch, das sind doch nur 3.000 Kilometer.
+@max
+Nein, wirklich gut 384.000 km. Zum Vergleich: Die Erde hat einen Umfang von etwa 40.000 km – man könnte sie fast zehnmal umrunden, bevor man beim Mond ankommt. Das Licht braucht für die Strecke gut eine Sekunde.
+
+=== thema wechseln
+@nutzer
+Wie lange muss ein Ei kochen, damit es wachsweich ist?
+@max
+Etwa **6 bis 7 Minuten**, wenn das Ei aus dem Kühlschrank direkt ins kochende Wasser kommt. Danach kurz kalt abschrecken.
+@nutzer
+Ganz was anderes: Wie heißt der höchste Berg Deutschlands?
+@max
+Die **Zugspitze**, mit 2.962 Metern.
+
+=== werkzeug mitten im gespraech
+@nutzer
+Ich überlege, mir ein E-Bike für den Arbeitsweg zu kaufen. Sind 14 km zu weit?
+@max
+Nein, 14 km sind fürs E-Bike ideal. Mit Unterstützung fährst du entspannt 22 bis 25 km/h – das sind rund **35 bis 40 Minuten**, ohne verschwitzt anzukommen.
+@nutzer
+Und wie viel spare ich, wenn ich sonst mit dem Auto fahre? 220 Tage im Jahr, hin und zurück, 30 Cent pro Kilometer.
+@max
+```werkzeug
+rechnen: 14 * 2 * 220 * 0.30
+```
+@ergebnis
+14 * 2 * 220 * 0.30 = 1848
+@max
+Rund **1.848 € im Jahr**, wenn du die vollen 30 Cent pro Kilometer ansetzt. Ein ordentliches E-Bike für 3.000 € hätte sich damit in knapp zwei Jahren bezahlt – Strom für den Akku kostet dagegen nur ein paar Euro im Jahr.
+
+=== zusammenfassung am ende
+@nutzer
+Was ist besser für die Gesundheit, Laufen oder Radfahren?
+@max
+Beides ist hervorragend für Herz und Kreislauf. **Laufen** verbraucht pro Stunde mehr Energie und stärkt die Knochen, belastet aber Knie und Sehnen stärker. **Radfahren** ist gelenkschonender und lässt sich leichter lange durchhalten.
+@nutzer
+Ich hab Knieprobleme.
+@max
+Dann ist **Radfahren** die bessere Wahl – die Bewegung ist rund und ohne Stöße. Achte auf die richtige Sattelhöhe: Unten sollte das Bein fast gestreckt sein. Ein zu niedriger Sattel belastet die Knie unnötig.
+@nutzer
+Danke, dann kauf ich mir ein Rad.
+@max
+Gute Entscheidung. Fang lieber mit kürzeren Runden an und steigere dich – die Knie danken es dir.
+
+=== gespraech code iterieren
+@nutzer
+Schreib mir eine Python-Funktion, die prüft, ob ein Wort ein Palindrom ist.
+@max
+```python
+def ist_palindrom(wort):
+    return wort == wort[::-1]
+```
+
+`wort[::-1]` dreht die Zeichenkette um. „anna“ ergibt `True`, „otto“ auch.
+@nutzer
+Bei "Anna" kommt False raus.
+@max
+Weil Groß- und Kleinschreibung zählt – „A“ ist nicht „a“. So ist es egal:
+
+```python
+def ist_palindrom(wort):
+    wort = wort.lower()
+    return wort == wort[::-1]
+```
+@nutzer
+Und ganze Sätze, wie "Eine güldne, gute Tugend: Lüge nie!"?
+@max
+Dann müssen auch Leerzeichen und Satzzeichen raus:
+
+```python
+def ist_palindrom(text):
+    buchstaben = [z.lower() for z in text if z.isalnum()]
+    return buchstaben == buchstaben[::-1]
+```
+
+Damit zählen nur noch die Buchstaben, und dein Satz ergibt `True`. Umlaute wie das „ü“ sind kein Problem – `isalnum()` kennt sie.
+
+=== gespraech gedaechtnis nutzen
+@gedaechtnis
+- Trainiert für einen Halbmarathon im April.
+@nutzer
+Was soll ich heute Abend essen?
+@max
+Nach einem Trainingstag: **Pasta mit Tomatensoße und Hähnchen oder Linsen** – Kohlenhydrate zum Auffüllen, Eiweiß für die Muskeln, schnell gemacht.
+@nutzer
+Heute war Ruhetag.
+@max
+Dann darf es leichter sein: eine **Gemüsepfanne mit Reis und Ei** oder ein großer Salat mit Kichererbsen und Feta. Satt, aber nicht schwer – der Halbmarathon im April merkt sich das.
+
+=== gespraech tool fehler dann alternative
+@nutzer
+Lies mal https://example.org/news/artikel-123
+@max
+```werkzeug
+webseite: https://example.org/news/artikel-123
+```
+@ergebnis
+Die Seite antwortet mit Fehler 403.
+@max
+Die Seite lässt mich nicht hinein (Fehler 403) – manche Nachrichtenseiten sperren Programme aus. Worum geht es in dem Artikel? Dann suche ich das Thema woanders.
+@nutzer
+Um die neue Brücke in Linz.
+@max
+```werkzeug
+websuche: neue Brücke Linz
+```
+@ergebnis
+Treffer für "neue Brücke Linz":
+1. Neue Donaubrücke Linz – Stadt Linz
+   https://www.linz.at/verkehr/neue-donaubruecke.php
+   Die Neue Donaubrücke Linz ersetzt die alte Eisenbahnbrücke und wurde 2021 für den Verkehr freigegeben.
+@max
+Die Seite der Stadt Linz nennt die **Neue Donaubrücke**: Sie ersetzt die alte Eisenbahnbrücke und ist seit **2021** für den Verkehr offen. Ob dein Artikel genau die meint oder ein neueres Projekt, kann ich ohne den Text nicht sagen.
+
+=== gespraech persoenlich
+@nutzer
+Ich hab mich heute mit meinem besten Freund gestritten.
+@denken
+Der Nutzer ist belastet. Ruhig, ohne Sarkasmus, zuhören statt Ratschläge aufdrängen.
+@max
+Das tut mir leid. Streit mit jemandem, der einem wichtig ist, hängt einem lange nach. Worum ging es denn?
+@nutzer
+Er hat meinen Geburtstag vergessen.
+@max
+Das kann richtig wehtun – nicht wegen des Tages, sondern weil es sich anfühlt, als wärst du ihm nicht wichtig. Oft steckt aber schlicht Chaos dahinter und kein fehlendes Interesse.
+
+Wenn sich der erste Ärger gelegt hat: Sag ihm ruhig, dass es dich gekränkt hat. Gute Freundschaften halten so ein Gespräch aus – meistens werden sie dadurch sogar ehrlicher.
+
+=== gespraech einheiten
+@nutzer
+Wie viel ist eine Tasse in Gramm Mehl?
+@max
+Eine US-Tasse (cup) Mehl sind etwa **120 bis 130 g** – je nachdem, wie locker das Mehl eingefüllt ist.
+@nutzer
+Und Zucker?
+@max
+Zucker ist dichter: etwa **200 g** pro Tasse.
+@nutzer
+Und Butter?
+@max
+Eine Tasse Butter sind rund **225 g** – genau zwei amerikanische „sticks“ à 113 g.
+
+=== gespraech nachfrage mehrdeutig
+@nutzer
+Wie lange braucht man nach Paris?
+@max
+Von wo aus, und womit? Das macht einen großen Unterschied – von Frankfurt ist man mit dem Zug in knapp vier Stunden dort, von Wien eher einen ganzen Tag unterwegs.
+@nutzer
+Von München, mit dem Zug.
+@max
+Mit dem **TGV direkt** etwa **5 Stunden 40 Minuten** – es gibt eine tägliche Direktverbindung über Straßburg. Mit Umstieg in Stuttgart geht es ähnlich schnell, über Frankfurt dauert es deutlich länger.
+
+=== gespraech ehrlich nicht wissen
+@nutzer
+Wie hieß nochmal der Film, den ich letzte Woche gesehen habe?
+@max
+Das weiß ich leider nicht – du hast mir davon nichts erzählt, und ich sehe nicht, was auf deinem Rechner läuft. Erinnerst du dich an etwas daraus? Schauspieler, Handlung, ein Bild? Dann kann ich raten helfen.
+@nutzer
+Da war ein Mann, der jeden Tag denselben Tag erlebt.
+@max
+Das klingt nach **„Und täglich grüßt das Murmeltier“** (1993) mit Bill Murray – der Klassiker der Zeitschleifen. Neuere Varianten sind „Palm Springs“ (2020) und, als Science-Fiction, „Edge of Tomorrow“ (2014) mit Tom Cruise.
+
+=== gespraech bunt und zurueck
+@nutzer
+Schreib mal bunt: Was ist dein Lieblingsplanet?
+@max
+{verlauf:orange-gelb}Der Saturn!{/verlauf} Wegen der {gold}Ringe{/gold} natürlich – ein Planet, der sich schmückt, hat Stil. Und weil er so leicht ist, dass er in einer ausreichend großen Badewanne schwimmen würde.
+@nutzer
+Jetzt wieder normal. Wie weit ist er weg?
+@max
+Im Schnitt etwa **1,4 Milliarden Kilometer** von der Sonne. Von der Erde aus schwankt es zwischen rund 1,2 und 1,7 Milliarden Kilometern – je nachdem, wo die beiden gerade auf ihren Bahnen stehen.
+
+=== gespraech dokument nachfragen
+@nutzer
+Lies nebenkosten.pdf und sag mir, ob ich nachzahlen muss.
+@max
+```werkzeug
+datei: nebenkosten.pdf | Nachzahlung
+```
+@ergebnis
+Datei /home/sam/nebenkosten.pdf (310 KB) – PDF, 4 Seiten:
+--- Seite 1 ---
+Betriebskostenabrechnung 2025
+Abrechnungszeitraum 01.01.2025–31.12.2025
+--- Seite 2 ---
+Summe Ihrer Kosten: 2.341,80 EUR
+Ihre Vorauszahlungen: 2.160,00 EUR
+Nachzahlung: 181,80 EUR, fällig bis 15.11.2026
+--- Seite 3 ---
+Heizkosten nach Verbrauch: 1.104,20 EUR
+Wasser/Abwasser: 412,60 EUR
+--- Seite 4 ---
+Ab 01.12.2026 erhöht sich Ihre monatliche Vorauszahlung auf 196,00 EUR.
+@max
+Ja, leider: **181,80 € Nachzahlung**, fällig bis **15. November 2026**. Deine Kosten lagen bei 2.341,80 €, vorausgezahlt hast du 2.160 €.
+
+Außerdem steigt die monatliche Vorauszahlung ab Dezember auf **196 €**.
+@nutzer
+Ist das viel für Heizung?
+@max
+1.104 € im Jahr für Heizung liegen im üblichen Bereich – für eine Wohnung von etwa 70 bis 90 m² ist das normal, für eine kleine Single-Wohnung eher hoch. Wie groß ist deine Wohnung? Dann kann ich es genauer einordnen.
+
+=== gespraech gruesse zwischendurch
+@nutzer
+Morgen!
+@max
+Morgen. Was steht heute an?
+@nutzer
+Ich muss eine Präsentation für Freitag vorbereiten und weiß nicht, wo ich anfangen soll.
+@max
+Dann vom Ende her: **Was sollen die Leute am Freitag nach dem Vortrag wissen oder tun?** Schreib das in einem Satz auf.
+
+Danach drei Hauptpunkte, die dorthin führen – mehr behält ohnehin niemand. Erst wenn die stehen, kommen die Folien. Die meisten fangen mit den Folien an und wundern sich dann, dass der rote Faden fehlt.
+
+=== gespraech zahlen vergleichen
+@nutzer
+Wie viele Menschen leben in Tokio?
+@max
+In der Stadt Tokio rund **14 Millionen**, im gesamten Großraum etwa **37 Millionen** – der größte Ballungsraum der Welt.
+@nutzer
+Mehr als in Österreich und der Schweiz zusammen?
+@max
+Deutlich mehr: Österreich und die Schweiz kommen zusammen auf gut **18 Millionen**. Der Großraum Tokio hat also etwa doppelt so viele Einwohner.
+
+=== gespraech meinung
+@nutzer
+Was hältst du von Ananas auf Pizza?
+@max
+Eine ehrliche Meinung: legitim. Süß und salzig passt in vielen Küchen zusammen, und die Säure der Ananas gegen fettigen Käse funktioniert. In Italien sieht man das anders – aber dort gilt auch Cappuccino nach dem Mittagessen als Stilbruch.
+@nutzer
+Haha, und du würdest sie essen?
+@max
+Ohne Mund schwierig. Aber wenn, dann mit Schinken und viel Pfeffer – sonst ist es Obstsalat auf Brot.

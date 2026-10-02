@@ -1,0 +1,230 @@
+# Dateien finden: "Wo ist …?" → `finden`, danach bei Bedarf `datei`. Pfade genau abschreiben, nichts erfinden.
+# Ohne Treffer ehrlich sagen und andere Begriffe oder einen Ordner vorschlagen.
+
+=== finden steuererklaerung
+@nutzer
+Wo ist meine Steuererklärung von 2025?
+@denken
+Der Nutzer sucht eine Datei auf seinem Rechner. Ich verwende `finden` mit den Begriffen.
+@max
+```werkzeug
+finden: Steuererklärung 2025
+```
+@ergebnis
+Gesucht nach „Steuererklärung 2025“ in C:\Users\alex (48.213 Dateien angesehen, 6.2 s):
+Im Namen:
+- C:\Users\alex\Documents\Steuer\Steuererklärung_2025.pdf (1.2 MB, geändert 14.03.2026)
+- C:\Users\alex\Downloads\Steuererklärung 2025 Entwurf.pdf (980 KB, geändert 02.03.2026)
+Im Inhalt:
+- C:\Users\alex\Documents\Notizen\finanzen.txt (3 KB, geändert 20.01.2026): „Steuererklärung 2025 bis Ende Juli abgeben, Belege im Ordner Steuer.“
+(Lesen mit `datei: <Pfad>`.)
+@max
+Gefunden – die fertige liegt hier:
+
+`C:\Users\alex\Documents\Steuer\Steuererklärung_2025.pdf` (vom 14. März)
+
+Im Download-Ordner gibt es außerdem einen **Entwurf** vom 2. März. Und in deinen Notizen steht, dass sie bis Ende Juli abgegeben werden muss.
+
+=== finden fotos urlaub
+@nutzer
+Find mal meine Fotos vom Kroatien-Urlaub.
+@max
+```werkzeug
+finden: Fotos Kroatien
+```
+@ergebnis
+Gesucht nach „Fotos Kroatien“ in /home/sam (21.874 Dateien angesehen, 3.1 s):
+Im Namen:
+- /home/sam/Bilder/2025 Kroatien/IMG_4411.jpg (3.4 MB, geändert 18.08.2025)
+- /home/sam/Bilder/2025 Kroatien/IMG_4412.jpg (3.1 MB, geändert 18.08.2025)
+- /home/sam/Bilder/2025 Kroatien/IMG_4415.jpg (2.9 MB, geändert 18.08.2025)
+… und 214 weitere
+(Lesen mit `datei: <Pfad>`.)
+@max
+Die liegen gesammelt im Ordner **`/home/sam/Bilder/2025 Kroatien/`** – gut 200 Fotos vom August 2025.
+
+=== finden nichts
+@nutzer
+Wo hab ich den Mietvertrag gespeichert?
+@max
+```werkzeug
+finden: Mietvertrag
+```
+@ergebnis
+Gesucht nach „Mietvertrag“ in C:\Users\kim (31.402 Dateien angesehen, 4.8 s):
+Nichts gefunden. Vielleicht andere Begriffe oder ein anderer Ordner (`finden: Begriffe | Ordner`).
+@max
+Unter dem Namen „Mietvertrag“ finde ich nichts, auch nicht im Inhalt lesbarer Dateien. Vielleicht heißt die Datei anders – etwa nach der Hausverwaltung oder einfach „Scan“ mit Datum. Weißt du ungefähr, wann du ihn gespeichert hast oder wie die Vermieterin heißt?
+
+=== finden excel umsatz
+@nutzer
+Ich suche die Excel-Datei mit den Umsätzen.
+@max
+```werkzeug
+finden: Excel Umsatz
+```
+@ergebnis
+Gesucht nach „Excel Umsatz“ in C:\Users\jan (52.118 Dateien angesehen, 7.4 s):
+Im Namen:
+- C:\Users\jan\OneDrive\Arbeit\Umsatz 2025.xlsx (48 KB, geändert 09.01.2026)
+- C:\Users\jan\OneDrive\Arbeit\Umsatz 2024.xlsx (45 KB, geändert 12.01.2025)
+(Lesen mit `datei: <Pfad>`.)
+@max
+Zwei Kandidaten, beide in `C:\Users\jan\OneDrive\Arbeit\`:
+
+- **Umsatz 2025.xlsx** – zuletzt geändert am 9. Januar 2026
+- **Umsatz 2024.xlsx** – vom Januar 2025
+
+Die aktuellere dürfte die von 2025 sein.
+
+=== finden im projekt
+@nutzer
+In welcher Datei hier im Projekt steht die Klasse ChatLoop?
+@max
+```werkzeug
+finden: ChatLoop | .
+```
+@ergebnis
+Gesucht nach „ChatLoop“ in /home/alex/code/max (412 Dateien angesehen, 0.3 s):
+Im Namen:
+- /home/alex/code/max/src/Max/ChatLoop.cs (8.1 KB, geändert 29.09.2026)
+Im Inhalt:
+- /home/alex/code/max/src/Max/Program.cs (6.3 KB, geändert 29.09.2026): „await new ChatLoop(AnsiConsole.Console, backend, () => DateTime.Now, commands, paths.History, opening).RunAsync();“
+(Lesen mit `datei: <Pfad>`.)
+@max
+In **`src/Max/ChatLoop.cs`**. Benutzt wird sie in `src/Max/Program.cs`, dort wird sie am Ende gestartet.
+
+=== finden dann lesen
+@nutzer
+Such mal die Bedienungsanleitung vom Geschirrspüler und sag mir, was Fehler E24 bedeutet.
+@max
+```werkzeug
+finden: Geschirrspüler Anleitung
+```
+@ergebnis
+Gesucht nach „Geschirrspüler Anleitung“ in C:\Users\lena (28.990 Dateien angesehen, 4.0 s):
+Im Namen:
+- C:\Users\lena\Documents\Haushalt\Geschirrspüler_Anleitung_SMV4.pdf (4.8 MB, geändert 11.05.2024)
+(Lesen mit `datei: <Pfad>`.)
+@max
+```werkzeug
+datei: C:\Users\lena\Documents\Haushalt\Geschirrspüler_Anleitung_SMV4.pdf | E24
+```
+@ergebnis
+Datei C:\Users\lena\Documents\Haushalt\Geschirrspüler_Anleitung_SMV4.pdf (4.8 MB) – PDF, 64 Seiten. Stellen zu „E24“:
+--- Anfang (Seite 1) ---
+Gebrauchsanleitung Geschirrspüler SMV4
+Lesen Sie die Anleitung vor dem ersten Gebrauch.
+--- Seite 51 ---
+Fehlercode E24: Abwasserschlauch geknickt oder verstopft, Pumpensieb verstopft.
+Abhilfe: Schlauch knickfrei verlegen, Pumpensieb reinigen (siehe Seite 44).
+(Ganz lesen: `datei: C:\Users\lena\Documents\Haushalt\Geschirrspüler_Anleitung_SMV4.pdf | Seite 51`.)
+@max
+**E24** heißt: Das Wasser läuft nicht ab. Laut Anleitung (Seite 51) ist entweder der **Abwasserschlauch geknickt oder verstopft** oder das **Pumpensieb** ist zu.
+
+1. Schlauch hinter dem Gerät prüfen und knickfrei verlegen.
+2. Pumpensieb unten im Spülraum herausdrehen und reinigen – wie das geht, steht auf Seite 44.
+
+Danach Gerät kurz vom Strom nehmen und neu starten.
+
+=== finden tippfehler
+@nutzer
+wo is mein lebenslauf
+@max
+```werkzeug
+finden: Lebenslauf
+```
+@ergebnis
+Gesucht nach „Lebenslauf“ in /home/mika (19.203 Dateien angesehen, 2.6 s):
+Im Namen:
+- /home/mika/Dokumente/Bewerbung/Lebenslauf_2026.docx (64 KB, geändert 07.02.2026)
+- /home/mika/Dokumente/Bewerbung/Lebenslauf_2026.pdf (210 KB, geändert 07.02.2026)
+- /home/mika/Dokumente/Alt/Lebenslauf_alt.doc (88 KB, geändert 15.09.2021)
+(Lesen mit `datei: <Pfad>`.)
+@max
+Der aktuelle liegt in `/home/mika/Dokumente/Bewerbung/` – als **Word** und als **PDF**, beide vom 7. Februar 2026. Dazu gibt es noch einen alten von 2021 im Ordner `Alt`.
+
+=== finden zeit um
+@nutzer
+Finde alle Dateien, in denen „Projekt Kranich“ vorkommt.
+@max
+```werkzeug
+finden: Projekt Kranich
+```
+@ergebnis
+Gesucht nach „Projekt Kranich“ in C:\Users\chris (412.533 Dateien angesehen, 20.0 s):
+Im Inhalt:
+- C:\Users\chris\Documents\Arbeit\Kranich_Zeitplan.xlsx (31 KB, geändert 22.09.2026): „Projekt Kranich – Meilensteine“
+- C:\Users\chris\Documents\Arbeit\Protokoll_0915.docx (19 KB, geändert 15.09.2026): „TOP 2: Stand Projekt Kranich, Abnahme verschoben auf Oktober.“
+(Lesen mit `datei: <Pfad>`.)
+(Nicht alles durchsucht – die Zeit war um. Mit `| Ordner` geht es gezielter.)
+@max
+Zwei Treffer, beide unter `C:\Users\chris\Documents\Arbeit\`:
+
+- **Kranich_Zeitplan.xlsx** – die Meilensteine
+- **Protokoll_0915.docx** – laut Protokoll vom 15. September ist die Abnahme auf Oktober verschoben
+
+Die Suche hat allerdings nicht alles geschafft – dein Benutzerordner ist groß. Wenn es noch mehr geben muss, sag mir den Ordner, dann suche ich dort gezielt.
+
+=== finden in ordner
+@nutzer
+Gibt es in meinem Download-Ordner eine Rechnung von Amazon?
+@max
+```werkzeug
+finden: Rechnung Amazon | ~/Downloads
+```
+@ergebnis
+Gesucht nach „Rechnung Amazon“ in /home/noah/Downloads (1.284 Dateien angesehen, 0.9 s):
+Im Inhalt:
+- /home/noah/Downloads/Rechnung_D01-4471182.pdf (88 KB, geändert 03.09.2026): „Amazon EU S.à r.l. – Rechnung“
+(Lesen mit `datei: <Pfad>`.)
+@max
+Ja: **`Rechnung_D01-4471182.pdf`** vom 3. September – der Name verrät es nicht, aber im Inhalt steht Amazon als Rechnungssteller.
+
+=== finden schluessel verweigert
+@nutzer
+Wo liegt mein SSH-Schlüssel und was steht drin?
+@max
+Wo er liegt, kann ich dir sagen: meist in `~/.ssh/` als `id_ed25519` oder `id_rsa`. Hineinsehen werde ich aber nicht – Schlüssel und Zugangsdaten lasse ich grundsätzlich in Ruhe. Den öffentlichen Teil (`.pub`) kannst du bei Bedarf selbst öffnen und kopieren.
+
+=== finden bilder screenshot
+@nutzer
+Wo sind meine Screenshots von gestern?
+@max
+```werkzeug
+finden: Screenshots
+```
+@ergebnis
+Gesucht nach „Screenshots“ in C:\Users\toni (38.120 Dateien angesehen, 5.3 s):
+Im Namen:
+- C:\Users\toni\Pictures\Screenshots\Screenshot 2026-10-01 214512.png (412 KB, geändert 01.10.2026)
+- C:\Users\toni\Pictures\Screenshots\Screenshot 2026-10-01 093301.png (288 KB, geändert 01.10.2026)
+- C:\Users\toni\Pictures\Screenshots\Screenshot 2026-09-28 160044.png (1.1 MB, geändert 28.09.2026)
+… und 63 weitere
+(Lesen mit `datei: <Pfad>`.)
+@max
+Windows legt sie unter **`C:\Users\toni\Pictures\Screenshots\`** ab. Von gestern sind zwei dabei, um 09:33 und um 21:45 Uhr.
+
+=== finden praesentation
+@nutzer
+Wo ist meine Präsentation über Solarenergie?
+@max
+```werkzeug
+finden: Präsentation Solarenergie
+```
+@ergebnis
+Gesucht nach „Präsentation Solarenergie“ in /home/nele (24.551 Dateien angesehen, 3.4 s):
+Nichts gefunden. Vielleicht andere Begriffe oder ein anderer Ordner (`finden: Begriffe | Ordner`).
+@max
+```werkzeug
+finden: Solar
+```
+@ergebnis
+Gesucht nach „Solar“ in /home/nele (24.551 Dateien angesehen, 3.3 s):
+Im Namen:
+- /home/nele/Schule/Physik/Photovoltaik_Referat.pptx (6.2 MB, geändert 19.05.2026)
+Im Inhalt:
+- /home/nele/Schule/Physik/Notizen_Referat.txt (2 KB, geändert 18.05.2026): „Solarenergie: Wirkungsgrad heutiger Module um 22 %“
+(Lesen mit `datei: <Pfad>`.)
+@max
+Unter dem Wort „Solarenergie“ gab es nichts, aber mit „Solar“: Die Präsentation heißt **`Photovoltaik_Referat.pptx`** und liegt in `/home/nele/Schule/Physik/`. Die Notizen dazu sind gleich daneben.

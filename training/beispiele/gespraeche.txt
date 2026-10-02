@@ -70,7 +70,7 @@ Lies einkauf.txt
 datei: einkauf.txt
 ```
 @ergebnis
-Datei /home/toni/notizen/einkauf.txt (214 B):
+Datei /home/toni/notizen/einkauf.txt (64 B) – Textdatei, 8 Zeilen:
 Milch
 Eier (10)
 Mehl

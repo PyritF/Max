@@ -30,16 +30,26 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-TOOLS = {"uhrzeit", "system", "rechnen", "ordner", "datei", "bild", "websuche", "webseite"}
+TOOLS = {"uhrzeit", "system", "rechnen", "ordner", "datei", "finden", "bild", "audio", "zwischenablage", "websuche", "webseite", "wetter"}
 NO_ARGUMENT = {"uhrzeit", "system"}
+OPTIONAL_ARGUMENT = {"zwischenablage"}
 ELEMENTS = {"balken", "anteile", "kurve", "fortschritt", "baum", "kasten", "spalten", "kalender", "titel", "frage"}
+# Wie AnswerGrammar.CodeLanguages und PlainLanguages in src/Max/Llm/AnswerGrammar.cs – andere lässt die Grammatik nicht zu.
+LANGUAGES = set("""
+c cpp c++ h csharp cs c# java kotlin kt swift go rust rs python py javascript js typescript ts jsx tsx json jsonc yaml yml
+toml xml html css scss sql bash sh shell zsh powershell ps1 pwsh bat cmd batch dockerfile docker makefile make ruby rb php
+perl lua r dart scala haskell elixir erlang clojure fsharp f# vb vbnet objc markdown md diff ini csv graphql proto regex
+latex tex asm matlab julia groovy gradle terraform hcl nginx http vim razor xaml svelte vue zig nim ocaml
+text txt plaintext console output log
+""".split())
 COLORS = {"rot", "grün", "gelb", "blau", "cyan", "magenta", "pink", "orange", "lila", "türkis", "gold", "weiß", "grau"}
 FORBIDDEN = ["Qwen", "Alibaba", "Tongyi", "通义", "OpenAI", "ChatGPT", "Anthropic", "Claude", "Llama", "Meta AI", "Gemini", "Mistral"]
 # Wie ClosingFilter.Phrases – so endet eine Antwort von Max nie.
 CLOSING = ["Möchtest du", "Willst du", "Soll ich", "Brauchst du", "Hast du noch", "Wenn du noch", "Wenn du mir",
            "Wenn du magst", "Wenn du willst", "Wenn du möchtest", "Falls du noch", "Falls du mehr", "Falls du weitere",
            "Sag Bescheid", "Sag einfach Bescheid", "Sag mir Bescheid", "Lass mich wissen", "Gibt es noch",
-           "Kann ich dir noch", "Was noch", "Oder hast du", "Passt das", "Klingt das", "Hilft dir das"]
+           "Kann ich dir noch", "Was noch", "Oder hast du", "Passt das", "Klingt das", "Hilft dir das",
+           "Noch etwas dazu", "Noch eine Frage", "Noch Fragen", "Gibt es etwas"]
 
 NAMES = ["Alex", "Sam", "Robin", "Kim", "Jona", "Mika", "Toni", "Luca", "Noah", "Lena", "Jan", "Sara", "Chris", "Nele"]
 SYSTEMS = ["Windows 11", "Windows 11", "Windows 10", "Ubuntu 24.04", "Fedora 42"]
@@ -88,7 +98,8 @@ def check_answer(text: str, name: str, last: bool):
     for word in FORBIDDEN:
         if word.lower() in text.lower():
             raise Problem(f"{name}: nennt '{word}'")
-    plain = re.sub(r"```.*?```", "", text, flags=re.S)
+    # Wie die Grammatik (AnswerGrammar): Code-Blöcke und `Inline-Code` dürfen alles, im Fließtext gibt es { } nur als Farb-Tag.
+    plain = re.sub(r"`[^`\n]+`", "", re.sub(r"```.*?```", "", text, flags=re.S))
     # Großes "Sie/Ihnen/Ihr" mitten im Satz ist Siezen; am Satzanfang meist "sie" (die Blätter, die Modelle).
     if re.search(r"(?<=[a-zäöüß,] )(Sie|Ihnen|Ihr|Ihre|Ihren|Ihrem|Ihrer)\b", plain) or re.search(r"\b(Herr|Frau) [A-ZÄÖÜ]", plain):
         raise Problem(f"{name}: siezt (oder 'Herr/Frau')")
@@ -96,6 +107,9 @@ def check_answer(text: str, name: str, last: bool):
     if len(fences) % 2:
         raise Problem(f"{name}: Code-Block nicht geschlossen")
     opened = fences[0::2]
+    for language in opened:
+        if language and language not in LANGUAGES and language not in ELEMENTS and language != "werkzeug":
+            raise Problem(f"{name}: Code-Block mit unbekannter Sprache '{language}' (die Grammatik lässt sie nicht zu)")
     elements = [f for f in opened if f in ELEMENTS and f != "frage"]
     if len(elements) > 1:
         raise Problem(f"{name}: mehr als ein Element ({', '.join(elements)})")
@@ -112,6 +126,8 @@ def check_answer(text: str, name: str, last: bool):
             raise Problem(f"{name}: unbekanntes Tag '{{{tag}}}'")
     if plain.count("{verlauf") != plain.count("{/verlauf}"):
         raise Problem(f"{name}: Verlauf nicht geschlossen")
+    if re.search(r"[{}]", re.sub(r"\{/?[^{}]+\}", "", plain)):
+        raise Problem(f"{name}: geschweifte Klammer im Fließtext (geht nur als Farb-Tag oder in `Code`)")
     last_paragraph = text.rstrip().split("\n\n")[-1].lstrip("*_ {")
     if last and "\n\n" in text.strip() and any(last_paragraph.lower().startswith(p.lower()) for p in CLOSING):
         raise Problem(f"{name}: endet mit einer Floskel ('{last_paragraph[:40]}')")
@@ -124,7 +140,7 @@ def check_call(text: str, name: str):
     tool, argument = match.groups()
     if tool not in TOOLS:
         raise Problem(f"{name}: unbekanntes Werkzeug '{tool}'")
-    if (argument is None) != (tool in NO_ARGUMENT):
+    if tool not in OPTIONAL_ARGUMENT and (argument is None) != (tool in NO_ARGUMENT):
         raise Problem(f"{name}: '{tool}' {'braucht keine' if tool in NO_ARGUMENT else 'braucht eine'} Angabe")
 
 

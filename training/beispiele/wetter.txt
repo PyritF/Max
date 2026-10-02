@@ -1,0 +1,279 @@
+# Wetter: immer über `wetter` (Open-Meteo), nie raten. Ohne Ort erst nachfragen – außer der Ort steht im
+# Gedächtnis. Antwort kurz: das, wonach gefragt wurde, dann höchstens ein nützlicher Hinweis.
+
+=== wetter morgen graz
+@nutzer
+Wie wird das Wetter morgen in Graz?
+@denken
+Der Nutzer fragt nach dem Wetter morgen in Graz. Das schaue ich mit `wetter` nach.
+@max
+```werkzeug
+wetter: Graz
+```
+@ergebnis
+Wetter in Graz (Steiermark, Österreich), Stand Donnerstag, 16:00 Uhr Ortszeit:
+Jetzt: 19 °C, gefühlt 18 °C, teilweise bewölkt, Wind 9 km/h, Luftfeuchte 54 %.
+Vorhersage:
+- Heute: 8 bis 20 °C, teilweise bewölkt, Regenwahrscheinlichkeit 5 %
+- Morgen: 10 bis 16 °C, Regen, Regenwahrscheinlichkeit 80 % (7,4 mm)
+- Sa 10.10.: 7 bis 14 °C, leichte Regenschauer, Regenwahrscheinlichkeit 45 % (1,2 mm)
+- So 11.10.: 5 bis 15 °C, überwiegend klar
+Sonnenaufgang heute 07:09, Sonnenuntergang 18:26 Uhr.
+(Quelle: Open-Meteo)
+@max
+Morgen wird es in Graz nass: **10 bis 16 °C und Regen**, mit 80 % Wahrscheinlichkeit und rund 7 mm. Ein Schirm ist keine schlechte Idee.
+
+Am Sonntag klart es wieder auf.
+
+=== wetter jetzt wien
+@nutzer
+Wie warm ist es gerade in Wien?
+@max
+```werkzeug
+wetter: Wien
+```
+@ergebnis
+Wetter in Wien (Österreich), Stand Montag, 11:00 Uhr Ortszeit:
+Jetzt: 23 °C, gefühlt 24 °C, klar, Wind 14 km/h, Luftfeuchte 41 %.
+Vorhersage:
+- Heute: 15 bis 27 °C, klar
+- Morgen: 16 bis 28 °C, überwiegend klar
+- Mi 17.6.: 17 bis 24 °C, Gewitter, Regenwahrscheinlichkeit 70 % (9,8 mm), Wind bis 41 km/h
+Sonnenaufgang heute 04:53, Sonnenuntergang 20:58 Uhr.
+(Quelle: Open-Meteo)
+@max
+In Wien hat es gerade **23 °C** bei klarem Himmel. Heute geht es noch bis 27 °C hinauf.
+
+=== wetter ohne ort
+@nutzer
+Brauche ich morgen einen Regenschirm?
+@max
+Kommt drauf an, wo du morgen bist – welche Stadt soll ich nachsehen?
+
+=== wetter ort aus gedaechtnis
+@gedaechtnis
+- Wohnt in Linz.
+@nutzer
+Brauche ich morgen einen Regenschirm?
+@denken
+Der Nutzer will wissen, ob es morgen regnet. Er wohnt in Linz, also schaue ich dort mit `wetter` nach.
+@max
+```werkzeug
+wetter: Linz
+```
+@ergebnis
+Wetter in Linz (Oberösterreich, Österreich), Stand Dienstag, 20:00 Uhr Ortszeit:
+Jetzt: 12 °C, gefühlt 10 °C, bedeckt, Wind 18 km/h, Luftfeuchte 78 %.
+Vorhersage:
+- Heute: 9 bis 15 °C, bedeckt, Regenwahrscheinlichkeit 20 %
+- Morgen: 8 bis 13 °C, leichter Regen, Regenwahrscheinlichkeit 65 % (2,8 mm)
+- Do 16.4.: 6 bis 14 °C, teilweise bewölkt, Regenwahrscheinlichkeit 10 %
+Sonnenaufgang heute 06:08, Sonnenuntergang 19:53 Uhr.
+(Quelle: Open-Meteo)
+@max
+Ja, nimm ihn mit: Morgen gibt es in Linz **leichten Regen**, 65 % Wahrscheinlichkeit, bei 8 bis 13 °C. Viel wird es nicht – knapp 3 mm –, aber genug für nasse Schultern.
+
+=== wetter wochenende muenchen
+@nutzer
+Wie wird das Wochenende in München? Wir wollen wandern.
+@max
+```werkzeug
+wetter: München
+```
+@ergebnis
+Wetter in München (Bayern, Deutschland), Stand Donnerstag, 09:00 Uhr Ortszeit:
+Jetzt: 14 °C, gefühlt 13 °C, überwiegend klar, Wind 6 km/h, Luftfeuchte 70 %.
+Vorhersage:
+- Heute: 9 bis 21 °C, überwiegend klar
+- Morgen: 11 bis 22 °C, teilweise bewölkt, Regenwahrscheinlichkeit 15 %
+- Sa 13.9.: 12 bis 23 °C, klar
+- So 14.9.: 13 bis 19 °C, Regenschauer, Regenwahrscheinlichkeit 75 % (5,1 mm)
+- Mo 15.9.: 10 bis 17 °C, bedeckt, Regenwahrscheinlichkeit 30 %
+Sonnenaufgang heute 06:46, Sonnenuntergang 19:31 Uhr.
+(Quelle: Open-Meteo)
+@max
+Geht am **Samstag**: klar und bis 23 °C – ideales Wanderwetter. Am **Sonntag** ziehen Regenschauer durch (75 %), da wäre die Tour eher nass.
+
+Wenn ihr nur einen Tag habt, nehmt den Samstag.
+
+=== wetter berlin heute
+@nutzer
+wetter berlin
+@max
+```werkzeug
+wetter: Berlin
+```
+@ergebnis
+Wetter in Berlin (Deutschland), Stand Mittwoch, 08:00 Uhr Ortszeit:
+Jetzt: 3 °C, gefühlt -1 °C, Nebel, Wind 11 km/h, Luftfeuchte 96 %.
+Vorhersage:
+- Heute: 1 bis 6 °C, bedeckt, Regenwahrscheinlichkeit 25 %
+- Morgen: 0 bis 4 °C, leichter Schneefall, Regenwahrscheinlichkeit 55 % (1,6 mm)
+- Fr 5.12.: -2 bis 3 °C, überwiegend klar
+Sonnenaufgang heute 08:04, Sonnenuntergang 15:54 Uhr.
+(Quelle: Open-Meteo)
+@max
+Berlin, gerade: **3 °C**, gefühlt -1 °C, und Nebel. Heute wird es höchstens 6 °C, morgen kommt **leichter Schnee** dazu.
+
+=== wetter sonnenuntergang
+@nutzer
+Wann geht heute in Salzburg die Sonne unter?
+@max
+```werkzeug
+wetter: Salzburg
+```
+@ergebnis
+Wetter in Salzburg (Österreich), Stand Freitag, 15:00 Uhr Ortszeit:
+Jetzt: 16 °C, gefühlt 15 °C, teilweise bewölkt, Wind 8 km/h, Luftfeuchte 59 %.
+Vorhersage:
+- Heute: 6 bis 17 °C, teilweise bewölkt
+- Morgen: 7 bis 18 °C, überwiegend klar
+Sonnenaufgang heute 07:01, Sonnenuntergang 18:34 Uhr.
+(Quelle: Open-Meteo)
+@max
+Heute um **18:34 Uhr**.
+
+=== wetter ort unbekannt
+@nutzer
+Wie ist das Wetter in Kleinwolkenheim am See?
+@max
+```werkzeug
+wetter: Kleinwolkenheim am See
+```
+@ergebnis
+Einen Ort „Kleinwolkenheim am See“ finde ich nicht – vielleicht anders schreiben oder einen größeren Ort in der Nähe nehmen.
+@max
+Den Ort kennt der Wetterdienst nicht. Nenn mir eine größere Stadt in der Nähe, dann schaue ich dort nach.
+
+=== wetter dienst offline
+@nutzer
+Wird es heute in Hamburg regnen?
+@max
+```werkzeug
+wetter: Hamburg
+```
+@ergebnis
+Der Wetterdienst antwortet gerade nicht. Später noch einmal versuchen.
+@max
+Der Wetterdienst antwortet gerade nicht, deshalb kann ich es dir nicht sagen – raten wäre bei Hamburger Wetter ohnehin unseriös. Versuch es in ein paar Minuten noch einmal.
+
+=== wetter bunt
+@nutzer
+Schreib bunt: Wie wird das Wetter morgen in Innsbruck?
+@max
+```werkzeug
+wetter: Innsbruck
+```
+@ergebnis
+Wetter in Innsbruck (Tirol, Österreich), Stand Samstag, 10:00 Uhr Ortszeit:
+Jetzt: 26 °C, gefühlt 27 °C, klar, Wind 5 km/h, Luftfeuchte 38 %.
+Vorhersage:
+- Heute: 14 bis 30 °C, klar
+- Morgen: 15 bis 31 °C, überwiegend klar, Regenwahrscheinlichkeit 10 %
+- Mo 21.7.: 16 bis 27 °C, Gewitter, Regenwahrscheinlichkeit 85 % (14,2 mm), Wind bis 47 km/h
+Sonnenaufgang heute 05:41, Sonnenuntergang 21:03 Uhr.
+(Quelle: Open-Meteo)
+@max
+{verlauf:gelb-orange}Sommer pur in Innsbruck!{/verlauf} Morgen gibt es **15 bis {rot}31 °C{/rot}**, überwiegend klar – nur 10 % Regenrisiko.
+
+Am Montag kippt es allerdings: {blau}Gewitter{/blau} mit kräftigem Wind. Wer in die Berge will, macht das morgen.
+
+=== wetter vergleich
+@nutzer
+Wo ist es morgen wärmer, in Hamburg oder in Köln?
+@max
+```werkzeug
+wetter: Hamburg
+```
+@ergebnis
+Wetter in Hamburg (Deutschland), Stand Dienstag, 12:00 Uhr Ortszeit:
+Jetzt: 17 °C, gefühlt 16 °C, bedeckt, Wind 21 km/h, Luftfeuchte 72 %.
+Vorhersage:
+- Heute: 12 bis 18 °C, bedeckt
+- Morgen: 11 bis 17 °C, leichter Regen, Regenwahrscheinlichkeit 60 % (2,1 mm)
+Sonnenaufgang heute 06:12, Sonnenuntergang 20:07 Uhr.
+(Quelle: Open-Meteo)
+@max
+```werkzeug
+wetter: Köln
+```
+@ergebnis
+Wetter in Köln (Nordrhein-Westfalen, Deutschland), Stand Dienstag, 12:00 Uhr Ortszeit:
+Jetzt: 21 °C, gefühlt 21 °C, teilweise bewölkt, Wind 10 km/h, Luftfeuchte 55 %.
+Vorhersage:
+- Heute: 13 bis 23 °C, teilweise bewölkt
+- Morgen: 14 bis 24 °C, überwiegend klar, Regenwahrscheinlichkeit 5 %
+Sonnenaufgang heute 06:23, Sonnenuntergang 20:01 Uhr.
+(Quelle: Open-Meteo)
+@max
+In **Köln**, und zwar deutlich: morgen bis **24 °C** und überwiegend klar. Hamburg schafft nur 17 °C, dazu leichter Regen.
+
+=== wetter kleidung
+@nutzer
+Was soll ich morgen in Zürich anziehen?
+@max
+```werkzeug
+wetter: Zürich
+```
+@ergebnis
+Wetter in Zürich (Schweiz), Stand Sonntag, 19:00 Uhr Ortszeit:
+Jetzt: 9 °C, gefühlt 6 °C, bedeckt, Wind 15 km/h, Luftfeuchte 81 %.
+Vorhersage:
+- Heute: 6 bis 11 °C, bedeckt
+- Morgen: 4 bis 9 °C, Nieselregen, Regenwahrscheinlichkeit 70 % (1,8 mm)
+- Di 11.11.: 3 bis 8 °C, Nebel
+Sonnenaufgang heute 07:28, Sonnenuntergang 16:57 Uhr.
+(Quelle: Open-Meteo)
+@max
+Morgen hat Zürich **4 bis 9 °C** und Nieselregen. Also:
+
+- eine **wasserabweisende Jacke** mit Kapuze,
+- einen Pullover darunter,
+- Schuhe, die Nässe vertragen.
+
+Für einen Schal ist es auch nicht zu früh.
+
+=== wetter postleitzahl
+@nutzer
+Wetter für 8010?
+@max
+```werkzeug
+wetter: 8010
+```
+@ergebnis
+Wetter in Graz (Steiermark, Österreich), Stand Mittwoch, 07:00 Uhr Ortszeit:
+Jetzt: 11 °C, gefühlt 10 °C, Nebel, Wind 3 km/h, Luftfeuchte 94 %.
+Vorhersage:
+- Heute: 9 bis 19 °C, teilweise bewölkt
+- Morgen: 10 bis 20 °C, überwiegend klar
+Sonnenaufgang heute 06:58, Sonnenuntergang 18:44 Uhr.
+(Quelle: Open-Meteo)
+@max
+8010 ist Graz: Gerade **11 °C und Nebel**, der sich aber auflöst – heute bis 19 °C, morgen bis 20 °C und überwiegend klar.
+
+=== wetter nur allgemein
+@nutzer
+Warum ist es im Gebirge eigentlich kälter als im Tal?
+@max
+Weil die Luft mit der Höhe dünner wird. Steigt Luft auf, dehnt sie sich aus und kühlt dabei ab – grob **6,5 °C pro 1.000 Höhenmeter**. Dazu kommt, dass der Boden die Wärme der Sonne abgibt und die Luft von unten heizt; oben ist dieser „Heizkörper“ weit weg.
+
+Darum liegt auf 3.000 Metern oft Schnee, während im Tal schon die Wiesen blühen.
+
+=== wetter regen reise
+@nutzer
+Ich fahre übermorgen nach Triest. Wie wird das Wetter dort?
+@max
+```werkzeug
+wetter: Triest
+```
+@ergebnis
+Wetter in Triest (Friaul-Julisch Venetien, Italien), Stand Freitag, 13:00 Uhr Ortszeit:
+Jetzt: 22 °C, gefühlt 22 °C, überwiegend klar, Wind 25 km/h, Luftfeuchte 48 %.
+Vorhersage:
+- Heute: 17 bis 23 °C, überwiegend klar
+- Morgen: 16 bis 22 °C, teilweise bewölkt, Wind bis 52 km/h
+- So 5.10.: 15 bis 21 °C, klar, Wind bis 61 km/h
+Sonnenaufgang heute 07:04, Sonnenuntergang 18:48 Uhr.
+(Quelle: Open-Meteo)
+@max
+Übermorgen, am Sonntag, wird es in Triest **klar bei 15 bis 21 °C** – aber windig, bis 61 km/h. Das ist die berühmte Bora. Pack eine Jacke ein, die nicht davonfliegt.

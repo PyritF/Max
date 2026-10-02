@@ -166,7 +166,7 @@ Ordner C:\Users\sam\Projekte\haushaltsbuch:
 - tests/
 - .gitignore (412 B)
 - haushaltsbuch.sln (1.1 KB)
-- README.md (2.3 KB)
+- README.md (256 B)
 @max
 Hier liegt ein C#-Projekt namens **haushaltsbuch**:
 
@@ -224,7 +224,7 @@ Lies die README.md und sag mir in einem Satz, worum es geht.
 datei: README.md
 ```
 @ergebnis
-Datei C:\Users\sam\Projekte\haushaltsbuch\README.md (2.3 KB):
+Datei C:\Users\sam\Projekte\haushaltsbuch\README.md (256 B) – Textdatei, 10 Zeilen:
 # Haushaltsbuch
 
 Ein kleines Programm, um Einnahmen und Ausgaben aus CSV-Exporten der Bank zu kategorisieren und Monatsübersichten zu erstellen.
@@ -246,7 +246,7 @@ Was macht die Datei src/Rechner.cs?
 datei: src/Rechner.cs
 ```
 @ergebnis
-Datei /home/jan/code/demo/src/Rechner.cs (612 B):
+Datei /home/jan/code/demo/src/Rechner.cs (307 B) – Textdatei, 10 Zeilen:
 namespace Demo;
 
 public static class Rechner
@@ -270,31 +270,31 @@ Beide runden auf zwei Nachkommastellen und rechnen mit `decimal`, was bei Geldbe
 "C:\Users\lena\Documents\Mietvertrag.pdf" Wie hoch ist die Kaution?
 @max
 ```werkzeug
-datei: C:\Users\lena\Documents\Mietvertrag.pdf
+datei: C:\Users\lena\Documents\Mietvertrag.pdf | Wie hoch ist die Kaution?
 ```
 @ergebnis
-Datei C:\Users\lena\Documents\Mietvertrag.pdf (284 KB):
-PDF mit 6 Seite(n):
---- Seite 1 ---
+Datei C:\Users\lena\Documents\Mietvertrag.pdf (284 KB) – PDF, 6 Seiten. Stellen zu „Wie hoch ist die Kaution?“:
+--- Anfang (Seite 1) ---
 Mietvertrag über Wohnraum
 zwischen Hausverwaltung Sonnenhof GmbH (Vermieter) und Lena Beispiel (Mieterin)
 § 1 Mietsache: Wohnung im 2. OG links, 3 Zimmer, ca. 74 m²
 --- Seite 2 ---
 § 4 Miete: Die monatliche Grundmiete beträgt 890,00 €, zuzüglich Betriebskostenvorauszahlung von 210,00 €.
 § 5 Kaution: Die Mieterin leistet eine Mietsicherheit in Höhe von drei Nettokaltmieten (2.670,00 €). Sie kann in drei gleichen monatlichen Teilzahlungen erbracht werden.
+(Ganz lesen: `datei: C:\Users\lena\Documents\Mietvertrag.pdf | Seite 2`.)
 @max
-Die Kaution beträgt **2.670 €** – drei Nettokaltmieten zu je 890 € (§ 5). Du darfst sie laut Vertrag in **drei Monatsraten** zahlen, also je 890 €.
+Die Kaution beträgt **2.670 €** – drei Nettokaltmieten zu je 890 € (§ 5, Seite 2). Du darfst sie laut Vertrag in **drei Monatsraten** zahlen, also je 890 €.
 
 === datei word gezogen
 @nutzer
 '/home/nele/Dokumente/Protokoll Teamtreffen.docx' fass das kurz zusammen
 @max
 ```werkzeug
-datei: /home/nele/Dokumente/Protokoll Teamtreffen.docx
+datei: /home/nele/Dokumente/Protokoll Teamtreffen.docx | fass das kurz zusammen
 ```
 @ergebnis
-Datei /home/nele/Dokumente/Protokoll Teamtreffen.docx (18.4 KB):
-Word-Dokument:
+Datei /home/nele/Dokumente/Protokoll Teamtreffen.docx (18.4 KB) – Word-Dokument, 1 Teil:
+--- Teil 1 ---
 Protokoll Teamtreffen 14.10.
 Anwesend: Nele, Tom, Aylin, Marco
 1. Release 2.3 verschiebt sich um eine Woche, weil die Zahlungsschnittstelle noch Fehler hat.
@@ -445,7 +445,7 @@ Treffer für "nächste .NET Version Release Termin":
 webseite: https://learn.microsoft.com/dotnet/core/releases-and-support
 ```
 @ergebnis
-Seite https://learn.microsoft.com/dotnet/core/releases-and-support – Releases and support for .NET:
+Webseite https://learn.microsoft.com/dotnet/core/releases-and-support („Releases and support for .NET“) – Webseite, 1 Teil:
 Microsoft ships major releases of .NET every year in November. Even-numbered releases are Long Term Support (LTS) releases that get three years of support. Odd-numbered releases are Standard Term Support (STS) releases that get two years of support.
 @max
 .NET erscheint im festen Rhythmus: **jedes Jahr im November** eine neue Hauptversion.
@@ -502,7 +502,7 @@ Was steht auf https://example.com?
 webseite: https://example.com
 ```
 @ergebnis
-Seite https://example.com/ – Example Domain:
+Webseite https://example.com/ („Example Domain“) – Webseite, 1 Teil:
 Example Domain
 This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.
 More information...
@@ -517,7 +517,7 @@ Fass mir die Seite https://blog.beispiel.de/tipps zusammen.
 webseite: https://blog.beispiel.de/tipps
 ```
 @ergebnis
-Seite https://blog.beispiel.de/tipps – 5 Tipps für besseren Schlaf:
+Webseite https://blog.beispiel.de/tipps („5 Tipps für besseren Schlaf“) – Webseite, 1 Teil:
 1. Feste Schlafenszeiten, auch am Wochenende.
 2. Kein Bildschirm in der letzten Stunde vor dem Schlafen.
 3. Das Schlafzimmer kühl halten, etwa 16 bis 18 Grad.
@@ -545,14 +545,14 @@ ordner: .
 @ergebnis
 Ordner /home/toni/notizen:
 - archiv/
-- einkauf.txt (214 B)
-- ideen.md (1.3 KB)
+- einkauf.txt (64 B)
+- ideen.md (129 B)
 @max
 ```werkzeug
 datei: ideen.md
 ```
 @ergebnis
-Datei /home/toni/notizen/ideen.md (1.3 KB):
+Datei /home/toni/notizen/ideen.md (129 B) – Textdatei, 4 Zeilen:
 # Ideen
 - Balkon: Kräuterkasten mit Basilikum, Thymian, Minze
 - Wochenende: Radtour zum Stausee
