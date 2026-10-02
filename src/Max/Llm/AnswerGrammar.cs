@@ -57,11 +57,14 @@ internal static class AnswerGrammar
         if (toolCall is not null)
             Rule("w-werkzeug", toolCall);
         var lead = colorful ? "[ \\n]* \"{verlauf\" ( \":\" grad )? \"}\" " : "";
-        // Nach dem schließenden ``` (Code oder Element) kommt ein Zeilenumbruch – oder die Antwort ist zu Ende. Sonst
+        // Nach dem schließenden ``` eines Code-Blocks kommt ein Zeilenumbruch – oder die Antwort ist zu Ende. Sonst
         // "schließt" das Modell einen Block mit "```baum" und schreibt den Namen als Text weiter: Im Selbsttest 56
         // wurde daraus eine Schleife aus leeren ```bash-Blöcken (ein zweites Element war verboten, bash ging).
-        var tail = widgets ? "( \"```\" code | \"```\" widget ( nl item* ( \"```\" code )? )? )? " : "( \"```\" code )? ";
-        Rule("answer", lead + "item* " + tail + "( \"```\" w-frage [ \\n]* )?");
+        // Nach einem Element (und dem Auswahlmenü) immer ein Zeilenumbruch: Erst dann ist es während der Antwort zu und
+        // wird geprüft – kaputt neu erzeugt oder ohne Elemente weitergeschrieben. Hörte das Modell direkt nach dem ```
+        // auf, fiel ein kaputtes Element am Ende einfach weg (Selbsttest 60: leere Antwort).
+        var tail = widgets ? "( \"```\" code | \"```\" widget nl item* ( \"```\" code )? )? " : "( \"```\" code )? ";
+        Rule("answer", lead + "item* " + tail + "( \"```\" w-frage nl [ \\n]* )?");
         Rule("item", "plain | tag | inline-code | fence");
         // Auch kein "}" im Fließtext: Kleine Modelle schließen einen Verlauf sonst mit "Wort}" statt "{/verlauf}".
         Rule("plain", "[^{}`]");

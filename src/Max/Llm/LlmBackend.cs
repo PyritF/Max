@@ -382,13 +382,6 @@ internal sealed partial class LlmBackend : IChatBackend
                     {
                         await RewindAsync(beforeReply, prompt, head, generated, ct);
                     }
-                    if (shown.ToString().Trim().Length == 0)
-                    {
-                        // Lieber ein ehrlicher Satz als eine leere Antwort. Er steht nur in der Anzeige, nicht im Cache.
-                        const string sorry = "Das wollte mir gerade nicht gelingen. Frag mich gern noch einmal, vielleicht etwas anders.";
-                        shown.Append(sorry);
-                        yield return new ReplyChunk(sorry);
-                    }
                     break;
                 }
 
@@ -544,9 +537,14 @@ internal sealed partial class LlmBackend : IChatBackend
                 {
                     rest += gate.Accept();          // doch kein Aufruf: als Code zeigen
                 }
+                else if (WidgetValidator.IsValid(open.Name, open.Body))
+                {
+                    rest += gate.Accept();
+                }
                 else
                 {
-                    rest += WidgetValidator.IsValid(open.Name, open.Body) ? gate.Accept() : gate.Drop();
+                    LlmEngine.Log($"Element '{open.Name}' am Ende ungültig, weggelassen: {open.Body.ReplaceLineEndings(" / ")}");
+                    rest += gate.Drop();
                 }
             }
             rest = closing.Push(rest) + closing.Flush();
@@ -554,6 +552,13 @@ internal sealed partial class LlmBackend : IChatBackend
             {
                 shown.Append(rest);
                 yield return new ReplyChunk(rest);
+            }
+            // Nie eine leere Antwort (Selbsttest 60: ein kaputter Balken ganz am Ende fiel weg, und nichts blieb übrig).
+            // Der Satz steht nur in der Anzeige, nicht im Cache.
+            if (toolCall.Call is null && shownBefore.Trim().Length == 0 && shown.ToString().Trim().Length == 0)
+            {
+                shown.Append(Sorry);
+                yield return new ReplyChunk(Sorry);
             }
         }
         finally
@@ -567,6 +572,9 @@ internal sealed partial class LlmBackend : IChatBackend
             beforeReply?.Dispose();
         }
     }
+
+    /// <summary>Lieber ein ehrlicher Satz als eine leere Antwort.</summary>
+    internal const string Sorry = "Das wollte mir gerade nicht gelingen. Frag mich gern noch einmal, vielleicht etwas anders.";
 
     /// <summary>
     /// Den Cache auf Prompt, Kopf und <paramref name="generated"/> bringen, wenn Verworfenes darin steht (ein Element).

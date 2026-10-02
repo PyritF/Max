@@ -460,6 +460,16 @@ public class LlmBackendTests
     }
 
     [Fact]
+    public async Task BrokenElementAtTheVeryEnd_GivesAnHonestSentence_NotAnEmptyAnswer()
+    {
+        // Selbsttest 60: Der Balken kam kaputt, und das Modell hörte direkt nach dem ``` auf – die Antwort blieb leer.
+        // (Die Grammatik verlangt jetzt einen Zeilenumbruch nach einem Element; das hier ist das Netz darunter.)
+        var model = new FakeModel("```balken\n", "kaputt\n", "```", null);
+        var (_, reply) = await Collect(Backend(model).StreamReplyAsync(Single("?"), CancellationToken.None));
+        Assert.Equal(LlmBackend.Sorry, reply);
+    }
+
+    [Fact]
     public async Task Repair_WorksAfterThinking_AtTheStartOfTheAnswer()
     {
         var model = new FakeModel("hm", "</think>", "\n\n", "```balken\n", "kaputt\n", "```\n", "A: 1\nB: 2\n", "```", null);
@@ -1318,7 +1328,7 @@ public class AnswerGrammarTests
         var gbnf = AnswerGrammar.Build();
         Assert.Contains("label ::= [^-:|\\n\\t`{ ] ( [^:|\\n\\t`{ ] | \" \" [^:|\\n\\t`{ ] ){0,24}", gbnf);
         Assert.Contains("plain ::= [^{}`]", gbnf);
-        Assert.Contains("answer ::= item* ( \"```\" code | \"```\" widget ( nl item* ( \"```\" code )? )? )? ( \"```\" w-frage [ \\n]* )?", gbnf);   // ein Element, Menü nur am Ende
+        Assert.Contains("answer ::= item* ( \"```\" code | \"```\" widget nl item* ( \"```\" code )? )? ( \"```\" w-frage nl [ \\n]* )?", gbnf);   // ein Element, Menü nur am Ende
         Assert.DoesNotContain("w-frage |", gbnf.Split("widget ::= ")[1].Split('\n')[0]);   // "Wort}" statt "{/verlauf}" geht nicht
         Assert.Contains("unit ::= ( [%\\u20ac$\\u00b0] | \" \" [^0-9:", gbnf);
     }
@@ -1335,7 +1345,7 @@ public class AnswerGrammarTests
     public void WithoutWidgets_OnlyTextCodeAndTheMenuRemain()
     {
         var gbnf = AnswerGrammar.Build(widgets: false);
-        Assert.Contains("answer ::= item* ( \"```\" code )? ( \"```\" w-frage [ \\n]* )?\n", gbnf);
+        Assert.Contains("answer ::= item* ( \"```\" code )? ( \"```\" w-frage nl [ \\n]* )?\n", gbnf);
     }
 
     [Theory]
@@ -1487,9 +1497,9 @@ public class AnswerGrammarMatchTests
     [InlineData("```python\nprint(1)\n```")]                                    // Code ganz am Ende, ohne Zeilenumbruch danach
     [InlineData("```python\nprint(1)\n```\n")]
     [InlineData("Text\n```balken\nA: 1\nB: 2\n```\nDanach mit\n```bash\nls\n```")]
-    [InlineData("```balken\nA: 1\nB: 2\n```")]
-    [InlineData("Fertig.\n\n```frage\nFrage: Was nun?\n- Plaudern\n- Arbeiten\n```")]
-    [InlineData("```balken\nA: 1\n```\n```frage\nFrage: Was nun?\n- Mehr\n- Weniger\n```")]
+    [InlineData("```balken\nA: 1\nB: 2\n```\n")]
+    [InlineData("Fertig.\n\n```frage\nFrage: Was nun?\n- Plaudern\n- Arbeiten\n```\n")]
+    [InlineData("```balken\nA: 1\n```\n```frage\nFrage: Was nun?\n- Mehr\n- Weniger\n```\n")]
     public void Grammar_Accepts(string answer) => Assert.True(Grammar.Accepts(answer));
 
     [Theory]
@@ -1501,6 +1511,8 @@ public class AnswerGrammarMatchTests
     [InlineData("```text\n```")]
     [InlineData("```bash\necho hi\n```baum\nx")]                                 // nach dem Schluss-``` weiter in derselben Zeile
     [InlineData("```balken\nA: 1\n```Danach.")]
+    [InlineData("Hier:\n```balken\nA: 1\n```")]                                 // Element ganz am Ende ohne Zeilenumbruch (Selbsttest 60)
+    [InlineData("Fertig.\n\n```frage\nFrage: Was nun?\n- Plaudern\n- Arbeiten\n```")]
     public void Grammar_Rejects(string answer) => Assert.False(Grammar.Accepts(answer));
 
     [Fact]
@@ -1517,7 +1529,8 @@ public class AnswerGrammarMatchTests
     {
         var answers = TrainingAnswers().ToList();
         Assert.True(answers.Count > 500, $"{answers.Count} Antworten");
-        var rejected = answers.Where(a => !Grammar.Accepts(a.Answer)).Select(a => a.Name).ToList();
+        // Mit Zeilenumbruch am Ende: Nach einem Element verlangt die Grammatik einen, danach darf die Antwort enden.
+        var rejected = answers.Where(a => !Grammar.Accepts(a.Answer + "\n")).Select(a => a.Name).ToList();
         Assert.True(rejected.Count == 0, "Passt nicht zur Grammatik: " + string.Join(", ", rejected));
     }
 }

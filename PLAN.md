@@ -591,6 +591,11 @@ Im Verlauf steht das wie ein normaler Werkzeug-Aufruf. Schlüssel und Zugangsdat
   behoben: Schrieb Max erst Text und rief dann mitten in der Antwort ein Werkzeug auf, stand der Text im Cache, im
   Verlauf aber der Aufruf – danach rechnete er zweimal den ganzen Verlauf neu (auf der CPU je acht Minuten). Jetzt
   geht es nach einem Aufruf zurück vor die Runde, und der Text davor kommt mit der Antwort in den Verlauf.
+  Selbsttest 60: Keine Werkzeug-Antwort endet mehr mit einer Rückfrage, der Cache passt bei allen Fragen. Ein Fehler,
+  behoben: Der Balken zur Rechnung kam auch neu erzeugt kaputt, und das Modell hörte direkt nach dem ``` auf – so war
+  der Block erst nach der Antwort zu, fiel dort weg, und die Antwort blieb leer. Nach einem Element verlangt die
+  Grammatik jetzt einen Zeilenumbruch (dann greift das Weiterschreiben ohne Elemente), und eine leere Antwort gibt es
+  nie mehr – höchstens den ehrlichen Satz „Das wollte mir gerade nicht gelingen …“.
 
 **Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |
