@@ -902,6 +902,27 @@ public class ClosingFilterTests
         Assert.Equal(expected, RunLearned([.. text.Select(c => c.ToString())]));
     }
 
+    [Theory]
+    // Selbsttest 55: hinter jedem Angebot ein "Beispiel"-Block ohne echten Code – Angebot und Block fallen weg.
+    [InlineData("Wien hat 2 Mio.\n\nWillst du, dass ich noch eine Stadt hinzufüge?\n```python\n# Beispiel: Salzburg\n```", "Wien hat 2 Mio.\n\n")]
+    [InlineData("Hier liegt alles.\n\nWillst du eine bestimmte Datei ansehen?\n```python\n# Beispiel: PLAN.md lesen\ndatei: PLAN.md\n```\n", "Hier liegt alles.\n\n")]
+    [InlineData("Morgen 22 °C.\n\nWillst du noch Details für einen anderen Ort?\n```python\n# Beispiel: Wien", "Morgen 22 °C.\n\n")]
+    public void OfferWithAnExampleBlock_IsDropped(string text, string expected)
+    {
+        Assert.Equal(expected, Run(text));
+        Assert.Equal(expected, Run([.. text.Select(c => c.ToString())]));
+    }
+
+    [Theory]
+    [InlineData("So geht es.\n\nWillst du die Klasse sehen?\n```csharp\npublic class Person { }\n```")]
+    [InlineData("Text.\n\nMöchtest du mehr?\n```python\n# x\n```\n\nNoch ein Absatz.")]
+    [InlineData("Möchtest du das so?\n```python\n# Vorschlag\n```")]
+    public void OfferWithRealCode_OrMoreAfterIt_Stays(string text)
+    {
+        Assert.Equal(text, Run(text));
+        Assert.Equal(text, Run([.. text.Select(c => c.ToString())]));
+    }
+
     [Fact]
     public void ClosingParagraph_OnlyShortLastParagraphs()
     {
@@ -1031,6 +1052,15 @@ public class ElementGateTests
         Assert.NotNull(gate.Closed);
         Assert.Equal("```bash\n\nwebsuche: ist hier nur Text\n```\nFertig.", gate.Accept());
         Assert.Equal(text, output + "```bash\n\nwebsuche: ist hier nur Text\n```\nFertig.");
+    }
+
+    [Fact]
+    public void BlockAfterAQuestion_IsAnExample_NotACall()
+    {
+        var gate = new ElementGate { IsCallLine = l => l.StartsWith("datei:") };
+        var text = "Hier liegt alles.\n\nWillst du eine bestimmte Datei ansehen?\n```python\ndatei: PLAN.md\n```\n";
+        Assert.Equal(text, string.Concat(text.Select(c => gate.Push(c.ToString()))) + gate.Flush());
+        Assert.Null(gate.Closed);
     }
 
     [Fact]

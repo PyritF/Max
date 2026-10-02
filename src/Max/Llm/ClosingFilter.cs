@@ -14,6 +14,8 @@ namespace Max.Llm;
 /// die Quelle ("Quelle: …"), fällt die Floskel weg, die Quelle bleibt.
 /// Gelernte Floskeln: Beginnt der Schluss wie der Schluss einer früheren Antwort und ist sein erster Satz derselbe, ist
 /// es eine Angewohnheit, kein Inhalt – Selbsttest 53 hängte "Und schwarz getrunken? …" an jede Antwort.
+/// Ein Code-Block direkt nach einer Floskel gehört zu ihr: Ohne echten Code darin ("# Beispiel: Wien", "datei: PLAN.md")
+/// fällt er am Ende mit ihr weg – Selbsttest 55 hängte so ein "Beispiel" an jedes Angebot, und es steckte an.
 /// </summary>
 internal sealed partial class ClosingFilter
 {
@@ -50,6 +52,8 @@ internal sealed partial class ClosingFilter
     private bool _anyShown;
     private bool _ruleOnly;                         // mitten im Absatz: nur prüfen, ob die Zeile eine Trennlinie wird
     private bool _heldLearned;                      // zurückgehalten, weil der Absatz wie ein früherer Schluss beginnt
+    private bool _heldFence;                        // in einem Code-Block, der mit der Floskel davor zurückgehalten wird
+    private readonly StringBuilder _fenceLine = new();
     private readonly List<string> _learned;         // erste Sätze früherer Schlussabsätze (klein, nur Wörter)
 
     /// <param name="earlierClosings">Die Schlussabsätze früherer Antworten (siehe <see cref="ClosingParagraph"/>).</param>
@@ -141,8 +145,13 @@ internal sealed partial class ClosingFilter
         if (_held.Length > 0)
         {
             var held = WithoutTrailingRules(_held.ToString());
+            var (prose, code) = SplitCode(held);
             if (held.Trim().Length == 0)
                 LlmEngine.Log("Trennlinie am Ende weggelassen.");
+            else if (code.Count > 0 && (!_anyShown || !code.All(IsNoCode) || StartsWithPhrase(prose, complete: true) != true && !_heldLearned))
+                output.Append(WithoutRules(held));      // echter Code nach der Floskel: alles bleibt
+            else if (code.Count > 0)
+                LlmEngine.Log($"Floskel mit Beispiel-Block am Ende weggelassen: {prose.Trim().ReplaceLineEndings(" ")}");
             else if (_heldLearned)
             {
                 if (_anyShown && _learned.Contains(FirstSentence(held)))
@@ -158,11 +167,28 @@ internal sealed partial class ClosingFilter
         }
         _holding = false;
         _heldLearned = false;
+        _heldFence = false;
+        _fenceLine.Clear();
         return output.ToString();
     }
 
     private void Add(char c, StringBuilder output)
     {
+        if (_heldFence)
+        {
+            _held.Append(c);
+            if (c != '\n')
+            {
+                _fenceLine.Append(c);
+                return;
+            }
+            if (_fenceLine.ToString().TrimStart().StartsWith("```", StringComparison.Ordinal))
+                _heldFence = false;                 // Block zu – die Floskel samt Block bleibt zurückgehalten
+            _fenceLine.Clear();
+            NewLine(blank: false);
+            return;
+        }
+
         if (_deciding)
         {
             _line.Append(c);
@@ -251,6 +277,44 @@ internal sealed partial class ClosingFilter
     /// <summary>"Quelle: …", "Quellen: …", "(Quelle: …)" – die Herkunft einer Antwort.</summary>
     private static bool IsSource(string line) => SourceRegex().IsMatch(line);
 
+    /// <summary>Text außerhalb der Code-Blöcke und die Inhalte der Blöcke.</summary>
+    internal static (string Prose, List<string> Code) SplitCode(string text)
+    {
+        var prose = new StringBuilder();
+        var code = new List<string>();
+        StringBuilder? block = null;
+        foreach (var line in text.Split('\n'))
+        {
+            if (line.TrimStart().StartsWith("```", StringComparison.Ordinal))
+            {
+                if (block is null)
+                {
+                    block = new StringBuilder();
+                }
+                else
+                {
+                    code.Add(block.ToString());
+                    block = null;
+                }
+                continue;
+            }
+            (block ?? prose).Append(line).Append('\n');
+        }
+        if (block is not null)
+            code.Add(block.ToString());     // nicht geschlossen
+        return (prose.ToString(), code);
+    }
+
+    /// <summary>
+    /// Kein echter Code: nur Kommentare ("# Beispiel: Wien", "// …") oder Zeilen wie ein Werkzeug-Aufruf ("datei: PLAN.md").
+    /// </summary>
+    internal static bool IsNoCode(string block) => block.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0)
+        .All(l => l.StartsWith('#') || l.StartsWith("//", StringComparison.Ordinal) || l.StartsWith("--", StringComparison.Ordinal)
+                  || ToolLikeRegex().IsMatch(l));
+
+    [GeneratedRegex(@"^[a-zäöü]+:\s+\S")]
+    private static partial Regex ToolLikeRegex();
+
     /// <summary>Trennlinien raus, samt einer Leerzeile direkt dahinter.</summary>
     internal static string WithoutRules(string text)
     {
@@ -285,6 +349,8 @@ internal sealed partial class ClosingFilter
     private void Release(StringBuilder output)
     {
         _heldLearned = false;
+        _heldFence = false;
+        _fenceLine.Clear();
         if (_held.Length == 0)
         {
             _holding = false;
@@ -353,6 +419,17 @@ internal sealed partial class ClosingFilter
         }
         if (_ruleOnly)
             return false;
+        if (_holding && trimmed.StartsWith('`'))
+        {
+            // Hinter einer Floskel: Beginnt ein Code-Block? Dann gehört er zu ihr (siehe oben).
+            if (trimmed.StartsWith("```", StringComparison.Ordinal))
+            {
+                _heldFence = true;
+                return true;
+            }
+            if (!complete && "```".StartsWith(trimmed, StringComparison.Ordinal))
+                return null;
+        }
         if (_holding)
         {
             // Hinter einer Floskel: Wird das die Quelle ("Quelle: …")? Dann fällt die Floskel weg – erst abwarten.

@@ -23,6 +23,7 @@ internal sealed partial class ElementGate
     private bool _started;                          // schon etwas Sichtbares durchgelassen?
     private bool _probing;                          // Code-Block mitten in der Antwort: Ist die erste Zeile ein Aufruf?
     private bool _inCode;                           // in einem normal gezeigten Code-Block (dessen ``` schließt nur)
+    private char _lastVisible;                      // letztes sichtbares Zeichen, das schon durchgelassen wurde
 
     /// <summary>
     /// Einen Code-Block ganz am Anfang der Antwort zurückhalten (als <see cref="Tools.ToolCall.MaybeBlockName"/>):
@@ -112,6 +113,7 @@ internal sealed partial class ElementGate
                 {
                     Closed = (_element, _body.ToString());
                     _rest.Append(text, i + 1, text.Length - i - 1);
+                    Remember(output);
                     return output.ToString();
                 }
                 _body.Append(line).Append('\n');
@@ -170,7 +172,29 @@ internal sealed partial class ElementGate
             _atLineStart = c == '\n';
             _started |= !char.IsWhiteSpace(c);
         }
+        Remember(output);
         return output.ToString();
+    }
+
+    private void Remember(StringBuilder output)
+    {
+        for (var i = output.Length - 1; i >= 0; i--)
+        {
+            if (!char.IsWhiteSpace(output[i]))
+            {
+                _lastVisible = output[i];
+                return;
+            }
+        }
+    }
+
+    /// <summary>Endet der Text vor dieser Stelle mit einer Frage? Ein Block danach ist ein Beispiel, kein Aufruf.</summary>
+    private bool AfterQuestion(StringBuilder output)
+    {
+        for (var i = output.Length - 1; i >= 0; i--)
+            if (!char.IsWhiteSpace(output[i]))
+                return output[i] == '?';
+        return _lastVisible == '?';
     }
 
     /// <summary>
@@ -199,6 +223,7 @@ internal sealed partial class ElementGate
     {
         var output = _held.ToString();
         _started = true;
+        _lastVisible = '`';                         // der Block endet mit ```
         return output + Continue();
     }
 
@@ -301,7 +326,8 @@ internal sealed partial class ElementGate
             _body.Clear();
             return;
         }
-        if (IsCallLine is not null && !_inCode && fence)
+        // Nach einer Frage ("Willst du eine Datei ansehen?") ist ein Block ein Beispiel, kein Aufruf (Selbsttest 55).
+        if (IsCallLine is not null && !_inCode && fence && !AfterQuestion(output))
         {
             _probing = true;                        // erst die erste Zeile abwarten
             _probe.Append(line);
