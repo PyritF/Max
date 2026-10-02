@@ -95,9 +95,11 @@ internal sealed partial record Reflection(IReadOnlyList<string> Facts, string? S
     }
 
     /// <summary>Lässt das Modell nachdenken und liest das Ergebnis. Null, wenn es nichts Brauchbares lieferte.</summary>
-    public static async Task<Reflection?> RunAsync(LlmBackend backend, IReadOnlyList<ChatMessage> messages, DateTime now, CancellationToken ct)
+    /// <param name="summary">Was Max sich vom Anfang eines langen Gesprächs notiert hat (siehe Conversation.Summary).</param>
+    public static async Task<Reflection?> RunAsync(LlmBackend backend, IReadOnlyList<ChatMessage> messages, DateTime now, CancellationToken ct,
+        string? summary = null)
     {
-        var text = await backend.RunTaskAsync(messages, Instruction, Gbnf, MaxTokens, IsComplete, ct);
+        var text = await backend.RunTaskAsync(messages, Instruction, Gbnf, MaxTokens, IsComplete, ct, summary);
         var reflection = Parse(text, now, messages.Where(m => m.Role == ChatRole.User).Select(m => m.Content));
         LlmEngine.Log(reflection is null ? $"Gedächtnis: Antwort nicht lesbar: {text.ReplaceLineEndings(" / ")}" : $"Gedächtnis: {text.ReplaceLineEndings(" / ")}");
         return reflection;

@@ -74,13 +74,14 @@ internal sealed partial class LlmBackend : IChatBackend
     private readonly BackendOptions _options;
     private readonly SamplingSettings _answer;
     private readonly SamplingSettings _thinking;
-    private readonly ContextWindow _window;
+    private ContextWindow _window;
     private readonly Dictionary<(bool Tools, bool Colorful, bool Widgets, bool ToolOnly), string> _grammars = [];
 
     // Tokens je Nachricht. Für eigene Antworten genau die Tokens, die auch im Cache des Modells stehen –
     // nicht neu zerlegt, damit der nächste Prompt exakt zum Cache passt.
     private readonly Dictionary<(ChatRole Role, string Content), IReadOnlyList<int>> _tokens = [];
     private IReadOnlyList<int>? _systemTokens;
+    private (string? Summary, IReadOnlyList<int> Tokens)? _systemWithSummary;
     private IReadOnlyList<int>? _assistantStart;
     private IReadOnlyList<int>? _thinkingStart;
     private IReadOnlyList<int>? _assistantEnd;
@@ -101,6 +102,13 @@ internal sealed partial class LlmBackend : IChatBackend
         _thinking = _options.Thinking ?? SamplingSettings.Thinking;
         _window = new ContextWindow(Math.Max(256, model.ContextSize - AnswerReserve - _options.ThinkingBudget));
     }
+
+    /// <summary>
+    /// Nur für den Selbsttest: tut so, als wäre der Kontext kleiner (null = wieder normal) – damit ein langes
+    /// Gespräch schon nach ein paar Fragen zu lang wird.
+    /// </summary>
+    internal void LimitContext(int? budget) =>
+        _window = new ContextWindow(budget ?? Math.Max(256, _model.ContextSize - AnswerReserve - _options.ThinkingBudget));
 
     /// <summary>Wie lange das Aufwärmen gedauert hat – für /debug.</summary>
     public TimeSpan? WarmUpTime { get; private set; }
@@ -202,8 +210,15 @@ internal sealed partial class LlmBackend : IChatBackend
     {
         await FinishCommitAsync();
 
+        // Wird das Gespräch zu lang, notiert Max sich erst den Anfang, der gleich wegfällt.
+        if (SummaryCut(conversation) is { } cut)
+        {
+            yield return new ReplyChunk("Notiere mir den Anfang unseres Gesprächs – er wird zu lang", IsStatus: true);
+            await SummarizeAsync(conversation, cut, ct);
+        }
+
         var think = ThinkingEnabled;
-        var prompt = BuildPrompt(conversation.Messages);
+        var prompt = BuildPrompt(conversation.Messages, conversation.Summary, conversation.SummarizedCount);
         var head = think ? _thinkingStart! : _assistantStart!;
         var clock = Stopwatch.StartNew();
 
@@ -555,10 +570,16 @@ internal sealed partial class LlmBackend : IChatBackend
     /// Nichts davon kommt in den Verlauf.
     /// </summary>
     /// <param name="done">Hört auf, sobald der Text damit fertig ist.</param>
-    public async Task<string> RunTaskAsync(IReadOnlyList<ChatMessage> messages, string instruction, string? grammar, int maxTokens, Func<string, bool>? done, CancellationToken ct)
+    /// <param name="summary">Was Max sich vom Anfang des Gesprächs notiert hat – steht dann im System-Prompt.</param>
+    /// <param name="skip">So viele Nachrichten vom Anfang deckt die Notiz ab.</param>
+    /// <param name="keepStart">Den Verlauf genau so beginnen lassen wie in der letzten Runde (nichts kürzen) – dann passt der Cache.</param>
+    public async Task<string> RunTaskAsync(IReadOnlyList<ChatMessage> messages, string instruction, string? grammar, int maxTokens, Func<string, bool>? done,
+        CancellationToken ct, string? summary = null, int skip = 0, bool keepStart = false)
     {
         await FinishCommitAsync();
-        var prompt = BuildPrompt([.. messages, new ChatMessage(ChatRole.User, instruction, DateTime.Now)]);
+        var prompt = BuildPrompt([.. messages, new ChatMessage(ChatRole.User, instruction, DateTime.Now)], summary, skip, keepStart);
+        if (prompt.Count + _assistantStart!.Count + maxTokens >= _model.ContextSize)
+            throw new InvalidOperationException("Für diesen Auftrag ist im Kontext kein Platz mehr.");
         await _model.PrefillAsync([.. prompt, .. _assistantStart!], ct);
 
         using var sampler = _model.CreateSampler(_answer with { Temperature = 0.3f }, grammar, banned: _thinkTags);
@@ -623,7 +644,10 @@ internal sealed partial class LlmBackend : IChatBackend
             _thinkTags);
 
     /// <summary>System-Prompt und Verlauf – ohne den Beginn der Antwort (der hängt vom Nachdenken ab).</summary>
-    internal IReadOnlyList<int> BuildPrompt(IReadOnlyList<ChatMessage> messages)
+    /// <param name="summary">Die Notiz vom Anfang eines langen Gesprächs – steht am Ende des System-Prompts.</param>
+    /// <param name="skip">So viele Nachrichten vom Anfang deckt die Notiz ab; sie gehen nicht mit.</param>
+    /// <param name="keepStart">Nicht kürzen, sondern wie in der letzten Runde beginnen (für Aufträge über den Cache).</param>
+    internal IReadOnlyList<int> BuildPrompt(IReadOnlyList<ChatMessage> messages, string? summary = null, int skip = 0, bool keepStart = false)
     {
         _systemTokens ??= _model.Tokenize(_template.Message(ChatRole.System, _systemPrompt));
         _assistantStart ??= _model.Tokenize(_template.AssistantStart);
@@ -636,19 +660,115 @@ internal sealed partial class LlmBackend : IChatBackend
             _thinkTags = [.. SingleToken("<think>"), .. _thinkEnd];
         }
 
-        var fixedCost = _systemTokens.Count + _thinkingStart.Count;
-        var first = _window.FirstIncluded(messages, fixedCost, m => TokensOf(m).Count);
+        var system = SystemTokens(summary);
+        var fixedCost = system.Count + _thinkingStart.Count;
+        var first = keepStart
+            ? Math.Max(_window.Current(messages), Math.Min(skip, messages.Count - 1))
+            : _window.FirstIncluded(messages, fixedCost, m => TokensOf(m).Count, skip);
         // Die letzte Frage des Nutzers bleibt immer – sonst antwortet Max auf ein Werkzeug-Ergebnis ohne Frage.
         var question = LastIndexOf(messages, ChatRole.User);
         if (question >= 0 && first > question)
             first = question;
-        var included = messages.Skip(first).ToList();
-        FitTurn(included, fixedCost);
+        var included = messages.Skip(Math.Max(0, first)).ToList();
+        if (!keepStart)
+            FitTurn(included, fixedCost);
 
-        var prompt = new List<int>(_systemTokens);
+        var prompt = new List<int>(system);
         foreach (var message in included)
             prompt.AddRange(TokensOf(message));
         return prompt;
+    }
+
+    /// <summary>Der System-Prompt, bei einem langen Gespräch mit der Notiz vom Anfang dahinter.</summary>
+    private IReadOnlyList<int> SystemTokens(string? summary)
+    {
+        if (summary is null)
+            return _systemTokens!;
+        if (_systemWithSummary is not { } cached || cached.Summary != summary)
+        {
+            cached = (summary, _model.Tokenize(_template.Message(ChatRole.System, _systemPrompt + SummarySection(summary))));
+            _systemWithSummary = cached;
+        }
+        return cached.Tokens;
+    }
+
+    internal static string SummarySection(string summary) =>
+        "\n\n## Früher in diesem Gespräch\n" +
+        "Der Anfang dieses Gesprächs passt nicht mehr in dein Gedächtnis. Das hast du dir davon notiert – knüpf daran an, " +
+        "wenn der Nutzer darauf zurückkommt:\n" + summary.Trim();
+
+    // ── Lange Gespräche: den Anfang zusammenfassen, statt ihn einfach zu vergessen ──
+
+    /// <summary>Höchstens so lang wird die Notiz vom Anfang.</summary>
+    internal const int MaxSummaryTokens = 400;
+
+    internal const string SummaryInstruction = """
+        (Interne Aufgabe, nicht Teil des Gesprächs – der Nutzer sieht das nicht.)
+        Das Gespräch wird zu lang, der Anfang fällt gleich aus deinem Gedächtnis. Notiere dir, was du brauchst, um später
+        daran anzuknüpfen: worum es ging, was der Nutzer wollte, Ergebnisse, Zahlen, Namen, Dateien, Abmachungen und
+        offene Fragen. Steht im System-Prompt schon eine Notiz vom Anfang, nimm ihren Inhalt mit auf.
+        Höchstens 10 knappe Stichpunkte, je eine Zeile, ohne Einleitung.
+        """;
+
+    internal const string SummaryGbnf = """
+        root ::= item{1,10}
+        item ::= "- " [^\n]{3,220} "\n"
+        """;
+
+    /// <summary>
+    /// Fällt in dieser Runde vorn etwas weg, das noch nicht zusammengefasst ist? Dann ab welcher Nachricht der Verlauf
+    /// danach beginnt – sonst null. (Für die Notiz rechnet das Modell mit etwas Platz.)
+    /// </summary>
+    private int? SummaryCut(Conversation conversation)
+    {
+        var messages = conversation.Messages;
+        var question = LastIndexOf(messages, ChatRole.User);
+        if (question <= conversation.SummarizedCount)
+            return null;
+        _systemTokens ??= _model.Tokenize(_template.Message(ChatRole.System, _systemPrompt));
+        _thinkingStart ??= _model.Tokenize(_template.AssistantStartThinking + _template.ThinkingSeed);
+        var fixedCost = SystemTokens(conversation.Summary).Count + _thinkingStart.Count + (conversation.Summary is null ? MaxSummaryTokens : 0);
+        var first = Math.Min(_window.Compute(messages, fixedCost, m => TokensOf(m).Count, conversation.SummarizedCount), question);
+        return first > conversation.SummarizedCount ? first : null;
+    }
+
+    /// <summary>
+    /// Lässt das Modell den Anfang zusammenfassen – über den Cache, in dem das Gespräch bis vor die neue Frage noch
+    /// ganz steht: Es rechnet nur den Auftrag und die Notiz. Klappt das nicht, gibt es eine schlichte Notiz aus den
+    /// Fragen des Nutzers.
+    /// </summary>
+    private async Task SummarizeAsync(Conversation conversation, int cut, CancellationToken ct)
+    {
+        var messages = conversation.Messages;
+        var question = LastIndexOf(messages, ChatRole.User);
+        string? summary = null;
+        try
+        {
+            var text = await RunTaskAsync(messages.Take(question).ToList(), SummaryInstruction, SummaryGbnf, MaxSummaryTokens,
+                t => t.Count(c => c == '\n') >= 10, ct, conversation.Summary, conversation.SummarizedCount, keepStart: true);
+            var lines = text.ReplaceLineEndings("\n").Split('\n').Select(l => l.Trim()).Where(l => l.StartsWith("- ", StringComparison.Ordinal) && l.Length > 4).ToList();
+            if (lines.Count > 0)
+                summary = string.Join('\n', lines);
+        }
+        catch (InvalidOperationException e)
+        {
+            LlmEngine.Log($"Notiz vom Anfang nicht geschrieben ({e.Message}) – nehme die Fragen.");
+        }
+        summary ??= PlainSummary(conversation, cut);
+        LlmEngine.Log($"Anfang des Gesprächs zusammengefasst (bis Nachricht {cut}): {summary.ReplaceLineEndings(" / ")}");
+        conversation.Summarize(summary, cut);
+    }
+
+    /// <summary>Notfalls: die bisherige Notiz und die Fragen des Nutzers aus dem Teil, der wegfällt.</summary>
+    internal static string PlainSummary(Conversation conversation, int cut)
+    {
+        var lines = (conversation.Summary ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
+        foreach (var message in conversation.Messages.Take(cut).Skip(conversation.SummarizedCount).Where(m => m.Role == ChatRole.User))
+        {
+            var text = string.Join(' ', message.Content.ReplaceLineEndings(" ").Split(' ', StringSplitOptions.RemoveEmptyEntries));
+            lines.Add("- Der Nutzer fragte: " + (text.Length <= 120 ? text : text[..119] + "…"));
+        }
+        return string.Join('\n', lines.TakeLast(12));
     }
 
     /// <summary>So viel bleibt von einem Werkzeug-Ergebnis mindestens, wenn der Platz knapp wird.</summary>

@@ -125,6 +125,10 @@ internal static class SelfTest
                         toolsUsed.Add(chunk.Text);
                         output.WriteLine($"  ⌕ {chunk.Text}");
                     }
+                    else if (chunk.IsStatus)
+                    {
+                        output.WriteLine($"  ✻ {chunk.Text}");
+                    }
                     else if (chunk.IsThinking)
                     {
                         thought += chunk.Text;
@@ -208,11 +212,59 @@ internal static class SelfTest
         }
 
         await backend.CompleteAsync();
+        result = Math.Max(result, await TestLongConversationAsync(backend, conversation, output));
         result = Math.Max(result, await TestMemoryAsync(backend, conversation, output, promptWith));
         output.WriteLine($"Auswahlmenü in {withQuestion}, Kasten in {withBox} von {Questions.Length} Antworten.");
         if (withQuestion > Questions.Length / 2 || withBox > Questions.Length / 2)
             output.WriteLine("WARNUNG: Elemente zu gleichförmig eingesetzt.");
         return result;
+    }
+
+    /// <summary>
+    /// Langes Gespräch: Mit kleinerem Kontext passt der Anfang nicht mehr hinein – Max soll ihn zusammenfassen und
+    /// trotzdem noch wissen, was der Nutzer ganz am Anfang über sich erzählt hat.
+    /// </summary>
+    private static async Task<int> TestLongConversationAsync(LlmBackend backend, Conversation conversation, TextWriter output)
+    {
+        const string question = "Worum ging es ganz am Anfang unseres Gesprächs, und was hatte ich dir da über mich erzählt?";
+        backend.LimitContext(5000);
+        conversation.AddUser(question);
+        output.WriteLine("── Langes Gespräch (Kontext künstlich klein) ──");
+        output.WriteLine($"› {question}");
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var reply = "";
+        try
+        {
+            await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
+            {
+                if (chunk.IsStatus || chunk.IsTool)
+                    output.WriteLine($"  ✻ {chunk.Text}");
+                else if (!chunk.IsThinking)
+                    reply += chunk.Text;
+            }
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            output.WriteLine($"FEHLER: Antwort gescheitert ({e.Message}).");
+            backend.LimitContext(null);
+            return 1;
+        }
+        conversation.AddAssistant(reply);
+        await backend.CompleteAsync();
+        backend.LimitContext(null);
+        output.WriteLine($"  Notiz vom Anfang (bis Nachricht {conversation.SummarizedCount}, {clock.Elapsed.TotalSeconds:0} s):");
+        foreach (var line in (conversation.Summary ?? "(keine)").Split('\n'))
+            output.WriteLine($"    {line}");
+        output.WriteLine($"◆ {reply}");
+        output.WriteLine();
+        if (conversation.Summary is null)
+        {
+            output.WriteLine("FEHLER: Anfang nicht zusammengefasst.");
+            return 1;
+        }
+        if (!reply.Contains(ExpectedFact, StringComparison.OrdinalIgnoreCase))
+            output.WriteLine($"WARNUNG: \"{ExpectedFact}\" vom Anfang nicht mehr gewusst.");
+        return 0;
     }
 
     /// <summary>

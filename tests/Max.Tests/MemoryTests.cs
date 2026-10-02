@@ -284,3 +284,102 @@ public class MemoryPromptTests
     public void HomeScreen_LastSessionDate(int day, int hour, string expected) =>
         Assert.Equal(expected, HomeScreen.When(new DateTime(2026, 9, day, hour, 5, 0), new DateTime(2026, 9, 28, 20, 0, 0)));
 }
+
+public sealed class ConversationArchiveTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "max-gespraeche-" + Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+            Directory.Delete(_dir, recursive: true);
+    }
+
+    [Fact]
+    public void SaveListLoad_RoundTrip_WithSummary()
+    {
+        var archive = new ConversationArchive(_dir);
+        var conversation = new Conversation();
+        conversation.AddAssistant("Guten Morgen.");
+        archive.Save(conversation);
+        Assert.Empty(archive.List());                     // ohne Frage des Nutzers wird nichts gespeichert
+
+        conversation.AddUser("Wie lang ist die Donau?");
+        conversation.Add(ChatRole.Tool, "Treffer: 2.850 km");
+        conversation.AddAssistant("Rund **2.850 km**.");
+        conversation.Summarize("- Es ging um Flüsse.", 1);
+        archive.Save(conversation);
+
+        var saved = Assert.Single(archive.List());
+        Assert.Equal(conversation.Id, saved.Id);
+        Assert.Equal("Wie lang ist die Donau?", saved.Title);
+        Assert.Equal(4, saved.Count);
+
+        var loaded = new Conversation();
+        Assert.True(archive.Load(saved.Id, loaded));
+        Assert.Equal(conversation.Messages.Select(m => (m.Role, m.Content)), loaded.Messages.Select(m => (m.Role, m.Content)));
+        Assert.Equal(("- Es ging um Flüsse.", 1), (loaded.Summary, loaded.SummarizedCount));
+        Assert.Equal(saved.Id, loaded.Id);
+
+        archive.Save(loaded, "Donau, Flüsse");
+        Assert.Equal("Donau, Flüsse", Assert.Single(archive.List()).Title);
+        Assert.Equal(1, archive.DeleteAll());
+        Assert.Empty(archive.List());
+    }
+
+    [Fact]
+    public void Clear_StartsANewConversation()
+    {
+        var archive = new ConversationArchive(_dir);
+        var conversation = new Conversation();
+        conversation.AddUser("Eins");
+        archive.Save(conversation);
+        conversation.Clear();
+        conversation.AddUser("Zwei");
+        archive.Save(conversation);
+        Assert.Equal(2, archive.List().Count);
+    }
+
+    [Theory]
+    [InlineData("2026-10-02 09:12", "heute, 09:12")]
+    [InlineData("2026-10-01 23:41", "gestern, 23:41")]
+    [InlineData("2026-09-28 14:05", "Mo, 28.9., 14:05")]
+    public void When_ReadsNaturally(string time, string expected) =>
+        Assert.Equal(expected, ConversationArchive.When(DateTime.Parse(time, System.Globalization.CultureInfo.InvariantCulture), new DateTime(2026, 10, 2, 10, 0, 0)));
+}
+
+public sealed class ContinueCommandTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "max-weiter-" + Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+            Directory.Delete(_dir, recursive: true);
+    }
+
+    [Fact]
+    public async Task Weiter_LoadsTheLastConversation_Verlauf_ListsThem()
+    {
+        var archive = new ConversationArchive(_dir);
+        var old = new Conversation();
+        old.AddUser("Was kann man in Wien machen?");
+        old.AddAssistant("Prater, Naschmarkt, Schönbrunn.");
+        archive.Save(old);
+
+        var console = new Spectre.Console.Testing.TestConsole();
+        var current = new Conversation();
+        var context = new Max.Commands.CommandContext(console, current, Max.Commands.CommandRegistry.CreateDefault());
+        await new Max.Commands.HistoryCommand(archive, () => DateTime.Now).ExecuteAsync(context, "");
+        await new Max.Commands.ContinueCommand(archive, () => DateTime.Now).ExecuteAsync(context, "");
+
+        Assert.Contains("Was kann man in Wien machen?", console.Output);
+        Assert.Contains("1 ", console.Output);
+        Assert.Equal(2, current.Messages.Count);
+        Assert.Equal(old.Id, current.Id);
+        Assert.Contains("Prater, Naschmarkt, Schönbrunn.", console.Output);
+
+        await new Max.Commands.ContinueCommand(archive, () => DateTime.Now).ExecuteAsync(context, "");
+        Assert.Contains("Es gibt noch kein früheres Gespräch.", console.Output);   // das laufende zählt nicht
+    }
+}

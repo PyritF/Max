@@ -123,6 +123,16 @@ public class ContextWindowTests
     }
 
     [Fact]
+    public void Minimum_SkipsWhatIsAlreadySummarized_AndComputeDoesNotRemember()
+    {
+        var messages = Turns(3);
+        var window = new ContextWindow(1000);
+        Assert.Equal(4, window.Compute(messages, 100, _ => 10, minimum: 4));
+        Assert.Equal(0, window.FirstIncluded(messages, 100, _ => 10));      // Compute hat sich nichts gemerkt
+        Assert.Equal(4, window.FirstIncluded(messages, 100, _ => 10, minimum: 4));
+    }
+
+    [Fact]
     public void NewestMessage_AlwaysStays_EvenIfHuge()
     {
         var messages = Turns(2);
@@ -1037,5 +1047,73 @@ public class AnswerGrammarTests
         var withoutStrings = System.Text.RegularExpressions.Regex.Replace(gbnf, "\"(\\\\.|[^\"\\\\])*\"|\\[(\\\\.|[^\\]\\\\])*\\]", " ");
         var used = System.Text.RegularExpressions.Regex.Matches(withoutStrings, @"(?<![\w-])[a-z][a-z-]*(?![\w-]*\s*::=)").Select(m => m.Value);
         Assert.All(used, name => Assert.Contains(name, defined));
+    }
+}
+
+public class LongConversationTests
+{
+    private static Conversation Long(int turns)
+    {
+        var conversation = new Conversation();
+        for (var i = 0; i < turns; i++)
+        {
+            conversation.AddUser($"Frage {i}: Erzähl mir etwas über das Thema Nummer {i}, gern ausführlich und mit Beispielen dazu.");
+            conversation.AddAssistant($"Antwort {i}: " + new string('x', 250));
+        }
+        conversation.AddUser("Und was war am Anfang?");
+        return conversation;
+    }
+
+    private static async Task<List<ReplyChunk>> Reply(LlmBackend backend, Conversation conversation)
+    {
+        var chunks = new List<ReplyChunk>();
+        await foreach (var chunk in backend.StreamReplyAsync(conversation, CancellationToken.None))
+            chunks.Add(chunk);
+        await backend.CompleteAsync();
+        return chunks;
+    }
+
+    [Fact]
+    public async Task TooLong_TheBeginningIsSummarized_NotJustDropped()
+    {
+        // Budget: 4600 - 1024 Antwort - 512 Denken = 3064 Zeichen (ein Zeichen = ein Token beim Test-Modell) – das Gespräch hat
+        // gut 3400, der Auftrag zum Zusammenfassen passt aber noch in den ganzen Kontext.
+        var model = new FakeModel("- Es ging um die Themen 0 bis 3.\n", "- Der Nutzer mag Beispiele.\n", null, "Am Anfang ging es um Thema 0.", null) { ContextSize = 4600 };
+        var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => false));
+        var conversation = Long(8);
+
+        var chunks = await Reply(backend, conversation);
+
+        Assert.Contains(chunks, c => c.IsStatus && c.Text.Contains("Anfang"));
+        Assert.Equal("- Es ging um die Themen 0 bis 3.\n- Der Nutzer mag Beispiele.", conversation.Summary);
+        Assert.True(conversation.SummarizedCount > 0);
+        var prompt = model.Decode(model.LastPromptBeforeSampler);
+        Assert.Contains("## Früher in diesem Gespräch", prompt);
+        Assert.Contains("- Der Nutzer mag Beispiele.", prompt);
+        Assert.DoesNotContain("Frage 0:", prompt);
+        Assert.Contains("Und was war am Anfang?", prompt);
+        Assert.Equal("Am Anfang ging es um Thema 0.", string.Concat(chunks.Where(c => !c.IsStatus && !c.IsTool).Select(c => c.Text)));
+    }
+
+    [Fact]
+    public async Task Short_NoSummary()
+    {
+        var model = new FakeModel("Kurz.", null);
+        var backend = new LlmBackend(model, "Du bist Max.", new BackendOptions(ThinkingEnabled: () => false));
+        var conversation = Long(2);
+
+        var chunks = await Reply(backend, conversation);
+
+        Assert.DoesNotContain(chunks, c => c.IsStatus);
+        Assert.Null(conversation.Summary);
+    }
+
+    [Fact]
+    public void Fallback_TheQuestionsOfTheDroppedPart()
+    {
+        var conversation = Long(3);
+        conversation.Summarize("- Alte Notiz.", 2);
+        Assert.Equal("- Alte Notiz.\n- Der Nutzer fragte: Frage 1: Erzähl mir etwas über das Thema Nummer 1, gern ausführlich und mit Beispielen dazu.",
+            LlmBackend.PlainSummary(conversation, 4));
     }
 }

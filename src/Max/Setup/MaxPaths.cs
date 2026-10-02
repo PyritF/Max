@@ -38,6 +38,9 @@ internal sealed class MaxPaths(string root)
     /// <summary>Was Max über den Nutzer weiß, und die Begrüßung für den nächsten Start.</summary>
     public string Memory => Path.Combine(Root, "memory.json");
 
+    /// <summary>Die gespeicherten Gespräche (für /verlauf und /weiter).</summary>
+    public string Conversations => Path.Combine(Root, "gespraeche");
+
     /// <summary>Frühere Eingaben für ↑/↓.</summary>
     public string History => Path.Combine(Root, "history.txt");
 

@@ -22,7 +22,17 @@ internal sealed class ContextWindow(int budget)
     /// <param name="messages">Der Verlauf ohne System-Prompt.</param>
     /// <param name="fixedCost">Tokens, die immer anfallen (System-Prompt, Antwort-Beginn).</param>
     /// <param name="cost">Tokens einer Nachricht.</param>
-    public int FirstIncluded(IReadOnlyList<ChatMessage> messages, int fixedCost, Func<ChatMessage, int> cost)
+    /// <param name="minimum">Davor nie – diese Nachrichten hat Max sich schon zusammengefasst.</param>
+    public int FirstIncluded(IReadOnlyList<ChatMessage> messages, int fixedCost, Func<ChatMessage, int> cost, int minimum = 0)
+    {
+        var start = Compute(messages, fixedCost, cost, minimum);
+        if (messages.Count > 0)
+            _firstKept = messages[start];
+        return start;
+    }
+
+    /// <summary>Wo der Verlauf beginnen würde – ohne sich das zu merken (zum Vorausschauen).</summary>
+    public int Compute(IReadOnlyList<ChatMessage> messages, int fixedCost, Func<ChatMessage, int> cost, int minimum = 0)
     {
         if (messages.Count == 0)
             return 0;
@@ -31,6 +41,7 @@ internal sealed class ContextWindow(int budget)
         var start = _firstKept is null ? 0 : IndexOf(messages, _firstKept);
         if (start < 0)
             start = 0;
+        start = Math.Max(start, Math.Min(minimum, messages.Count - 1));
 
         if (Total(messages, start, fixedCost, cost) > Budget)
         {
@@ -43,10 +54,11 @@ internal sealed class ContextWindow(int budget)
                     start++;
             }
         }
-
-        _firstKept = messages[start];
         return start;
     }
+
+    /// <summary>Der zuletzt gemerkte Anfang (für die Notiz vom Anfang, siehe LlmBackend) – oder 0.</summary>
+    public int Current(IReadOnlyList<ChatMessage> messages) => _firstKept is null ? 0 : Math.Max(0, IndexOf(messages, _firstKept));
 
     private static int Total(IReadOnlyList<ChatMessage> messages, int start, int fixedCost, Func<ChatMessage, int> cost)
     {

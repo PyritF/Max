@@ -27,16 +27,21 @@ internal sealed class ChatLoop
     // Was beim Beenden noch passiert (Gedächtnis) – bekommt das Gespräch, Strg+C bricht es ab.
     private readonly Func<Conversation, CancellationToken, Task>? _onExit;
 
+    // Hier landet das Gespräch nach jeder Antwort (für /weiter) – null = nirgends.
+    private readonly ConversationArchive? _archive;
+
     // Gesetzt, solange das Auswahlmenü offen ist – Strg+C wird dann ignoriert (Esc schließt es).
     private volatile bool _menuOpen;
 
     /// <param name="historyFile">Wo frühere Eingaben gespeichert werden (↑/↓); null = nur für diese Sitzung.</param>
     /// <param name="opening">Max' erster Satz (Begrüßung aus dem Gedächtnis) – steht auch im Verlauf, damit eine Antwort darauf passt.</param>
     /// <param name="onExit">Läuft beim Beenden vor der Verabschiedung, falls es ein Gespräch gab.</param>
+    /// <param name="archive">Speichert das Gespräch nach jeder Antwort, damit es mit /weiter weitergehen kann.</param>
     public ChatLoop(IAnsiConsole console, IChatBackend backend, Func<DateTime> clock, CommandRegistry? commands = null, string? historyFile = null,
-        string? opening = null, Func<Conversation, CancellationToken, Task>? onExit = null)
+        string? opening = null, Func<Conversation, CancellationToken, Task>? onExit = null, ConversationArchive? archive = null)
     {
         _onExit = onExit;
+        _archive = archive;
         _commands = commands ?? CommandRegistry.CreateDefault();
         var interactive = !Console.IsInputRedirected && !Console.IsOutputRedirected;
         _console = console;
@@ -162,6 +167,19 @@ internal sealed class ChatLoop
         finally
         {
             _reply = null;
+            Save();
+        }
+    }
+
+    private void Save()
+    {
+        try
+        {
+            _archive?.Save(_conversation);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Llm.LlmEngine.Log($"Gespräch nicht gespeichert: {e.Message}");
         }
     }
 

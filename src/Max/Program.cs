@@ -137,18 +137,27 @@ var updating = demo ? Task.CompletedTask : Task.Run(() => updater.RunAsync(manif
 
 // 3. Chat – in der Demo ohne Modell mit Platzhalter-Antworten.
 IChatBackend backend = llm ?? (IChatBackend)new PlaceholderBackend();
+var archive = demo ? null : new ConversationArchive(paths.Conversations);
 var commands = CommandRegistry.CreateDefault(
+[
     new ThinkCommand(thinking), new MemoryCommand(memory), new ForgetCommand(memory),
-    new DebugCommand(() => DebugReport.Build(engine, llm, paths, system, updater)), new DemoCommand());
+    .. archive is null ? Array.Empty<ICommand>() : [new ContinueCommand(archive, () => DateTime.Now), new HistoryCommand(archive, () => DateTime.Now)],
+    new DebugCommand(() => DebugReport.Build(engine, llm, paths, system, updater)), new DemoCommand(),
+]);
 
 // Beim Beenden notiert sich Max das Wichtigste – samt Begrüßung für den nächsten Start (PLAN.md §8a).
 Func<Conversation, CancellationToken, Task>? remember = llm is null ? null : async (conversation, ct) =>
 {
-    if (await Reflection.RunAsync(llm, conversation.Messages, DateTime.Now, ct) is { } reflection)
+    if (await Reflection.RunAsync(llm, conversation.Messages, DateTime.Now, ct, conversation.Summary) is { } reflection)
+    {
         memory.Set(reflection.ApplyTo(memory.Current, DateTime.Now));
+        // Die Themen als Titel in /verlauf.
+        if (reflection.Summary is { Length: > 0 } title && conversation.Id is not null)
+            archive?.Save(conversation, title);
+    }
 };
 var opening = llm is null ? null : memory.TakeGreeting(system.Now);
-await new ChatLoop(AnsiConsole.Console, backend, () => DateTime.Now, commands, paths.History, opening, remember).RunAsync();
+await new ChatLoop(AnsiConsole.Console, backend, () => DateTime.Now, commands, paths.History, opening, remember, archive).RunAsync();
 if (llm is not null)
     await llm.CompleteAsync(); // erst fertig nachrechnen, dann das Modell freigeben
 updates.Cancel();

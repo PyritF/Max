@@ -11,6 +11,7 @@ internal interface IChatBackend
 
 /// <summary>
 /// Ein Stück der Antwort – oder, mit <paramref name="IsThinking"/>, des Nachdenkens davor;
-/// mit <paramref name="IsTool"/> die Meldung, dass Max gerade ein Werkzeug benutzt ("Suche im Web: …").
+/// mit <paramref name="IsTool"/> die Meldung, dass Max gerade ein Werkzeug benutzt ("Suche im Web: …");
+/// mit <paramref name="IsStatus"/> eine andere Meldung, was er gerade tut ("Fasse den Anfang zusammen").
 /// </summary>
-internal readonly record struct ReplyChunk(string Text, bool IsThinking = false, bool IsTool = false);
+internal readonly record struct ReplyChunk(string Text, bool IsThinking = false, bool IsTool = false, bool IsStatus = false);

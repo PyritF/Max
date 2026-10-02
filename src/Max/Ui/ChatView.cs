@@ -96,10 +96,10 @@ internal sealed class ChatView(IAnsiConsole console, bool animate)
             await foreach (var chunk in chunks.WithCancellation(ct))
             {
                 await StopSpinnerAsync();
-                if (chunk.IsTool)
+                if (chunk.IsTool || chunk.IsStatus)
                 {
                     await StopThinkingAsync();
-                    writer.Write("⌕ " + chunk.Text + " ", new Style(Theme.Muted));
+                    writer.Write((chunk.IsTool ? "⌕ " : "✻ ") + chunk.Text + " ", new Style(Theme.Muted));
                     writer.EndLine();
                     RestartSpinner();
                     continue;
