@@ -23,9 +23,6 @@ internal sealed class MaxPaths(string root)
     /// </summary>
     public string Adapter => Path.Combine(Root, "adapter.bin");
 
-    /// <summary>Der Bild-Zusatz zum Modell; die Revision steht im Namen, damit ein neuer den alten ablöst.</summary>
-    public string Vision(int revision) => Path.Combine(Root, $"vision.{revision}.bin");
-
     /// <summary>Einstellungen, die man in Max selbst ändert (z. B. /denken).</summary>
     public string Settings => Path.Combine(Root, "settings.json");
 

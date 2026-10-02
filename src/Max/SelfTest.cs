@@ -14,6 +14,9 @@ internal static class SelfTest
     /// <summary>Wie eine ins Terminal gezogene Datei: der ganze Pfad in Anführungszeichen, dazu eine Frage.</summary>
     private static readonly string DraggedImage = $"\"{Path.GetFullPath(Path.Combine("tests", "testbild.png"))}\" Was steht da drauf?";
 
+    /// <summary>Eine hineingezogene Sprachnachricht (Ogg Opus wie bei Messengern), gesprochen von espeak.</summary>
+    private static readonly string DraggedVoice = $"\"{Path.GetFullPath(Path.Combine("tests", "sprachnachricht.opus"))}\" Wann kann ich mein Fahrrad abholen?";
+
     private static readonly string[] Questions =
     [
         "Wer bist du?",
@@ -35,6 +38,7 @@ internal static class SelfTest
         "Wie hoch ist laut tests/mietvertrag.pdf die Kaution?",
         "In welchem Monat war der Umsatz laut tests/umsatz.xlsx am höchsten?",
         "Was ist der Gesamtbetrag auf der eingescannten Rechnung tests/rechnung-scan.pdf?",
+        DraggedVoice,
         "Wie wird das Wetter morgen in Graz?",
         "Wo auf diesem Rechner liegt die Datei mit dem Mietvertrag?",
         DraggedImage,
@@ -62,6 +66,7 @@ internal static class SelfTest
         ["In welchem Monat war der Umsatz laut tests/umsatz.xlsx am höchsten?"] = ("datei", "Oktober"),
         // Nur ein Bild im PDF – der Bild-Zusatz liest es ab.
         ["Was ist der Gesamtbetrag auf der eingescannten Rechnung tests/rechnung-scan.pdf?"] = ("datei", "152"),
+        [DraggedVoice] = ("audio", "Donnerstag"),
         ["Wie wird das Wetter morgen in Graz?"] = ("wetter", "°C"),
         ["Wo auf diesem Rechner liegt die Datei mit dem Mietvertrag?"] = ("finden", "mietvertrag.pdf"),
         [DraggedImage] = ("bild", "42"),
@@ -218,7 +223,16 @@ internal static class SelfTest
     {
         var now = DateTime.Now;
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        var reflection = await Reflection.RunAsync(backend, conversation.Messages, now, CancellationToken.None);
+        Reflection? reflection;
+        try
+        {
+            reflection = await Reflection.RunAsync(backend, conversation.Messages, now, CancellationToken.None);
+        }
+        catch (InvalidOperationException e)
+        {
+            output.WriteLine($"FEHLER: Notizen am Gesprächsende gescheitert ({e.Message}).");
+            return 3;
+        }
         output.WriteLine($"── Gedächtnis ({clock.Elapsed.TotalSeconds:0.0} s) ──");
         if (reflection is null)
         {

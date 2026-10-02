@@ -26,10 +26,39 @@
     <PackageReference Include="LLamaSharp" Version="0.27.0" />
     <PackageReference Include="LLamaSharp.Backend.Cpu" Version="0.27.0" />
     <PackageReference Include="LLamaSharp.Backend.Vulkan" Version="0.27.0" />
+    <PackageReference Include="Concentus" Version="2.2.2" />
+    <PackageReference Include="Concentus.Oggfile" Version="1.0.7" />
+    <PackageReference Include="NLayer" Version="3.0.0" />
+    <PackageReference Include="NVorbis" Version="0.10.5" />
     <PackageReference Include="PdfPig" Version="0.1.16" />
     <PackageReference Include="Spectre.Console" Version="0.57.2" />
     <PackageReference Include="TextMateSharp.Grammars" Version="2.0.4" />
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <!-- Ohne die mitgelieferten Build-Regeln: die würden die Bibliotheken aller Systeme lose neben die Exe legen. -->
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" ExcludeAssets="build" GeneratePathProperty="true" />
   </ItemGroup>
+
+  <!--
+    Whisper (Sprache → Text): nur die Bibliotheken für das eigene System (rund 2 MB). Beim Bauen landen sie unter
+    runtimes/<rid>/, beim Veröffentlichen als eine Datei stecken sie mit drin wie die von llama.cpp
+    (siehe Llm/SpeechEngine.cs, das sie dort findet).
+  -->
+  <PropertyGroup>
+    <WhisperRid Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</WhisperRid>
+    <WhisperRid Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">win-x64</WhisperRid>
+    <WhisperRid Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">linux-x64</WhisperRid>
+  </PropertyGroup>
+  <ItemGroup>
+    <WhisperLibrary Include="$(PkgWhisper_net_Runtime)/build/$(WhisperRid)/*.so;$(PkgWhisper_net_Runtime)/build/$(WhisperRid)/*.dll" />
+    <None Include="@(WhisperLibrary)" Link="runtimes/$(WhisperRid)/%(Filename)%(Extension)" Visible="false"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+  <Target Name="BundleWhisper" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(PublishSingleFile)' == 'true'">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(WhisperLibrary)" RelativePath="runtimes/$(WhisperRid)/%(Filename)%(Extension)"
+                             AssetType="native" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
 
   <!-- Eingebaut: das Manifest (erster Start klappt auch, wenn GitHub kurz nicht erreichbar ist) und Max' System-Prompt. -->
   <ItemGroup>

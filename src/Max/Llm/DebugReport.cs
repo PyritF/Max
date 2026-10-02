@@ -50,7 +50,8 @@ internal static class DebugReport
         var gpu = system.Hardware.Gpu;
         rows.Add(("GPU", gpu is null ? "keine erkannt" : $"{gpu.Name} · {Format.Memory(gpu.VramBytes)}"));
         rows.Add(("RAM", Format.Memory(system.Hardware.RamBytes)));
-        rows.Add(("Bilder", Update.VisionFile.Installed(paths) is not null ? "Bild-Zusatz bereit" : "Bild-Zusatz fehlt noch (kommt im Hintergrund)"));
+        rows.Add(("Bilder", Update.AddOnFile.Vision.Installed(paths) is not null ? "Bild-Zusatz bereit" : "Bild-Zusatz fehlt noch (kommt im Hintergrund)"));
+        rows.Add(("Sprache", Update.AddOnFile.Audio.Installed(paths) is not null ? "Spracherkennung bereit" : "Spracherkennung fehlt noch (kommt im Hintergrund)"));
         if (updater is not null)
             rows.Add(("Update", UpdateText(updater)));
         rows.Add(("Datenordner", paths.Root));

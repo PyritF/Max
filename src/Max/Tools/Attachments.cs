@@ -6,7 +6,7 @@ namespace Max.Tools;
 /// Dateien, die der Nutzer ins Terminal gezogen (oder als Pfad eingefügt) hat. Das Terminal schreibt dann nur
 /// den Pfad in die Eingabe – je nach System in Anführungszeichen ("C:\Bilder\a b.png", '/home/x/a b.png'),
 /// mit "\ " statt Leerzeichen (/home/x/a\ b.png) oder als file://-Adresse. Max sieht sich solche Dateien an,
-/// bevor er antwortet: Bilder mit <c>bild</c>, alles andere mit <c>datei</c>.
+/// bevor er antwortet: Bilder mit <c>bild</c>, Aufnahmen mit <c>audio</c>, alles andere mit <c>datei</c>.
 /// </summary>
 internal static partial class Attachments
 {
@@ -21,7 +21,8 @@ internal static partial class Attachments
     {
         var files = Find(message, workingDirectory, out var rest);
         var question = rest.Length is > 0 and <= 300 ? rest.Replace('|', '/') : "";
-        return files.Select(path => new ToolCall(ImageTool.IsImage(path) ? "bild" : "datei", question.Length > 0 ? $"{path} | {question}" : path)).ToList();
+        return files.Select(path => new ToolCall(ImageTool.IsImage(path) ? "bild" : AudioDecoder.IsAudio(path) ? "audio" : "datei",
+            question.Length > 0 ? $"{path} | {question}" : path)).ToList();
     }
 
     /// <summary>Alle vorhandenen Dateien in der Nachricht; <paramref name="rest"/> ist der Text ohne sie.</summary>

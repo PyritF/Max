@@ -7,7 +7,7 @@ namespace Max.Setup;
 /// Steuert App- und Modell-Updates (PLAN.md §4). Liegt als <c>manifest.json</c> im Repo;
 /// eine Kopie ist in die Exe eingebaut.
 /// </summary>
-internal sealed record Manifest(AppInfo App, ModelEntry? Model, VisionEntry? Vision = null)
+internal sealed record Manifest(AppInfo App, ModelEntry? Model, AddOnEntry? Vision = null, AddOnEntry? Audio = null)
 {
     /// <summary>Taugt das Manifest? Das Modell muss eine Adresse haben (ältere Fassungen mit Stufen fallen durch).</summary>
     public bool IsComplete => Model is { Url.Length: > 0 };
@@ -37,11 +37,12 @@ internal sealed record ModelEntry(int Revision, string Url, string? Sha256, long
 }
 
 /// <summary>
-/// Der Bild-Zusatz zum Modell (<c>mmproj</c>) – damit Max Bilder und Screenshots lesen kann. Kommt still im
-/// Hintergrund, nachdem das Modell da ist; ohne ihn geht alles andere wie gewohnt.
+/// Ein Zusatz: der Bild-Zusatz zum Modell (<c>vision</c>, mmproj) für Bilder und Screenshots oder die
+/// Spracherkennung (<c>audio</c>, Whisper) für Aufnahmen. Kommt still im Hintergrund, nachdem das Modell da ist;
+/// ohne ihn geht alles andere wie gewohnt.
 /// </summary>
 /// <param name="Revision">Wird erhöht, wenn es einen neuen Zusatz gibt (z. B. mit einem neuen Modell).</param>
-internal sealed record VisionEntry(int Revision, string Url, string? Sha256, long SizeBytes);
+internal sealed record AddOnEntry(int Revision, string Url, string? Sha256, long SizeBytes);
 
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,

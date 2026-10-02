@@ -27,7 +27,9 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
 
     /// <summary>Die Standard-Werkzeuge – alle nur lesend.</summary>
     /// <param name="vision">Bildverständnis, sobald es bereitsteht (sonst null) – ohne Angabe gibt es kein <c>bild</c>.</param>
-    public static ToolBox CreateDefault(HttpClient web, Func<DateTime> clock, Func<string> workingDirectory, Func<IVision?>? vision = null) => new(
+    /// <param name="hearing">Spracherkennung, sobald sie bereitsteht – ohne Angabe gibt es kein <c>audio</c>.</param>
+    public static ToolBox CreateDefault(HttpClient web, Func<DateTime> clock, Func<string> workingDirectory, Func<IVision?>? vision = null,
+        Func<IHearing?>? hearing = null) => new(
     [
         new ClockTool(clock),
         new SystemInfoTool(),
@@ -36,6 +38,7 @@ internal sealed partial class ToolBox(IEnumerable<ITool> tools, Func<string>? wo
         new ReadFileTool(workingDirectory, vision),
         new FindFilesTool(workingDirectory),
         .. vision is null ? Array.Empty<ITool>() : [new ImageTool(vision, workingDirectory)],
+        .. hearing is null ? Array.Empty<ITool>() : [new AudioTool(hearing, workingDirectory)],
         new WebSearchTool(web),
         new ReadWebPageTool(web),
         new WeatherTool(web),

@@ -134,6 +134,8 @@ internal sealed class ReadFileTool(Func<string> workingDirectory, Func<IVision?>
             return $"Die Datei {path} gibt es nicht.";
         if (ImageTool.IsImage(path))
             return $"{Path.GetFileName(path)} ist ein Bild – dafür gibt es \"bild\".";
+        if (AudioDecoder.IsAudio(path))
+            return $"{Path.GetFileName(path)} ist eine Aufnahme – dafür gibt es \"audio\".";
 
         var info = new FileInfo(path);
         Document document;

@@ -31,6 +31,7 @@ internal static class ToolPrompt
           `| Blatt Umsatz`). Am Ende des Ergebnisses steht, wie es weitergeht.
         - Bilder und Screenshots: `bild: <Pfad>`, bei einer bestimmten Frage `bild: <Pfad> | <Frage>`. Du siehst das Bild
           nicht selbst – du bekommst eine Beschreibung davon; beantworte die Frage damit.
+        - Aufnahmen (Sprachnachricht, Memo, Mitschnitt): `audio: <Pfad>` schreibt ab, was gesagt wird.
         - Zwischenablage (Screenshot, kopierter Text): `zwischenablage`, mit Frage zum Bild `zwischenablage: <Frage>` – nur,
           wenn der Nutzer ausdrücklich davon spricht.
         - Zieht der Nutzer eine Datei ins Fenster, steht ihr Pfad in seiner Nachricht, und du hast sie schon angesehen

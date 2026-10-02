@@ -58,11 +58,13 @@ internal sealed class Updater(HttpClient http, MaxPaths paths, string? exePath, 
                 await DownloadModelAsync(model, ct);
                 notes.Add("neues Modell bereit – aktiv beim nächsten Start");
             }
-            if (VisionFile.IsMissing(paths, manifest.Vision))
+            foreach (var (addOn, entry) in new[] { (AddOnFile.Vision, manifest.Vision), (AddOnFile.Audio, manifest.Audio) })
             {
-                Status = "Bildverständnis wird geladen";
-                await VisionFile.DownloadAsync(_downloader, paths, manifest.Vision!, Progress, ct);
-                notes.Add("Bildverständnis bereit");
+                if (!addOn.IsMissing(paths, entry))
+                    continue;
+                Status = $"{addOn.Label} wird geladen";
+                await addOn.DownloadAsync(_downloader, paths, entry!, Progress, ct);
+                notes.Add($"{addOn.Label} bereit");
             }
             Status = notes.Count > 0 ? string.Join("; ", notes) : "aktuell";
         }

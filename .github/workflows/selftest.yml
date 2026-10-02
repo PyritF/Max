@@ -41,11 +41,11 @@ jobs:
       - name: Tests
         run: dotnet test
 
-      # Modell und Bild-Zusatz nicht bei jedem Lauf neu laden – der Schlüssel ändert sich nur mit ihren Einträgen
+      # Modell, Bild-Zusatz und Spracherkennung nicht bei jedem Lauf neu laden – der Schlüssel ändert sich nur mit ihren Einträgen
       # im Manifest (nicht mit der App-Version, die der Release-Workflow einträgt).
       - name: Modell-Schlüssel
         id: model
-        run: echo "key=$(jq -c '[.model, .vision]' manifest.json | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+        run: echo "key=$(jq -c '[.model, .vision, .audio]' manifest.json | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache@v4
         with:

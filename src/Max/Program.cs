@@ -35,16 +35,21 @@ LlmBackend? llm = null;
 VisionEngine? vision = null;
 IVision? Vision()
 {
-    if (vision is not null || engine is null || VisionFile.Installed(paths) is not { } projector)
+    if (vision is not null || engine is null || AddOnFile.Vision.Installed(paths) is not { } projector)
         return vision;
     // Auf die Grafikkarte nur, wenn neben dem Modell sicher Platz ist; sonst rechnet die CPU (langsamer).
     var roomy = engine.Info.GpuLayers > 0 && system?.Hardware.Gpu is { VramBytes: >= 10L * 1024 * 1024 * 1024 };
     return vision = new VisionEngine(engine, projector, roomy);
 }
 
+// Spracherkennung: erst, wenn ihr Zusatz da ist (er kommt im Hintergrund) – geladen bei der ersten Aufnahme.
+SpeechEngine? speech = null;
+IHearing? Hearing() =>
+    speech ??= AddOnFile.Audio.Installed(paths) is { } whisperModel ? new SpeechEngine(whisperModel) : null;
+
 // Werkzeuge (nur lesend): eigener HttpClient, der Weiterleitungen folgt – Webseiten leiten oft um.
 using var web = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = true, MaxAutomaticRedirections = 5 }) { Timeout = Timeout.InfiniteTimeSpan };
-var tools = Max.Tools.ToolBox.CreateDefault(web, () => DateTime.Now, () => Environment.CurrentDirectory, Vision);
+var tools = Max.Tools.ToolBox.CreateDefault(web, () => DateTime.Now, () => Environment.CurrentDirectory, Vision, Hearing);
 void OnHardware(SystemSnapshot s) => system = s;
 void OnLoaded(LlmEngine e, LlmBackend b) => (engine, llm) = (e, b);
 Manifest? manifest = null;
@@ -86,21 +91,24 @@ using (var startup = new CancellationTokenSource())
 system ??= SystemSnapshot.Capture();
 using var loadedEngine = engine;
 using var disposeVision = new Disposer(() => vision?.Dispose());
+using var disposeSpeech = new Disposer(() => speech?.Dispose());
 
 // Nur für den GitHub-Workflow: feste Fragen statt Chat – vorher den Bild-Zusatz holen, damit auch Bilder drankommen.
 if (args.Contains("--selftest") && engine is not null && llm is not null)
 {
     var current = manifest ?? await ManifestSource.LoadAsync(http, CancellationToken.None);
-    if (VisionFile.IsMissing(paths, current.Vision))
+    foreach (var (addOn, entry) in new[] { (AddOnFile.Vision, current.Vision), (AddOnFile.Audio, current.Audio) })
     {
-        Console.WriteLine("Lade den Bild-Zusatz …");
+        if (!addOn.IsMissing(paths, entry))
+            continue;
+        Console.WriteLine($"Lade {addOn.Label} …");
         try
         {
-            await VisionFile.DownloadAsync(new ModelDownloader(http), paths, current.Vision!, new StepProgress(), CancellationToken.None);
+            await addOn.DownloadAsync(new ModelDownloader(http), paths, entry!, new StepProgress(), CancellationToken.None);
         }
         catch (Exception e) when (e is HttpRequestException or IOException or InvalidOperationException or SetupException)
         {
-            Console.WriteLine($"WARNUNG: Bild-Zusatz nicht geladen ({e.Message}) – Bildfragen gehen dann nicht.");
+            Console.WriteLine($"WARNUNG: {addOn.Label} nicht geladen ({e.Message}) – Fragen dazu gehen dann nicht.");
         }
     }
     return await SelfTest.RunAsync(engine, llm, Console.Out, m => SystemPrompt.Build(system, m, tools));
