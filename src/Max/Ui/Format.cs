@@ -15,6 +15,17 @@ internal static class Format
     public static string Memory(long bytes) =>
         $"{Math.Round(bytes / 1024d / 1024 / 1024)} GB";
 
+    /// <summary>Freier Arbeitsspeicher mit einer Nachkommastelle, z. B. "17,8 GB".</summary>
+    public static string MemoryExact(long bytes) =>
+        (bytes / 1024d / 1024 / 1024).ToString("0.0", German) + " GB";
+
+    /// <summary>Laufwerke: große ganz und mit Tausenderpunkt ("1.402"), kleine mit einer Nachkommastelle ("26,6").</summary>
+    public static string DiskGigabytes(long bytes)
+    {
+        var gb = bytes / 1_000_000_000d;
+        return gb >= 100 ? gb.ToString("N0", German) : gb.ToString("0.0", German);
+    }
+
     /// <summary>Geschwindigkeit, z. B. "38,2 MB/s".</summary>
     public static string Speed(double bytesPerSecond) =>
         (bytesPerSecond / 1_000_000d).ToString("0.0", German) + " MB/s";

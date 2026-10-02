@@ -18,6 +18,23 @@ public class FormatTests
     }
 
     [Fact]
+    public void Freier_Speicher_und_Laufwerke_wie_im_Werkzeug_system()
+    {
+        Assert.Equal("17,8 GB", Format.MemoryExact(19_112_000_000));
+        Assert.Equal("1.402", Format.DiskGigabytes(1_402_300_000_000));
+        Assert.Equal("212", Format.DiskGigabytes(212_000_000_000));
+        Assert.Equal("26,6", Format.DiskGigabytes(26_600_000_000));
+    }
+
+    [Theory]
+    [InlineData(0, 1, 59, "1 Stunde, 59 Minuten")]
+    [InlineData(0, 4, 1, "4 Stunden, 1 Minute")]
+    [InlineData(1, 1, 0, "1 Tag, 1 Stunde")]
+    [InlineData(2, 5, 0, "2 Tagen, 5 Stunden")]
+    public void Laufzeit_in_der_richtigen_Einzahl(int days, int hours, int minutes, string expected) =>
+        Assert.Equal(expected, Max.Tools.SystemInfoTool.Uptime(new TimeSpan(days, hours, minutes, 0)));
+
+    [Fact]
     public void Speed_in_MB_pro_Sekunde()
     {
         Assert.Equal("38,2 MB/s", Format.Speed(38_200_000));

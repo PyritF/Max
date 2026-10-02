@@ -37,8 +37,9 @@ internal sealed class SystemInfoTool : ITool
         text.Append("Betriebssystem: ").Append(system.OsName).Append(" (").Append(RuntimeInformation.OSDescription.Trim()).Append(")\n");
         text.Append("Prozessor: ").Append(CpuName() ?? "unbekannt").Append(", ").Append(system.CpuCores).Append(" Kerne\n");
         text.Append("Arbeitsspeicher: ").Append(Format.Memory(system.TotalMemoryBytes));
+        // In Containern kommen Gesamt (Grenze des Containers) und frei (ganzer Rechner) aus verschiedenen Quellen.
         if (AvailableMemory() is { } free)
-            text.Append(", davon frei: ").Append(Format.Memory(free));
+            text.Append(", davon frei: ").Append(Format.MemoryExact(Math.Min(free, system.TotalMemoryBytes)));
         text.Append('\n');
         text.Append("Grafikkarte: ").Append(system.Hardware.Gpu is { } gpu ? $"{gpu.Name}, {Format.Memory(gpu.VramBytes)}" : "keine erkannt").Append('\n');
         text.Append("Läuft seit: ").Append(Uptime(TimeSpan.FromMilliseconds(Environment.TickCount64))).Append('\n');
@@ -49,8 +50,8 @@ internal sealed class SystemInfoTool : ITool
             {
                 if (!drive.IsReady || drive.TotalSize < 1_000_000_000 || drive.DriveType is DriveType.Ram or DriveType.Unknown)
                     continue;
-                text.Append("- ").Append(drive.Name).Append(": ").Append(Format.Gigabytes(drive.AvailableFreeSpace)).Append(" GB frei von ")
-                    .Append(Format.Gigabytes(drive.TotalSize)).Append(" GB\n");
+                text.Append("- ").Append(drive.Name).Append(": ").Append(Format.DiskGigabytes(drive.AvailableFreeSpace)).Append(" GB frei von ")
+                    .Append(Format.DiskGigabytes(drive.TotalSize)).Append(" GB\n");
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
@@ -59,8 +60,11 @@ internal sealed class SystemInfoTool : ITool
         return Task.FromResult(text.ToString().TrimEnd());
     }
 
-    internal static string Uptime(TimeSpan t) =>
-        t.TotalDays >= 1 ? $"{(int)t.TotalDays} Tagen, {t.Hours} Stunden" : $"{t.Hours} Stunden, {t.Minutes} Minuten";
+    internal static string Uptime(TimeSpan t) => t.TotalDays >= 1
+        ? $"{Count((int)t.TotalDays, "Tag", "Tagen")}, {Count(t.Hours, "Stunde", "Stunden")}"
+        : $"{Count(t.Hours, "Stunde", "Stunden")}, {Count(t.Minutes, "Minute", "Minuten")}";
+
+    private static string Count(int n, string one, string many) => $"{n} {(n == 1 ? one : many)}";
 
     private static string? CpuName()
     {

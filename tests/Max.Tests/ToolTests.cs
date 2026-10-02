@@ -601,6 +601,17 @@ public sealed class FindFilesTests : IDisposable
     }
 
     [Fact]
+    public async Task CommasInQueryAndPath_StayCommas()
+    {
+        Put("Fotos, alt/Rechnung, Strom.txt", "x");
+
+        var result = await Find("Rechnung, Strom | Fotos, alt");
+
+        Assert.Contains("Gesucht nach „Rechnung, Strom“ in " + Path.Combine(_home, "Fotos, alt") + " (", result);
+        Assert.Contains("Rechnung, Strom.txt", result);
+    }
+
+    [Fact]
     public async Task FolderLabel_RealFolderOfThatName_Wins()
     {
         Put("Ordner Projekt/readme.md", "Hallo");

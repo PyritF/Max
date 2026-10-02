@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Max.Tools.Documents;
@@ -88,10 +89,13 @@ internal sealed partial class FindFilesTool(Func<string> workingDirectory, Func<
     private static string Report(string query, string root, List<(FileInfo File, int InName)> byName, List<(FileInfo File, string Excerpt)> byContent,
         int seen, bool complete, TimeSpan elapsed)
     {
-        var text = new StringBuilder($"Gesucht nach „{query}“ in {root} ({seen:N0} Dateien angesehen, {elapsed.TotalSeconds:0.0} s):\n".Replace(',', '.'));
+        // Zahlen wie "48.213 Dateien, 6.2 s" – nur die Zahlen, Suchbegriffe und Pfade bleiben, wie sie sind.
+        var count = seen.ToString("N0", CultureInfo.InvariantCulture).Replace(',', '.');
+        var seconds = elapsed.TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture);
+        var text = new StringBuilder($"Gesucht nach „{query}“ in {root} ({count} Dateien angesehen, {seconds} s):\n");
         if (byName.Count == 0 && byContent.Count == 0)
         {
-            text.Append("Nichts gefunden. Vielleicht andere Begriffe oder ein anderer Ordner (`finden: Begriffe | Ordner`).");
+            text.Append("Nichts gefunden. Vielleicht andere Begriffe oder ein anderer Ordner (`finden: Begriffe | Ordnerpfad`).");
         }
         else
         {
@@ -112,7 +116,7 @@ internal sealed partial class FindFilesTool(Func<string> workingDirectory, Func<
             text.Append("(Lesen mit `datei: <Pfad>`.)");
         }
         if (!complete)
-            text.Append("\n(Nicht alles durchsucht – die Zeit war um. Mit `| Ordner` geht es gezielter.)");
+            text.Append("\n(Nicht alles durchsucht – die Zeit war um. Mit `| Ordnerpfad` geht es gezielter.)");
         return text.ToString();
     }
 
