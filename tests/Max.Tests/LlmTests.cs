@@ -643,7 +643,8 @@ public class LlmBackendTests
     public async Task Cancellation_IsPassedThrough()
     {
         using var cts = new CancellationTokenSource();
-        var model = new FakeModel("a", "b", "c") { OnSample = i => { if (i == 2) cts.Cancel(); } };
+        // Buchstaben, mit denen keine Floskel beginnt ("a" könnte "Aber" werden – das hielte der Floskel-Filter kurz zurück).
+        var model = new FakeModel("x", "y", "z") { OnSample = i => { if (i == 2) cts.Cancel(); } };
         var received = new List<string>();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
@@ -651,7 +652,7 @@ public class LlmBackendTests
             await foreach (var chunk in Backend(model).StreamReplyAsync(Single("?"), cts.Token))
                 received.Add(chunk.Text);
         });
-        Assert.Equal(["a", "b"], received);
+        Assert.Equal(["x", "y"], received);
     }
 
     [Fact]
@@ -904,6 +905,74 @@ public class ClosingFilterTests
     [Fact]
     public void OfferAtTheEnd_IsDropped() =>
         Assert.Equal("Die Antwort.\n\n", Run("Die Antwort.\n\n", "Möch", "test du mehr ", "wissen?\nSag Bescheid!"));
+
+    private static string RunFactual(params string[] chunks)
+    {
+        var filter = new ClosingFilter(factual: true);
+        return string.Concat(chunks.Select(filter.Push)) + filter.Flush();
+    }
+
+    private static string[] Chars(string text) => [.. text.Select(c => c.ToString())];
+
+    [Theory]
+    [InlineData("Die Antwort.\n\nUnd hast du noch Fragen dazu?")]
+    [InlineData("Die Antwort.\n\nAber falls du noch etwas brauchst, sag Bescheid.")]
+    [InlineData("Die Antwort.\n\nAlso, möchtest du mehr wissen?")]
+    public void OfferAfterAConjunction_IsDropped(string text)
+    {
+        Assert.Equal("Die Antwort.\n\n", Run(text));
+        Assert.Equal("Die Antwort.\n\n", Run(Chars(text)));
+    }
+
+    // Selbsttest 57: Nach fast jedem Werkzeug-Ergebnis eine Rückfrage – "Und morgen ist Samstag, oder?".
+    [Theory]
+    [InlineData("Und hast du das Bild selbst gemacht oder ist es ein Testbild?")]
+    [InlineData("Und morgen ist Samstag, oder?")]
+    [InlineData("Bist du selbst in Wien, oder eher in Graz oder Linz?")]
+    [InlineData("Was hast du morgen vor?")]
+    [InlineData("{verlauf:türkis-blau}Und bei dir? Hast du schon Herbstfeeling?{/verlauf}")]
+    [InlineData("**Und du?** ☕")]
+    [InlineData("Und was ist dein Projekt?\n- Konsole\n- Web")]
+    public void AfterAToolResult_AClosingQuestion_IsDropped(string question)
+    {
+        Assert.Equal("Das Ergebnis.\n\n", RunFactual("Das Ergebnis.\n\n", question));
+        Assert.Equal("Das Ergebnis.\n\n", RunFactual(Chars("Das Ergebnis.\n\n" + question)));
+    }
+
+    [Theory]
+    [InlineData("Das Ergebnis.\n\nUnd warum nicht grün? Weil das Auge Blau stärker wahrnimmt.")]       // Inhalt, keine Rückfrage
+    [InlineData("Das Ergebnis.\n\nWas heißt das? Die Kaution ist fällig.\n\nMehr dazu im Vertrag.")]
+    [InlineData("Welche Datei meinst du?")]                                                             // die ganze Antwort
+    [InlineData("Das Ergebnis.\n\nWie du siehst, ist alles da.")]
+    [InlineData("Das Ergebnis.\n\n```python\nprint(1)\n```\n\nWas danach kommt, steht im Code.")]
+    public void AfterAToolResult_ContentStays(string text)
+    {
+        Assert.Equal(text, RunFactual(text));
+        Assert.Equal(text, RunFactual(Chars(text)));
+    }
+
+    [Fact]
+    public void AfterAToolResult_RealAnswerFromSelfTest57_KeepsEverythingButTheQuestion()
+    {
+        const string answer = "Der Gesamtbetrag auf der Rechnung beträgt **152 Euro**.\n\nDie Positionen:\n- Inspektion Fahrrad: 89 €\n"
+            + "- Neue Bremsbeläge: 38 €\n- Kette: 25 €\n\nZahlbar innerhalb von 14 Tagen.\n\n";
+        const string question = "Und war das eine normale Wartung oder gab es noch etwas Besonderes?";
+        Assert.Equal(answer, RunFactual(Chars(answer + question)));
+        Assert.Equal(answer + question, Run(Chars(answer + question)));      // ohne Werkzeug bleibt sie
+    }
+
+    [Fact]
+    public void AfterAToolResult_ALongParagraphStartingLikeAQuestion_FlowsOn()
+    {
+        var filter = new ClosingFilter(factual: true);
+        var shown = filter.Push("Das Ergebnis.\n\nWas die Kosten angeht: ");
+        shown += filter.Push(string.Concat(Enumerable.Repeat("Miete, Nebenkosten und Strom kommen dazu, ", 8)));
+        Assert.Contains("Was die Kosten angeht", shown);         // nicht erst am Ende des Absatzes
+    }
+
+    [Fact]
+    public void InSmallTalk_ACounterQuestion_Stays() =>
+        Assert.Equal("Alles bestens.\n\nUnd bei dir?", Run("Alles bestens.\n\n", "Und bei dir?"));
 
     // Selbsttest 56: ab der Mitte in jeder Antwort ein ```bash-Block mit "Name: Wert" – Selbsttest 55: "# Beispiel".
     [Theory]

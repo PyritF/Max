@@ -581,6 +581,12 @@ Im Verlauf steht das wie ein normaler Werkzeug-Aufruf. Schlüssel und Zugangsdat
   hieß, den ganzen Verlauf neu zu rechnen – auf der CPU über zehn Minuten für eine Rechenfrage. Jetzt geht es auf
   den Stand vor der Antwort zurück, und nur die Antwort wird nachgerechnet. Der Lauf selbst war nicht hängen
   geblieben, nur langsam: Zusammenfassen und Gedächtnis brauchen auf der CPU zusammen rund 45 Minuten.
+  Selbsttest 57: Alle Fragen richtig, keine Schleife, kein Code-Block ohne Code mehr; die Rechenfrage mit kaputtem
+  Balken ist wieder schnell. Neue Angewohnheit: zehn von dreizehn Antworten auf ein Werkzeug-Ergebnis endeten mit
+  einer Rückfrage („Und morgen ist Samstag, oder?“, „Und hast du das Bild selbst gemacht?“) – obwohl der Prompt das
+  verbietet. Nach einem Werkzeug-Ergebnis fällt so ein Schlussabsatz jetzt weg (beginnt wie eine Frage an den Nutzer
+  und endet mit „?“); beim Plaudern bleibt eine Gegenfrage erlaubt. Floskeln zählen auch hinter „Und“, „Aber“,
+  „Also“, „Oder“ („Und hast du noch Fragen dazu?“).
 
 **Später (schreibend, mit Nachfrage):**
 | Tool | Risiko |

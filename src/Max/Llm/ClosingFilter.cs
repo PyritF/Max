@@ -16,6 +16,9 @@ namespace Max.Llm;
 /// es eine Angewohnheit, kein Inhalt – Selbsttest 53 hängte "Und schwarz getrunken? …" an jede Antwort.
 /// Ein Code-Block direkt nach einer Floskel gehört zu ihr: Ohne echten Code darin ("# Beispiel: Wien", "datei: PLAN.md")
 /// fällt er am Ende mit ihr weg – Selbsttest 55 hängte so ein "Beispiel" an jedes Angebot, und es steckte an.
+/// Nach einem Werkzeug-Ergebnis endet die Antwort nicht mit einer Rückfrage: Ein Schlussabsatz, der wie eine Frage an
+/// den Nutzer beginnt ("Und hast du …", "Bist du …", "Was …") und mit "?" endet, fällt weg – Selbsttest 57 hängte an
+/// zehn von dreizehn solchen Antworten "Und …?" an ("Und morgen ist Samstag, oder?"). Beim Plaudern bleibt sie.
 /// </summary>
 internal sealed partial class ClosingFilter
 {
@@ -55,12 +58,19 @@ internal sealed partial class ClosingFilter
     private bool _heldFence;                        // in einem Code-Block, der mit der Floskel davor zurückgehalten wird
     private readonly StringBuilder _fenceLine = new();
     private readonly List<string> _learned;         // erste Sätze früherer Schlussabsätze (klein, nur Wörter)
+    private readonly bool _factual;                 // Antwort auf ein Werkzeug-Ergebnis: am Ende keine Rückfrage
+    private bool _heldQuestion;                     // zurückgehalten, weil der Absatz wie eine Rückfrage beginnt
 
     /// <param name="earlierClosings">Die Schlussabsätze früherer Antworten (siehe <see cref="ClosingParagraph"/>).</param>
-    public ClosingFilter(IEnumerable<string>? earlierClosings = null)
+    /// <param name="factual">Die Antwort folgt auf ein Werkzeug-Ergebnis – dann fällt auch eine Rückfrage am Ende weg.</param>
+    public ClosingFilter(IEnumerable<string>? earlierClosings = null, bool factual = false)
     {
         _learned = (earlierClosings ?? []).Select(FirstSentence).Where(s => s.Split(' ').Length >= 3).Distinct().ToList();
+        _factual = factual;
     }
+
+    /// <summary>So lang ist ein Schlussabsatz höchstens.</summary>
+    private const int MaxClosingChars = 240;
 
     /// <summary>
     /// Der Schlussabsatz einer Antwort – ein kurzer Absatz ohne Code, Liste oder Tabelle hinter mindestens einem
@@ -73,7 +83,7 @@ internal sealed partial class ClosingFilter
         if (paragraphs.Length < 2)
             return null;
         var last = paragraphs[^1].Trim();
-        return last.Length <= 240 && !last.Contains('\n') && !last.StartsWith("```", StringComparison.Ordinal)
+        return last.Length <= MaxClosingChars && !last.Contains('\n') && !last.StartsWith("```", StringComparison.Ordinal)
             && !last.StartsWith('|') && !last.StartsWith("- ", StringComparison.Ordinal) ? last : null;
     }
 
@@ -120,6 +130,40 @@ internal sealed partial class ClosingFilter
         return undecided ? null : false;
     }
 
+    private static readonly HashSet<string> QuestionStarts =
+    [
+        "und", "aber", "oder", "also",
+        "was", "wie", "wo", "wann", "warum", "wieso", "weshalb", "welche", "welcher", "welches", "welchen", "wer", "wen", "wem",
+        "wofür", "woran", "worauf", "womit", "wohin", "woher", "wozu",
+    ];
+
+    /// <summary>
+    /// Beginnt der Absatz wie eine Frage an den Nutzer – "Und …", ein Fragewort, "Hast du …", "Gefällt dir …"?
+    /// null = noch zu kurz. Was so beginnt und doch keine Frage ist, wird nur kurz zurückgehalten.
+    /// </summary>
+    private static bool? StartsLikeQuestion(string line, bool complete)
+    {
+        if (AfterTags(line) is not { } text)
+            return complete ? false : null;
+        var words = Words(text).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var known = complete || text.Length > 0 && !char.IsLetterOrDigit(text[^1]) ? words.Length : words.Length - 1;
+        if (known >= 1 && QuestionStarts.Contains(words[0]))
+            return true;
+        if (known >= 2)
+            return words[1] is "du" or "dir" or "dich";
+        return complete ? false : null;
+    }
+
+    /// <summary>Endet der Absatz mit einer Frage (nach Farb-Tags, Formatierung, Emoji und Antwortmöglichkeiten)?</summary>
+    internal static bool IsQuestion(string paragraph)
+    {
+        var text = Max.Ui.ColorTags.Strip(WithoutTrailingOptions(WithoutRules(paragraph))).TrimEnd();
+        var end = text.Length;
+        while (end > 0 && !char.IsLetterOrDigit(text[end - 1]) && text[end - 1] is not ('?' or '.' or '!' or ':'))
+            end--;
+        return end > 0 && text[end - 1] == '?';
+    }
+
     public string Push(string text)
     {
         var output = new StringBuilder();
@@ -159,6 +203,13 @@ internal sealed partial class ClosingFilter
                 else
                     output.Append(WithoutRules(held));
             }
+            else if (_heldQuestion)
+            {
+                if (_anyShown && IsQuestion(held))
+                    LlmEngine.Log($"Rückfrage am Ende weggelassen: {held.Trim().ReplaceLineEndings(" ")}");
+                else
+                    output.Append(WithoutRules(held));
+            }
             else if (!_anyShown || StartsWithPhrase(held, complete: true, Phrases) != true && !held.Contains('?'))
                 output.Append(WithoutRules(held));
             else
@@ -167,6 +218,7 @@ internal sealed partial class ClosingFilter
         }
         _holding = false;
         _heldLearned = false;
+        _heldQuestion = false;
         _heldFence = false;
         _fenceLine.Clear();
         return output.ToString();
@@ -242,6 +294,9 @@ internal sealed partial class ClosingFilter
             _held.Append(c);
             if (c == '\n')
                 NewLine(blank: false);
+            // Eine Rückfrage ist kurz – ein langer Absatz, der nur so anfing, läuft weiter, statt auf sein Ende zu warten.
+            if (_heldQuestion && _held.Length > MaxClosingChars)
+                Release(output);
             return;
         }
 
@@ -394,6 +449,7 @@ internal sealed partial class ClosingFilter
     private void Release(StringBuilder output)
     {
         _heldLearned = false;
+        _heldQuestion = false;
         _heldFence = false;
         _fenceLine.Clear();
         if (_held.Length == 0)
@@ -488,9 +544,18 @@ internal sealed partial class ClosingFilter
                 return true;
         }
         var phrase = StartsWithPhrase(line, complete);
-        if (phrase != false || _holding || _learned.Count == 0)
+        if (phrase != false || _holding)
             return phrase;
-        return StartsLikeLearned(line, complete);
+        var learned = _learned.Count > 0 ? StartsLikeLearned(line, complete) : false;
+        if (learned != false)
+            return learned;
+        // Den ersten Absatz nie: Ist die ganze Antwort eine Frage, ist sie eine echte Rückfrage.
+        if (!_factual || !_anyShown)
+            return false;
+        var question = StartsLikeQuestion(line, complete);
+        if (question == true)
+            _heldQuestion = true;
+        return question;
     }
 
     /// <summary>true = Floskel, false = sicher keine, null = noch zu kurz, um es zu sagen.</summary>
@@ -498,15 +563,49 @@ internal sealed partial class ClosingFilter
 
     private static bool? StartsWithPhrase(string line, bool complete, string[] phrases)
     {
+        if (AfterTags(line) is not { } text)
+            return complete || line.Length > 40 ? false : null;
+        var result = MatchPhrase(text, complete, phrases);
+        if (result == true)
+            return true;
+        // "Und hast du noch Fragen dazu?" ist dieselbe Floskel wie "Hast du noch Fragen dazu?" (Selbsttest 57).
+        var undecided = result is null;
+        foreach (var conjunction in Conjunctions)
+        {
+            if (text.Length > conjunction.Length && text.StartsWith(conjunction, StringComparison.OrdinalIgnoreCase) && text[conjunction.Length] is ' ' or ',')
+            {
+                var rest = text[conjunction.Length..].TrimStart(',', ' ');
+                var after = rest.Length == 0 && !complete ? null : MatchPhrase(rest, complete, phrases);
+                if (after == true)
+                    return true;
+                undecided |= after is null;
+            }
+            else if (!complete && (conjunction + " ").StartsWith(text, StringComparison.OrdinalIgnoreCase))
+            {
+                undecided = true;
+            }
+        }
+        return undecided ? null : false;
+    }
+
+    private static readonly string[] Conjunctions = ["Und", "Aber", "Also", "Oder"];
+
+    /// <summary>Der Text nach Formatierung und Farb-Tags am Anfang ({cyan}, {verlauf:…}, [rot]). Null, solange ein Tag offen ist.</summary>
+    private static string? AfterTags(string line)
+    {
         var text = line.TrimStart().TrimStart('*', '_', '>', ' ');
-        // Farb-Tags davor überspringen ({cyan}, {verlauf:…}, [rot]) – die Floskel dahinter zählt.
         while (text.Length > 0 && text[0] is '{' or '[')
         {
             var close = text.IndexOf(text[0] == '{' ? '}' : ']');
             if (close < 0)
-                return complete || text.Length > 40 ? false : null;
+                return null;
             text = text[(close + 1)..].TrimStart('*', '_', ' ');
         }
+        return text;
+    }
+
+    private static bool? MatchPhrase(string text, bool complete, string[] phrases)
+    {
         var undecided = false;
         foreach (var phrase in phrases)
         {

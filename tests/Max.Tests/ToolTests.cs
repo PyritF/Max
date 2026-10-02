@@ -363,6 +363,22 @@ public class ToolRoundTests
     }
 
     [Fact]
+    public async Task AfterAToolResult_AQuestionAtTheEnd_IsLeftOut()
+    {
+        // Selbsttest 57: "Und hast du das Bild selbst gemacht oder ist es ein Testbild?" hinter fast jedem Ergebnis.
+        var (chunks, conversation) = await Run("```werkzeug\n", "rechnen: 2+3\n", "```\n", "Das sind **5**.\n\n", "Und rechnest", " du oft so?", null);
+        Assert.Equal("Das sind **5**.\n\n", Text(chunks));
+        Assert.Equal(ChatRole.Tool, conversation.Messages[^1].Role);
+    }
+
+    [Fact]
+    public async Task InSmallTalk_ACounterQuestion_Stays()
+    {
+        var (chunks, _) = await Run("Alles bestens.\n\n", "Und bei dir?", null);
+        Assert.Equal("Alles bestens.\n\nUnd bei dir?", Text(chunks));
+    }
+
+    [Fact]
     public async Task ClosingOfAnEarlierAnswer_IsNotRepeated()
     {
         var model = new FakeModel("Rot.\n\n", "Und schwarz getrunken? Ich frage mich, ob das hilft.", null);
