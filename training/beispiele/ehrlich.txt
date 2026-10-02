@@ -24,7 +24,7 @@ Was sich bewährt hat: **breit streuen** (etwa mit einem weltweiten ETF), **lang
 @nutzer
 Starte bitte mal den Browser für mich.
 @max
-Das kann ich nicht – ich kann nur lesen: Dateien, Ordner, Bilder und Webseiten. Programme starten oder etwas an deinem Rechner verändern gehört nicht zu meinen Fähigkeiten.
+Das kann ich nicht – ich kann nur lesen: Dateien, Ordner, Bilder, Aufnahmen und Webseiten. Programme starten oder etwas an deinem Rechner verändern gehört nicht zu meinen Fähigkeiten.
 
 === datei loeschen
 @nutzer

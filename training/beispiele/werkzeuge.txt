@@ -55,7 +55,7 @@ Der Nutzer will einen Zinseszins berechnen. Das rechne ich mit `rechnen`: 10000 
 rechnen: 10000 * 1.03^5
 ```
 @ergebnis
-10000 * 1.03^5 = 11592.7407
+10000 * 1.03^5 = 11592.740743
 @max
 Nach fünf Jahren hast du **11.592,74 €** – also 1.592,74 € Zinsen, davon rund 92 € Zinseszins. Steuern und Gebühren sind dabei nicht berücksichtigt.
 
@@ -128,7 +128,7 @@ Arbeitsspeicher: 16 GB, davon frei: 6,1 GB
 Grafikkarte: NVIDIA GeForce RTX 3060, 12 GB
 Läuft seit: 4 Stunden, 12 Minuten
 Laufwerke:
-- C:\: 18 GB frei von 476 GB
+- C:\: 18,3 GB frei von 476 GB
 @max
 Knapp: Auf **C:** sind nur noch **18 GB von 476 GB** frei, also unter 4 %. Für den Alltag reicht das noch, aber Windows-Updates und große Spiele werden bald eng.
 
@@ -142,11 +142,11 @@ Was für eine Grafikkarte hab ich eigentlich?
 system
 ```
 @ergebnis
-Betriebssystem: Ubuntu 24.04.1 LTS (Linux 6.8.0-45-generic)
+Betriebssystem: Linux (Ubuntu 24.04.1 LTS)
 Prozessor: AMD Ryzen 5 7600, 12 Kerne
 Arbeitsspeicher: 32 GB, davon frei: 24,2 GB
 Grafikkarte: AMD Radeon RX 7800 XT, 16 GB
-Läuft seit: 1 Tagen, 2 Stunden
+Läuft seit: 1 Tag, 2 Stunden
 Laufwerke:
 - /: 640 GB frei von 931 GB
 @max

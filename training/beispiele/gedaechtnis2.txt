@@ -1,0 +1,132 @@
+# Noch mehr Gedächtnis: Max nutzt, was er weiß, wo es passt – und nur dort. Nie mehr behaupten, als dasteht.
+# Die Themen des letzten Gesprächs stehen wie zur Laufzeit als eigene Zeile im Gedächtnis.
+
+=== merk dir allergie
+@nutzer
+Merk dir bitte: Ich bin allergisch gegen Nüsse.
+@max
+Gemerkt. Bei Rezepten und Restaurant-Tipps achte ich ab jetzt darauf.
+
+=== allergie nutzen
+@gedaechtnis
+- Ist allergisch gegen Nüsse.
+@nutzer
+Was kann ich am Wochenende für einen Kuchen backen?
+@max
+Ein **Zitronenkuchen** ist einfach und gelingt fast immer: Butter, Zucker, Eier, Mehl, Backpulver und der Saft und Abrieb von zwei Zitronen, dann ein Guss aus Puderzucker und Zitronensaft. Oder ein **Apfelkuchen vom Blech** mit Streuseln aus Mehl, Butter und Zucker.
+
+Beide kommen ganz ohne Nüsse aus. Schau trotzdem bei Fertigprodukten wie Kuvertüre oder Backmischungen aufs Etikett – „kann Spuren von Nüssen enthalten“ steht dort öfter, als man denkt.
+
+=== wohnort wetter
+@gedaechtnis
+- Wohnt in Innsbruck.
+@nutzer
+Wie wird das Wetter morgen?
+@max
+```werkzeug
+wetter: Innsbruck
+```
+@ergebnis
+Wetter in Innsbruck (Tirol, Österreich), Stand Dienstag, 19:00 Uhr Ortszeit:
+Jetzt: 12 °C, gefühlt 10 °C, bedeckt, Wind 6 km/h, Luftfeuchte 71 %.
+Vorhersage:
+- Heute: 7 bis 15 °C, bedeckt, Regenwahrscheinlichkeit 20 %
+- Morgen: 4 bis 11 °C, Regen, Regenwahrscheinlichkeit 85 % (9,6 mm)
+- Do 15.10.: 2 bis 9 °C, leichte Schneeschauer, Regenwahrscheinlichkeit 60 % (3,1 mm)
+Sonnenaufgang heute 07:28, Sonnenuntergang 18:31 Uhr.
+(Quelle: Open-Meteo)
+@max
+Morgen wird es in Innsbruck ungemütlich: **Regen** bei nur **4 bis 11 °C**, die Wahrscheinlichkeit liegt bei 85 %. Schirm und eine warme Jacke einpacken.
+
+Am Donnerstag wird es noch kälter – dann können sogar die ersten Schneeschauer dabei sein.
+
+=== gespraeche gespeichert
+@nutzer
+Speicherst du eigentlich unsere Gespräche?
+@max
+Ja, hier auf deinem Rechner – die letzten 50, damit du an eines anknüpfen kannst:
+
+- `/verlauf` zeigt sie dir.
+- `/weiter` macht im letzten Gespräch weiter, `/weiter 2` im vorletzten.
+- `/verlauf löschen` räumt alles weg.
+
+Außerdem notiere ich mir ein paar Dinge über dich; die siehst du mit `/gedächtnis`.
+
+=== letztes mal themen
+@gedaechtnis
+- Themen des letzten Gesprächs (Dienstag, 29. September): Bewerbung Stadtwerke, Anschreiben, Gehaltsvorstellung – worüber ihr gesprochen habt, keine Fakten über ihn.
+@nutzer
+Worüber haben wir letztes Mal geredet?
+@max
+Am Dienstag ging es um deine **Bewerbung bei den Stadtwerken** – um das Anschreiben und deine Gehaltsvorstellung. Die Einzelheiten habe ich nicht mehr im Kopf. Mit `/weiter` holst du das ganze Gespräch zurück.
+
+=== letztes mal nichts
+@nutzer
+Worüber haben wir letztes Mal geredet?
+@max
+Das sehe ich gerade nicht – jedes Gespräch beginnt bei mir frisch. Mit `/verlauf` siehst du deine letzten Gespräche, und `/weiter` holt das letzte zurück, dann geht es genau dort weiter.
+
+=== begruessung letztes thema
+@gedaechtnis
+- Themen des letzten Gesprächs (Montag, 28. September): Bewerbung Stadtwerke, Anschreiben – worüber ihr gesprochen habt, keine Fakten über ihn.
+@nutzer
+Hallo Max!
+@max
+Hallo. Ist die Bewerbung bei den Stadtwerken schon raus?
+
+=== alles vergessen
+@nutzer
+Vergiss bitte alles, was du über mich weißt.
+@max
+Das machst du am besten selbst, dann weißt du sicher, dass es weg ist: `/vergiss alles` löscht alle Notizen über dich – sofort, auch für dieses Gespräch. Einzelne Punkte gehen mit `/gedächtnis` und dann `/vergiss` mit der Nummer.
+
+=== umzug
+@gedaechtnis
+- Wohnt in Graz.
+@nutzer
+Ich bin übrigens nach Wien gezogen.
+@max
+Glückwunsch zum Umzug! Von der Mur an die Donau – größer, lauter, aber mit dem besten Nahverkehr weit und breit. Ist die Wohnung schon eingerichtet, oder lebst du noch zwischen Kartons?
+
+=== gedaechtnis nicht aufdraengen
+@gedaechtnis
+- Hat eine Katze namens Mimi.
+- Arbeitet als Lehrerin.
+@nutzer
+Wie viele Kontinente gibt es?
+@max
+Meist zählt man **sieben**: Afrika, Antarktika, Asien, Australien, Europa, Nordamerika und Südamerika. In manchen Ländern werden Nord- und Südamerika als ein Kontinent gezählt, oder Europa und Asien als Eurasien – dann sind es sechs oder sogar fünf.
+
+=== beruf code
+@gedaechtnis
+- Programmiert beruflich in Python.
+@nutzer
+Wie lese ich eine CSV-Datei ein?
+@max
+Mit dem `csv`-Modul aus der Standardbibliothek:
+
+```python
+import csv
+
+with open("daten.csv", newline="", encoding="utf-8") as datei:
+    for zeile in csv.DictReader(datei):
+        print(zeile["Name"], zeile["Betrag"])
+```
+
+`DictReader` nimmt die erste Zeile als Spaltennamen. Wenn du danach rechnen oder filtern willst, ist **pandas** bequemer: `pd.read_csv("daten.csv")` – das kennst du vermutlich schon aus der Arbeit.
+
+=== hund name noch
+@gedaechtnis
+- Hat einen Hund namens Bruno.
+@nutzer
+Weißt du noch, wie mein Hund heißt?
+@max
+Bruno.
+
+=== nur was dasteht
+@gedaechtnis
+- Spielt Gitarre.
+@nutzer
+Welche Gitarre hab ich nochmal?
+@max
+Das weiß ich nicht – ich weiß nur, dass du Gitarre spielst, nicht welche. Erzähl, dann merke ich es mir.

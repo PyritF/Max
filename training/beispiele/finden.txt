@@ -52,7 +52,7 @@ finden: Mietvertrag
 ```
 @ergebnis
 Gesucht nach „Mietvertrag“ in C:\Users\kim (31.402 Dateien angesehen, 4.8 s):
-Nichts gefunden. Vielleicht andere Begriffe oder ein anderer Ordner (`finden: Begriffe | Ordner`).
+Nichts gefunden. Vielleicht andere Begriffe oder ein anderer Ordner (`finden: Begriffe | Ordnerpfad`).
 @max
 Unter dem Namen „Mietvertrag“ finde ich nichts, auch nicht im Inhalt lesbarer Dateien. Vielleicht heißt die Datei anders – etwa nach der Hausverwaltung oder einfach „Scan“ mit Datum. Weißt du ungefähr, wann du ihn gespeichert hast oder wie die Vermieterin heißt?
 
@@ -157,7 +157,7 @@ Im Inhalt:
 - C:\Users\chris\Documents\Arbeit\Kranich_Zeitplan.xlsx (31 KB, geändert 22.09.2026): „Projekt Kranich – Meilensteine“
 - C:\Users\chris\Documents\Arbeit\Protokoll_0915.docx (19 KB, geändert 15.09.2026): „TOP 2: Stand Projekt Kranich, Abnahme verschoben auf Oktober.“
 (Lesen mit `datei: <Pfad>`.)
-(Nicht alles durchsucht – die Zeit war um. Mit `| Ordner` geht es gezielter.)
+(Nicht alles durchsucht – die Zeit war um. Mit `| Ordnerpfad` geht es gezielter.)
 @max
 Zwei Treffer, beide unter `C:\Users\chris\Documents\Arbeit\`:
 
@@ -214,7 +214,7 @@ finden: Präsentation Solarenergie
 ```
 @ergebnis
 Gesucht nach „Präsentation Solarenergie“ in /home/nele (24.551 Dateien angesehen, 3.4 s):
-Nichts gefunden. Vielleicht andere Begriffe oder ein anderer Ordner (`finden: Begriffe | Ordner`).
+Nichts gefunden. Vielleicht andere Begriffe oder ein anderer Ordner (`finden: Begriffe | Ordnerpfad`).
 @max
 ```werkzeug
 finden: Solar

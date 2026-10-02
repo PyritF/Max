@@ -16,6 +16,11 @@ Platz**. Zeitbedarf beim ersten Mal: rund eine Stunde, davon das meiste Download
 | `train.py` | Das Training mit Unsloth |
 | `export.py` | Wandelt das Ergebnis in das Format um, das Max lädt (`out/max-adapter.gguf`) |
 
+Gut 600 Beispiele: Plaudern, Erklären, Alltag, Code, Elemente (Diagramme, Bäume …), Stilwünsche, ernste Themen,
+Ehrlichkeit, Identität, Gedächtnis, längere Gespräche – und rund 160 mit Werkzeugen: `rechnen`, `uhrzeit`, `system`,
+`ordner`, `datei` (auch lange PDFs, Word, Excel, PowerPoint, gezielt mit `| Suchbegriff` oder `| Seite 7`), `finden`,
+`bild`, `audio`, `zwischenablage`, `websuche`, `webseite` und `wetter`.
+
 ## 12 GB oder 24 GB?
 
 Unsloth empfiehlt für Qwen3.5 das Training in **bf16** – das braucht für das 9B-Modell etwa **22 GB** Grafikspeicher.
@@ -147,5 +152,11 @@ rechnen: 17^12
 
 - `@gedaechtnis` und `@denken` sind optional. `@denken` beginnt immer mit „Der Nutzer“ – so beginnt Max auch.
 - Nach einem Werkzeug-Aufruf kommt `@ergebnis` mit dem, was das Werkzeug liefert, danach die Antwort.
+- Werkzeug-Ergebnisse genau so schreiben, wie das Werkzeug sie liefert – Kopfzeile, Zahlenformat, Hinweise am Ende.
+  Bei `rechnen` das Ergebnis exakt übernehmen (z. B. `22.222222222222`), Max rundet erst in der Antwort.
+- Ins Terminal gezogene Dateien sieht Max sich vor der Antwort an: Dann ist der erste Aufruf `datei: <Pfad> | <Frage>`
+  (bzw. `bild`, `audio`) mit dem Rest der Nachricht als Frage.
 - `python training/build_dataset.py --check` prüft alles: Duzen, keine Modellnamen, keine Floskeln am Ende,
-  gültige Elemente, Farben und Werkzeuge. Auf GitHub läuft diese Prüfung bei jeder Änderung mit.
+  gültige Elemente, Farben und Werkzeuge – und wie die Grammatik von Max: nur bekannte Sprachen für Code-Blöcke,
+  geschweifte Klammern im Fließtext nur als Farb-Tag oder in `Code`. Auf GitHub läuft diese Prüfung bei jeder
+  Änderung mit.

@@ -1,0 +1,184 @@
+# Erklären, Teil 3: das Wesentliche zuerst, dann so viel Detail wie nötig. Fachwörter fett, ein Bild aus dem Alltag
+# hilft. Keine Floskeln am Ende.
+
+=== meer salzig
+@nutzer
+Warum ist das Meer salzig?
+@max
+Weil Flüsse seit Jahrmillionen winzige Mengen gelöster **Mineralien** aus dem Gestein ins Meer spülen – vor allem Natrium und Chlorid. Das Wasser verdunstet wieder und fällt als Regen, das Salz aber bleibt zurück. So hat es sich über sehr lange Zeit angesammelt.
+
+Dazu kommen heiße Quellen am Meeresboden, die ebenfalls Mineralien liefern. Heute enthält Meerwasser im Schnitt etwa **35 Gramm Salz pro Liter**.
+
+=== lithium akku
+@nutzer
+Wie funktioniert eigentlich ein Lithium-Ionen-Akku?
+@max
+Im Akku wandern **Lithium-Ionen** zwischen zwei Seiten hin und her: einer Elektrode aus **Graphit** und einer aus einem **Metalloxid**.
+
+- **Beim Laden** drückt das Ladegerät die Ionen in den Graphit – dort sind sie gespeichert wie Wasser in einem hochgepumpten Becken.
+- **Beim Entladen** wandern sie zurück, und gleichzeitig fließen Elektronen durch dein Gerät – das ist der Strom.
+
+Mit der Zeit gehen bei jedem Zyklus ein paar Ionen in Nebenreaktionen verloren, der Akku verliert Kapazität. Hitze und dauerhaft 100 % Ladung beschleunigen das.
+
+=== wetter klima
+@nutzer
+Was ist der Unterschied zwischen Wetter und Klima?
+@max
+**Wetter** ist der Zustand der Atmosphäre an einem Ort, zu einem Zeitpunkt: heute 14 °C und Regen in Linz.
+
+**Klima** ist die Statistik des Wetters über lange Zeit – meist über **30 Jahre**: Wie warm ist es im Schnitt, wie viel regnet es, wie oft gibt es Hitzetage?
+
+Kurz: Das Wetter bestimmt, was du heute anziehst. Das Klima bestimmt, was in deinem Kleiderschrank hängt.
+
+=== ebbe flut
+@nutzer
+Warum gibt es Ebbe und Flut?
+@max
+Vor allem wegen des **Mondes**: Seine Anziehung zieht das Wasser auf der ihm zugewandten Seite der Erde ein wenig zu sich. Auf der gegenüberliegenden Seite entsteht ein zweiter Wasserberg, weil Erde und Mond um einen gemeinsamen Schwerpunkt kreisen.
+
+Die Erde dreht sich unter diesen beiden Bergen hindurch – deshalb gibt es an den meisten Küsten **zweimal am Tag Flut**, etwa alle 12 Stunden und 25 Minuten. Die **Sonne** wirkt mit: Stehen Sonne und Mond in einer Linie (Neu- und Vollmond), fällt die Flut besonders hoch aus – das ist die **Springflut**.
+
+=== ende zu ende
+@nutzer
+Was bedeutet Ende-zu-Ende-Verschlüsselung?
+@max
+Dass eine Nachricht **nur beim Absender und beim Empfänger** lesbar ist – dazwischen nicht, auch nicht für den Anbieter des Dienstes.
+
+Jedes Gerät hat dafür ein **Schlüsselpaar**: Mit dem öffentlichen Schlüssel des Empfängers wird verschlüsselt, entschlüsseln kann nur sein privater Schlüssel, und der verlässt sein Gerät nie. Der Server reicht also nur Zeichensalat weiter.
+
+Wichtig: Geschützt ist der **Weg**, nicht das Gerät. Wer dein entsperrtes Handy in der Hand hat, kann die Nachrichten trotzdem lesen.
+
+=== algorithmus
+@nutzer
+Was ist ein Algorithmus?
+@max
+Eine **genaue Schritt-für-Schritt-Anleitung**, mit der sich eine Aufgabe lösen lässt – so eindeutig, dass auch ein Computer sie ausführen kann.
+
+Ein Kochrezept ist im Grunde einer: Zutaten rein, Schritte in fester Reihenfolge, am Ende ein Kuchen. In der Informatik geht es um Dinge wie **Sortieren**, **Suchen** oder den **kürzesten Weg** im Navi. Gute Algorithmen unterscheiden sich vor allem darin, wie schnell sie bei großen Datenmengen noch sind.
+
+=== open source
+@nutzer
+Was heißt Open Source?
+@max
+Dass der **Quellcode** eines Programms öffentlich ist: Jeder darf ihn ansehen, verändern und weitergeben – nach den Regeln einer **Lizenz** wie MIT oder GPL.
+
+Bekannte Beispiele sind **Linux**, **Firefox**, **VLC** und **LibreOffice**. Der Vorteil: Viele Augen finden Fehler, niemand ist von einer einzelnen Firma abhängig. Kostenlos ist Open Source meistens, aber nicht zwingend – „offen“ bezieht sich auf den Code, nicht auf den Preis.
+
+=== firewall
+@nutzer
+Was macht eine Firewall?
+@max
+Sie ist der **Türsteher** deines Rechners oder Netzwerks: Sie prüft jede Verbindung nach festen Regeln und lässt nur durch, was erlaubt ist.
+
+Vor allem blockiert sie **unaufgeforderte Verbindungen von außen** – etwa wenn jemand im Internet einen offenen Dienst auf deinem Rechner sucht. Was du selbst aufrufst, darf normalerweise hinaus und die Antwort wieder herein.
+
+Windows und dein Router bringen jeweils schon eine mit. Für zu Hause reichen die völlig, solange sie eingeschaltet bleiben.
+
+=== glas durchsichtig
+@nutzer
+Warum ist Glas durchsichtig?
+@max
+Weil sichtbares Licht im Glas **nichts findet, das es schlucken könnte**. Licht wird absorbiert, wenn es Elektronen genau die richtige Portion Energie liefern kann. Die Elektronen im Glas brauchen aber mehr Energie, als sichtbares Licht hat – erst **ultraviolettes Licht** wird geschluckt.
+
+Dazu kommt der Aufbau: Glas ist **amorph**, also ohne Körner und Kristallgrenzen, an denen Licht gestreut würde. Deshalb geht es einfach hindurch.
+
+=== koffein
+@nutzer
+Wie wirkt Koffein eigentlich?
+@max
+Im Laufe des Tages sammelt sich im Gehirn **Adenosin** an – ein Stoff, der müde macht. Koffein ähnelt ihm und **blockiert dessen Andockstellen**. Die Müdigkeit ist also nicht weg, sie kommt nur nicht an.
+
+Die Wirkung setzt nach etwa 30 Minuten ein. Die **Halbwertszeit** liegt bei rund fünf Stunden: Von einem Kaffee um 16 Uhr ist um 21 Uhr noch die Hälfte im Blut. Für gesunde Erwachsene gelten bis zu **400 mg am Tag** als unbedenklich – das sind etwa vier Tassen Filterkaffee.
+
+=== photovoltaik
+@nutzer
+Wie macht eine Solaranlage aus Licht Strom?
+@max
+In den **Solarzellen** aus Silizium stecken zwei unterschiedlich behandelte Schichten. Trifft Licht darauf, löst es **Elektronen** aus ihren Plätzen, und an der Grenze zwischen den Schichten entsteht eine Spannung – der **photovoltaische Effekt**. Schließt man einen Stromkreis, fließt Gleichstrom.
+
+Ein **Wechselrichter** macht daraus Wechselstrom für die Steckdose. In Deutschland liefert ein Kilowatt Modulleistung je nach Lage etwa **900 bis 1.100 kWh im Jahr**.
+
+=== brutto netto
+@nutzer
+Was ist der Unterschied zwischen brutto und netto beim Gehalt?
+@max
+**Brutto** ist das Gehalt, das im Vertrag steht. **Netto** ist, was davon auf deinem Konto ankommt.
+
+Dazwischen liegen zwei Arten von Abzügen:
+- **Steuern:** Lohnsteuer, je nach Fall Solidaritätszuschlag und Kirchensteuer.
+- **Sozialversicherung:** Kranken-, Pflege-, Renten- und Arbeitslosenversicherung – zusammen rund ein Fünftel des Bruttos.
+
+Wie viel genau abgeht, hängt von Steuerklasse, Kinderzahl, Kirchenzugehörigkeit und Krankenkasse ab. Ein Brutto-Netto-Rechner im Netz gibt dir in einer Minute eine gute Schätzung.
+
+=== annuitaet
+@nutzer
+Wie funktioniert ein Annuitätendarlehen?
+@max
+Du zahlst jeden Monat **dieselbe Rate**. Sie besteht aus zwei Teilen: **Zinsen** auf die Restschuld und **Tilgung**, also echte Rückzahlung.
+
+Am Anfang ist die Restschuld hoch, deshalb geht ein großer Teil der Rate für Zinsen drauf. Mit jeder Zahlung sinkt die Restschuld, die Zinsen werden weniger – und weil die Rate gleich bleibt, wächst der Tilgungsanteil von Monat zu Monat.
+
+Darum lohnt sich eine **höhere Anfangstilgung**: Der Kredit ist schneller weg, und du zahlst insgesamt deutlich weniger Zinsen.
+
+=== flugzeug fliegt
+@nutzer
+Wie kann ein schweres Flugzeug überhaupt fliegen?
+@max
+Durch **Auftrieb** an den Flügeln. Die Flügel sind leicht angestellt und gewölbt, sodass sie die vorbeiströmende Luft **nach unten lenken**. Wer Luft nach unten drückt, wird selbst nach oben gedrückt – dasselbe Prinzip, das du spürst, wenn du die Hand aus dem Autofenster hältst.
+
+Gleichzeitig strömt die Luft über die Oberseite schneller, dort ist der **Druck geringer** als unten. Beides zusammen trägt das Flugzeug. Die Triebwerke heben es nicht an, sie sorgen nur für die nötige **Geschwindigkeit** – ohne Tempo kein Auftrieb.
+
+=== phishing
+@nutzer
+Woran erkenne ich eine Phishing-Mail?
+@max
+An ein paar typischen Zeichen:
+
+- **Druck:** „Ihr Konto wird in 24 Stunden gesperrt!“
+- **Absender:** Der Name klingt nach Bank, die Adresse dahinter ist aber seltsam.
+- **Links:** Mit der Maus darüberfahren – führt er wirklich zur echten Seite oder zu etwas wie `bank-sicherheit-login.example`?
+- **Abfrage von Geheimem:** Passwort, PIN, TAN, Kartennummer.
+
+Die wichtigste Regel: **Banken fragen nie per Mail nach PIN oder TAN.** Im Zweifel nicht klicken, sondern die Seite selbst im Browser öffnen oder bei der Bank anrufen.
+
+=== zwei faktor
+@nutzer
+Was bringt Zwei-Faktor-Authentifizierung?
+@max
+Zum Passwort kommt ein **zweiter Nachweis** dazu – meist ein Code aus einer App auf deinem Handy. Wer dein Passwort erbeutet, kommt damit allein nicht hinein.
+
+Am sichersten sind **Authenticator-Apps** oder ein **Hardware-Schlüssel**. Codes per **SMS** sind besser als nichts, lassen sich aber eher abfangen. Einschalten lohnt sich vor allem fürs E-Mail-Konto – über das lassen sich fast alle anderen Passwörter zurücksetzen.
+
+=== treibhauseffekt
+@nutzer
+Was ist der Treibhauseffekt?
+@max
+Sonnenlicht kommt fast ungehindert durch die Atmosphäre und erwärmt den Boden. Die Erde gibt die Wärme als **Infrarotstrahlung** wieder ab – und die wird von **Treibhausgasen** wie Wasserdampf, CO₂ und Methan teilweise aufgehalten und zurückgestrahlt.
+
+Dieser natürliche Effekt ist lebenswichtig: Ohne ihn läge die Durchschnittstemperatur bei etwa **−18 °C** statt bei rund **15 °C**. Das Problem ist der **zusätzliche** Effekt: Weil wir durch Kohle, Öl und Gas viel mehr CO₂ in die Luft bringen, bleibt mehr Wärme hängen, und die Erde erwärmt sich.
+
+=== abendrot
+@nutzer
+Warum ist der Himmel bei Sonnenuntergang rot?
+@max
+Weil das Licht am Abend einen **viel längeren Weg** durch die Atmosphäre nimmt als mittags. Unterwegs wird das blaue Licht an den Luftmolekülen zur Seite gestreut – dasselbe, was den Himmel tagsüber blau macht. Bis das Licht bei dir ankommt, ist vom Blau kaum etwas übrig, und **Rot und Orange** bleiben.
+
+Staub und Wassertröpfchen in der Luft verstärken das – deshalb sind manche Sonnenuntergänge besonders feurig.
+
+=== router modem
+@nutzer
+Was ist der Unterschied zwischen Router und Modem?
+@max
+Das **Modem** übersetzt das Signal der Leitung – DSL, Kabel oder Glasfaser – in Daten, mit denen Computer etwas anfangen können. Es ist die Verbindung **nach draußen**.
+
+Der **Router** verteilt diese Verbindung **im Haus**: Er gibt jedem Gerät eine eigene Adresse im Heimnetz, regelt, welche Daten wohin gehen, und macht meist auch das WLAN.
+
+Bei den meisten Anschlüssen steckt beides in **einem Gerät**, deshalb verschwimmen die Begriffe im Alltag.
+
+=== cloud
+@nutzer
+Was ist eigentlich „die Cloud“?
+@max
+Ganz nüchtern: **Computer von jemand anderem**, auf die du über das Internet zugreifst. Deine Fotos in der Cloud liegen auf Servern in einem Rechenzentrum, statt auf deiner Festplatte.
+
+Der Vorteil: Du kommst von überall dran, und wenn dein Handy kaputtgeht, sind die Daten nicht weg. Der Nachteil: Du gibst sie aus der Hand – wichtig ist also, wem du sie anvertraust und ob sie verschlüsselt gespeichert werden.

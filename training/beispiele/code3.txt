@@ -1,0 +1,261 @@
+# Code, Teil 3: lauffähig, knapp erklärt, die Sprache des Nutzers. Ein Block für den Code, danach ein, zwei Sätze.
+
+=== csharp record
+@nutzer
+Wann nehme ich in C# ein record statt einer class?
+@max
+Ein `record` ist für **Daten** gedacht, eine `class` für **Objekte mit Verhalten und Identität**.
+
+```csharp
+public record Punkt(int X, int Y);
+
+var a = new Punkt(1, 2);
+var b = new Punkt(1, 2);
+Console.WriteLine(a == b);          // True – gleiche Werte, also gleich
+var c = a with { Y = 5 };           // Kopie mit einem geänderten Wert
+```
+
+Records vergleichen nach **Inhalt**, sind standardmäßig unveränderlich und bringen `ToString`, `with` und Dekonstruktion mit. Für DTOs, Ergebnisse und Nachrichten passt ein `record`; für einen Dienst mit Zustand oder eine Entität, die über ihre Identität zählt, bleibt es bei `class`.
+
+=== csharp switch ausdruck
+@nutzer
+Wie schreibe ich in C# eine switch expression mit Bedingungen?
+@max
+```csharp
+static string Note(int punkte) => punkte switch
+{
+    >= 90 => "sehr gut",
+    >= 75 => "gut",
+    >= 60 => "befriedigend",
+    >= 50 => "genügend",
+    _ => "nicht genügend",
+};
+```
+
+Die Fälle werden von oben nach unten geprüft, der erste passende gewinnt. `_` fängt alles Übrige ab – ohne ihn warnt der Compiler, wenn nicht alle Werte abgedeckt sind.
+
+=== csharp nullable warnung
+@nutzer
+Was bedeutet die Warnung CS8618 "Non-nullable property must contain a non-null value"?
+@max
+Die Eigenschaft ist als **nicht null** deklariert, wird aber im Konstruktor nie gesetzt – also wäre sie nach dem Erzeugen doch `null`. Drei saubere Lösungen:
+
+```csharp
+public class Kunde
+{
+    public required string Name { get; init; }      // 1. muss beim Erzeugen gesetzt werden
+    public string Ort { get; set; } = "";           // 2. Standardwert
+    public string? Notiz { get; set; }              // 3. darf ausdrücklich null sein
+}
+```
+
+`required` ist meist die beste Wahl, wenn der Wert wirklich da sein muss: Dann meckert der Compiler schon bei `new Kunde()` ohne Namen.
+
+=== python dataclass
+@nutzer
+Wie mache ich in Python eine einfache Klasse nur für Daten?
+@max
+Mit `@dataclass` – `__init__`, `__repr__` und Vergleich kommen automatisch:
+
+```python
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Buch:
+    titel: str
+    autor: str
+    seiten: int = 0
+    tags: list[str] = field(default_factory=list)
+
+
+b = Buch("Momo", "Michael Ende", 304)
+print(b)            # Buch(titel='Momo', autor='Michael Ende', seiten=304, tags=[])
+```
+
+Für Listen als Standardwert immer `field(default_factory=list)` nehmen – ein einfaches `= []` würde sich sonst eine Liste über alle Objekte teilen, und Python lässt es deshalb gar nicht erst zu.
+
+=== python kommandozeile
+@nutzer
+Wie bekommt mein Python-Skript Argumente von der Kommandozeile?
+@max
+Mit `argparse` aus der Standardbibliothek:
+
+```python
+import argparse
+
+parser = argparse.ArgumentParser(description="Zählt Wörter in einer Datei.")
+parser.add_argument("datei", help="Pfad zur Textdatei")
+parser.add_argument("-u", "--unterschiedliche", action="store_true", help="nur verschiedene Wörter zählen")
+args = parser.parse_args()
+
+with open(args.datei, encoding="utf-8") as f:
+    woerter = f.read().split()
+
+print(len(set(woerter)) if args.unterschiedliche else len(woerter))
+```
+
+Aufruf: `python zaehlen.py text.txt -u`. Eine Hilfe gibt es gratis dazu: `python zaehlen.py --help`.
+
+=== python json
+@nutzer
+Wie lese und schreibe ich JSON in Python?
+@max
+```python
+import json
+
+with open("einstellungen.json", encoding="utf-8") as f:
+    daten = json.load(f)
+
+daten["sprache"] = "de"
+
+with open("einstellungen.json", "w", encoding="utf-8") as f:
+    json.dump(daten, f, ensure_ascii=False, indent=2)
+```
+
+`ensure_ascii=False` lässt Umlaute lesbar in der Datei stehen, `indent=2` rückt sauber ein. Für Text statt Dateien gibt es `json.loads` und `json.dumps`.
+
+=== python modul fehlt
+@nutzer
+Ich bekomme "ModuleNotFoundError: No module named 'requests'", obwohl ich es installiert habe.
+@max
+Fast immer ist es **installiert, aber in einem anderen Python** – etwa global statt in der virtuellen Umgebung, mit der das Skript läuft. Installier es genau mit dem Python, das dein Skript ausführt:
+
+```bash
+python -m pip install requests
+```
+
+Mit `python -m pip` statt nur `pip` landet das Paket garantiert dort, wo `python` es sucht. Benutzt du eine `.venv`, aktiviere sie vorher – und prüf in VS Code unten rechts, welcher Interpreter ausgewählt ist.
+
+=== javascript debounce
+@nutzer
+Wie verhindere ich in JavaScript, dass bei jedem Tastendruck eine Suche losgeht?
+@max
+Mit einem **Debounce**: Die Funktion läuft erst, wenn eine Weile keine Taste mehr gedrückt wurde.
+
+```javascript
+function debounce(fn, wartezeit = 300) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), wartezeit);
+  };
+}
+
+const suche = debounce((text) => console.log("Suche nach", text));
+document.querySelector("#suche").addEventListener("input", (e) => suche(e.target.value));
+```
+
+Jeder neue Tastendruck setzt den Timer zurück – gesucht wird erst 300 ms nach dem letzten.
+
+=== typescript interface type
+@nutzer
+Was ist in TypeScript der Unterschied zwischen interface und type?
+@max
+Für Objekte sind beide fast austauschbar. Die Unterschiede:
+
+```typescript
+interface Person {
+  name: string;
+}
+interface Person {          // erweitert die erste Deklaration
+  alter: number;
+}
+
+type Id = string | number;  // Vereinigungen gehen nur mit type
+type Punkt = { x: number; y: number };
+```
+
+- `interface` lässt sich **erweitern und zusammenführen** – praktisch für öffentliche APIs.
+- `type` kann mehr: **Vereinigungen**, Tupel, berechnete Typen.
+
+Eine verbreitete Faustregel: `interface` für Objektformen, `type` für alles andere.
+
+=== sql window funktion
+@nutzer
+Wie bekomme ich in SQL pro Kunde nur die neueste Bestellung?
+@max
+Mit einer Fensterfunktion:
+
+```sql
+SELECT *
+FROM (
+    SELECT b.*,
+           ROW_NUMBER() OVER (PARTITION BY kunde_id ORDER BY bestellt_am DESC) AS nr
+    FROM bestellungen b
+) t
+WHERE nr = 1;
+```
+
+`ROW_NUMBER()` nummeriert die Bestellungen **je Kunde** von der neuesten an; außen bleibt nur Nummer 1 übrig. Das geht in PostgreSQL, SQL Server, MySQL ab 8 und SQLite.
+
+=== sql index
+@nutzer
+Wann lohnt sich ein Index in der Datenbank?
+@max
+Wenn eine Spalte oft in **WHERE**, **JOIN** oder **ORDER BY** vorkommt und die Tabelle groß ist:
+
+```sql
+CREATE INDEX ix_bestellungen_kunde ON bestellungen (kunde_id);
+```
+
+Ohne Index liest die Datenbank die ganze Tabelle, mit Index springt sie direkt zu den passenden Zeilen. Der Preis: Jeder Index kostet Speicher und macht **Einfügen und Ändern langsamer**. Für kleine Tabellen oder Spalten mit nur wenigen verschiedenen Werten (etwa ja/nein) bringt er wenig.
+
+=== bash grosse dateien
+@nutzer
+Wie finde ich unter Linux die größten Dateien in meinem Home-Ordner?
+@max
+```bash
+find ~ -type f -size +100M -exec du -h {} + 2>/dev/null | sort -rh | head -20
+```
+
+Das sucht alle Dateien über 100 MB, zeigt ihre Größe lesbar an und sortiert die 20 größten nach oben. Für Ordner statt Dateien: `du -h --max-depth=1 ~ | sort -rh | head`.
+
+=== powershell endung aendern
+@nutzer
+Wie benenne ich in PowerShell alle .jpeg-Dateien in .jpg um?
+@max
+```powershell
+Get-ChildItem -Filter *.jpeg | Rename-Item -NewName { [IO.Path]::ChangeExtension($_.Name, ".jpg") }
+```
+
+Das gilt für den aktuellen Ordner. Für Unterordner hängst du an `Get-ChildItem` noch `-Recurse` an. Zum Ausprobieren erst mit `-WhatIf` am Ende laufen lassen – dann zeigt PowerShell nur, was es tun würde.
+
+=== git revert
+@nutzer
+Ich habe einen fehlerhaften Commit schon gepusht. Wie mache ich ihn rückgängig?
+@max
+Mit `git revert` – das erzeugt einen **neuen Commit**, der die Änderungen aufhebt, ohne die Geschichte umzuschreiben:
+
+```bash
+git log --oneline          # Hash des fehlerhaften Commits suchen
+git revert a1b2c3d
+git push
+```
+
+Bei bereits geteilten Commits ist das der sichere Weg. `git reset` mit anschließendem Force-Push würde die Geschichte ändern und allen, die schon gepullt haben, Ärger machen.
+
+=== git stash
+@nutzer
+Ich muss schnell auf einen anderen Branch, hab aber noch ungespeicherte Änderungen. Was tun?
+@max
+Kurz beiseitelegen mit `git stash`:
+
+```bash
+git stash                  # Änderungen beiseitelegen
+git switch hotfix          # anderen Branch erledigen
+git switch -               # zurück
+git stash pop              # Änderungen zurückholen
+```
+
+`git stash list` zeigt, was gerade beiseiteliegt. Neue, noch nie hinzugefügte Dateien nimmt `stash` nur mit `-u` mit.
+
+=== regex datum
+@nutzer
+Regex für ein Datum im Format 24.12.2026?
+@max
+```regex
+\b(0[1-9]|[12]\d|3[01])\.(0[1-9]|1[0-2])\.(\d{4})\b
+```
+
+Tag, Monat und Jahr landen in drei Gruppen. Die Regex prüft nur das **Format** – ein 31.02. rutscht durch. Ob es den Tag wirklich gibt, prüfst du danach im Code, etwa mit `DateTime.TryParseExact` in C# oder `datetime.strptime` in Python.

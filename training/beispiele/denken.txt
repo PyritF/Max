@@ -1,0 +1,144 @@
+# Nachdenken: kurz, sachlich, beginnt mit "Der Nutzer". Es klärt, was gefragt ist, ob ein Werkzeug nötig ist
+# (dann mit seinem Namen in Backticks) und wie die Antwort klingen soll – und dann kommt sie.
+
+=== denken grundpreis
+@nutzer
+Was ist günstiger: 750 g Kaffee für 3,49 € oder 1 kg für 4,29 €?
+@denken
+Der Nutzer will Grundpreise vergleichen. Ich rechne den Kilopreis der kleinen Packung mit `rechnen` aus.
+@max
+```werkzeug
+rechnen: 3.49 / 0.75
+```
+@ergebnis
+3.49 / 0.75 = 4.653333333333
+@max
+Die **1-kg-Packung**: Sie kostet 4,29 € pro Kilo, die kleine umgerechnet 4,65 € pro Kilo – rund 36 Cent mehr.
+
+=== denken prozent
+@nutzer
+Wie viel sind 17,5 % von 2.340 €?
+@denken
+Der Nutzer will einen Prozentwert. Ich verwende `rechnen`.
+@max
+```werkzeug
+rechnen: 2340 * 17.5%
+```
+@ergebnis
+2340 * 17.5% = 409.5
+@max
+**409,50 €**.
+
+=== denken kein werkzeug
+@nutzer
+Welcher Wochentag war der 1. Januar 2000?
+@denken
+Der Nutzer fragt nach einem bekannten Datum. Das weiß ich sicher: ein Samstag. Kein Werkzeug nötig.
+@max
+Ein **Samstag** – der Tag, an dem die Welt feststellte, dass der befürchtete Jahr-2000-Fehler weitgehend ausblieb.
+
+=== denken rueckfrage
+@nutzer
+Mach das mal kleiner.
+@denken
+Der Nutzer bezieht sich auf etwas, das ich nicht kenne – im Gespräch gibt es nichts, was man verkleinern könnte. Kurz nachfragen.
+@max
+Was genau soll kleiner werden – ein Bild, eine Datei, ein Text? Sag mir, worum es geht.
+
+=== denken auto meilen
+@nutzer
+Mein Mietwagen in den USA zeigt 45 Meilen pro Stunde als Limit an. Wie schnell ist das?
+@denken
+Der Nutzer will Meilen in Kilometer umrechnen. Eine Meile sind 1,609344 km. Ich nutze `rechnen`.
+@max
+```werkzeug
+rechnen: 45 * 1.609344
+```
+@ergebnis
+45 * 1.609344 = 72.42048
+@max
+Etwa **72 km/h**. Auf dem Tacho stehen in US-Mietwagen meist beide Skalen – die km/h sind oft die kleinere, innere.
+
+=== denken finanzierung
+@nutzer
+Ein Laptop kostet 1.299 €. Was zahle ich im Monat, wenn ich ihn auf 24 Monate finanziere, ohne Zinsen?
+@denken
+Der Nutzer will eine Monatsrate ohne Zinsen. Ich teile mit `rechnen`.
+@max
+```werkzeug
+rechnen: 1299 / 24
+```
+@ergebnis
+1299 / 24 = 54.125
+@max
+Rund **54,13 € im Monat**. Schau beim Angebot genau hin: „0 %“ gilt oft nur mit Ratenschutz oder Kontoführungsgebühr, und nach einer Aktionszeit kann ein hoher Zins folgen.
+
+=== denken aktuell suchen
+@nutzer
+Gibt es gerade Probleme mit dem Zug zwischen Wien und Salzburg?
+@denken
+Der Nutzer fragt nach der aktuellen Lage bei der Bahn, das kann ich nicht wissen. Ich rufe `websuche` auf.
+@max
+```werkzeug
+websuche: Zug Wien Salzburg Störung aktuell
+```
+@ergebnis
+Treffer für "Zug Wien Salzburg Störung aktuell":
+1. Weststrecke: Bauarbeiten am Wochenende – verkehr.example
+   https://verkehr.example/bahn/weststrecke-bauarbeiten
+   Wegen Gleisarbeiten zwischen St. Pölten und Linz fallen am Samstag und Sonntag einzelne Züge aus. Die Fahrzeit verlängert sich um bis zu 40 Minuten.
+@max
+Laut verkehr.example gibt es am **Wochenende Bauarbeiten** zwischen St. Pölten und Linz: Einzelne Züge fallen aus, und die Fahrt dauert bis zu **40 Minuten länger**. Unter der Woche ist dort nichts gemeldet – vor der Abfahrt lohnt trotzdem ein Blick in die Fahrplanauskunft.
+
+=== denken gefuehl
+@nutzer
+Ich bin so aufgeregt, morgen ist mein erster Tag im neuen Job!
+@denken
+Der Nutzer freut sich und ist nervös. Mitfreuen, ein, zwei praktische Gedanken, kein Sarkasmus.
+@max
+Glückwunsch! Aufregung vor dem ersten Tag ist ein gutes Zeichen – es ist dir wichtig.
+
+Für morgen reicht wenig: Weg und Uhrzeit klären, etwas früher da sein, und dir die Namen aufschreiben, die du hörst. Niemand erwartet, dass du am ersten Tag schon alles weißt – Fragen stellen ist ausdrücklich erlaubt.
+
+=== denken meinung
+@nutzer
+Lohnt sich ein E-Reader, oder reichen normale Bücher?
+@denken
+Der Nutzer will eine Einschätzung. Eine ehrliche Meinung mit Begründung, kurz Vor- und Nachteile.
+@max
+Wenn du **viel liest** oder oft unterwegs bist: ja. Ein E-Reader wiegt so viel wie ein Taschenbuch, trägt Hunderte Bücher, lässt sich auch in der Sonne gut lesen und die Schrift beliebig vergrößern. Viele Bibliotheken verleihen E-Books sogar kostenlos.
+
+Wenn du nur ein paar Bücher im Jahr liest, lohnt er sich kaum. Und manches – Bildbände, Kochbücher, Bücher zum Verschenken – ist auf Papier einfach schöner.
+
+=== denken datei suchen
+@nutzer
+Wo hab ich nochmal die Bedienungsanleitung vom Geschirrspüler?
+@denken
+Der Nutzer sucht eine Datei auf seinem Rechner. Ich verwende `finden`.
+@max
+```werkzeug
+finden: Geschirrspüler Anleitung
+```
+@ergebnis
+Gesucht nach „Geschirrspüler Anleitung“ in C:\Users\robin (52.318 Dateien angesehen, 7.4 s):
+Im Namen:
+- C:\Users\robin\Documents\Haushalt\Geschirrspüler_Anleitung.pdf (3.9 MB, geändert 08.03.2025)
+(Lesen mit `datei: <Pfad>`.)
+@max
+Hier: `C:\Users\robin\Documents\Haushalt\Geschirrspüler_Anleitung.pdf` – im Ordner **Haushalt** in deinen Dokumenten.
+
+=== denken nach ergebnis
+@nutzer
+Wie viel zahle ich im Jahr für meinen Handyvertrag, wenn er 21 % teurer wird? Jetzt sind es 350 € im Jahr.
+@denken
+Der Nutzer will den neuen Jahrespreis. Ich verwende `rechnen` mit 350 * 1.21.
+@max
+```werkzeug
+rechnen: 350 * 1.21
+```
+@ergebnis
+350 * 1.21 = 423.5
+@denken
+Der Nutzer zahlt künftig 423,50 € im Jahr, also 73,50 € mehr. Kurz antworten und erwähnen, dass eine Preiserhöhung oft ein Sonderkündigungsrecht auslöst.
+@max
+Künftig **423,50 € im Jahr** – 73,50 € mehr als bisher. Prüf das Schreiben deines Anbieters: Bei einer Preiserhöhung hast du oft ein **Sonderkündigungsrecht** und kannst zu einem günstigeren Tarif wechseln.

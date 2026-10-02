@@ -1,0 +1,444 @@
+# Werkzeuge, Teil 3: direkt aufrufen – ohne Ankündigung davor –, mehrere nacheinander, wenn nötig, und danach
+# mit dem Ergebnis antworten. Rechnen immer mit `rechnen`, Aktuelles mit `websuche`, Zeit mit `uhrzeit`.
+
+=== deutschlandticket preis
+@nutzer
+Was kostet das Deutschlandticket inzwischen?
+@max
+```werkzeug
+websuche: Deutschlandticket Preis 2026
+```
+@ergebnis
+Treffer für "Deutschlandticket Preis 2026":
+1. Deutschlandticket: Preis steigt auf 63 Euro – Die Bundesregierung
+   https://www.bundesregierung.de/breg-de/aktuelles/deutschlandticket-preis
+   Seit dem 1. Januar 2026 kostet das Deutschlandticket 63 Euro im Monat. Es gilt weiterhin bundesweit im Nahverkehr.
+2. Deutschlandticket – Fragen und Antworten | DB
+   https://www.bahn.de/angebot/regio/deutschland-ticket
+   Das Deutschlandticket ist ein monatlich kündbares Abo für Busse und Bahnen im Nahverkehr.
+@max
+Seit Januar 2026 kostet es **63 € im Monat** (Quelle: Bundesregierung). Es bleibt ein monatlich kündbares Abo und gilt bundesweit in Bussen und Bahnen des Nahverkehrs – nicht aber in ICE und IC.
+
+=== wetter zwei staedte
+@nutzer
+Wo ist es morgen wärmer, in Wien oder in Salzburg?
+@max
+```werkzeug
+wetter: Wien
+```
+@ergebnis
+Wetter in Wien (Österreich), Stand Mittwoch, 10:00 Uhr Ortszeit:
+Jetzt: 14 °C, gefühlt 13 °C, teilweise bewölkt, Wind 18 km/h, Luftfeuchte 62 %.
+Vorhersage:
+- Heute: 9 bis 17 °C, teilweise bewölkt
+- Morgen: 10 bis 19 °C, überwiegend klar
+- Fr 9.10.: 11 bis 18 °C, bedeckt, Regenwahrscheinlichkeit 30 %
+Sonnenaufgang heute 07:02, Sonnenuntergang 18:24 Uhr.
+(Quelle: Open-Meteo)
+@max
+```werkzeug
+wetter: Salzburg
+```
+@ergebnis
+Wetter in Salzburg (Österreich), Stand Mittwoch, 10:00 Uhr Ortszeit:
+Jetzt: 11 °C, gefühlt 10 °C, Nebel, Wind 4 km/h, Luftfeuchte 88 %.
+Vorhersage:
+- Heute: 6 bis 15 °C, Nebel
+- Morgen: 7 bis 16 °C, teilweise bewölkt
+- Fr 9.10.: 8 bis 14 °C, leichter Regen, Regenwahrscheinlichkeit 70 % (4,2 mm)
+Sonnenaufgang heute 07:14, Sonnenuntergang 18:39 Uhr.
+(Quelle: Open-Meteo)
+@max
+In **Wien**: Dort werden es morgen bis zu **19 °C** bei überwiegend klarem Himmel. Salzburg kommt auf höchstens 16 °C und bleibt teilweise bewölkt.
+
+=== tage bis weihnachten
+@nutzer
+Wie viele Tage sind es noch bis Weihnachten?
+@max
+```werkzeug
+uhrzeit
+```
+@ergebnis
+Freitag, 2. Oktober 2026, 18:22:40 Uhr (Kalenderwoche 40)
+@max
+Noch **83 Tage** bis Heiligabend – also knapp zwölf Wochen. Für Geschenke ist das reichlich Zeit, erfahrungsgemäß reicht sie trotzdem nie.
+
+=== wochentag
+@nutzer
+Welcher Wochentag ist heute?
+@max
+```werkzeug
+uhrzeit
+```
+@ergebnis
+Mittwoch, 21. Oktober 2026, 08:15:03 Uhr (Kalenderwoche 43)
+@max
+Heute ist **Mittwoch**, der 21. Oktober.
+
+=== uhrzeit new york
+@nutzer
+Wie spät ist es gerade in New York?
+@max
+```werkzeug
+uhrzeit
+```
+@ergebnis
+Donnerstag, 22. Oktober 2026, 15:40:12 Uhr (Kalenderwoche 43)
+@max
+In New York ist es gerade **9:40 Uhr** morgens – bei mitteleuropäischer Sommerzeit liegt die Ostküste sechs Stunden zurück.
+
+=== gehaltsabrechnung
+@nutzer
+Wie viel netto stand auf meiner letzten Gehaltsabrechnung?
+@max
+```werkzeug
+finden: Gehaltsabrechnung
+```
+@ergebnis
+Gesucht nach „Gehaltsabrechnung“ in /home/kim (27.540 Dateien angesehen, 3.9 s):
+Im Namen:
+- /home/kim/Dokumente/Gehalt/Gehaltsabrechnung_2026-09.pdf (88.4 KB, geändert 30.09.2026)
+- /home/kim/Dokumente/Gehalt/Gehaltsabrechnung_2026-08.pdf (87.9 KB, geändert 31.08.2026)
+- /home/kim/Dokumente/Gehalt/Gehaltsabrechnung_2026-07.pdf (88.1 KB, geändert 31.07.2026)
+(Lesen mit `datei: <Pfad>`.)
+@max
+```werkzeug
+datei: /home/kim/Dokumente/Gehalt/Gehaltsabrechnung_2026-09.pdf | Netto
+```
+@ergebnis
+Datei /home/kim/Dokumente/Gehalt/Gehaltsabrechnung_2026-09.pdf (88.4 KB) – PDF, 1 Seite:
+--- Seite 1 ---
+Entgeltabrechnung September 2026
+Gesamtbrutto 3.850,00
+Lohnsteuer 448,25
+Solidaritätszuschlag 0,00
+Krankenversicherung 336,88
+Pflegeversicherung 69,30
+Rentenversicherung 358,05
+Arbeitslosenversicherung 50,05
+Nettobezug 2.587,47
+Auszahlungsbetrag 2.587,47
+@max
+Auf der Abrechnung für **September 2026** stehen **2.587,47 € netto** bei 3.850 € brutto. Die größten Abzüge sind die Lohnsteuer (448,25 €) und die Rentenversicherung (358,05 €).
+
+=== mailbox rueckfrage
+@nutzer
+"/home/lena/Downloads/mailbox_0310.m4a" Wer war das?
+@max
+```werkzeug
+audio: /home/lena/Downloads/mailbox_0310.m4a | Wer war das?
+```
+@ergebnis
+Aufnahme /home/lena/Downloads/mailbox_0310.m4a (0:27 min, Sprache: Deutsch, 412.6 KB) – Abschrift, 4 Zeilen:
+[0:00] Ja, guten Tag, hier ist Brandt von der Hausverwaltung Seeblick.
+[0:05] Es geht um den Wasserschaden im Keller, der Gutachter würde gern am Dienstag vorbeikommen.
+[0:12] Passt Ihnen zehn Uhr? Sonst rufen Sie mich bitte bis Montag zurück.
+[0:18] Meine Nummer ist null sieben eins eins, vier fünf sechs sieben acht null. Danke, auf Wiederhören.
+@max
+Das war **Brandt von der Hausverwaltung Seeblick**. Es geht um den Wasserschaden im Keller: Ein Gutachter möchte am **Dienstag um 10 Uhr** vorbeikommen.
+@nutzer
+Und bis wann soll ich zurückrufen?
+@max
+Bis **Montag** – aber nur, wenn dir Dienstag um 10 Uhr nicht passt. Die Nummer ist **0711 456780**.
+
+=== rabatt
+@nutzer
+Ein Fernseher kostet 899 €, im Angebot 25 % billiger. Was zahle ich?
+@max
+```werkzeug
+rechnen: 899 * 0.75
+```
+@ergebnis
+899 * 0.75 = 674.25
+@max
+**674,25 €** – du sparst 224,75 €.
+
+=== tagesgeld zinsen
+@nutzer
+Wie viel Zinsen bringen 15.000 € auf dem Tagesgeldkonto mit 2,5 % in einem Jahr?
+@max
+```werkzeug
+rechnen: 15000 * 2.5%
+```
+@ergebnis
+15000 * 2.5% = 375
+@max
+**375 €** vor Steuern – vorausgesetzt, der Zinssatz bleibt das ganze Jahr gleich, was beim Tagesgeld nicht garantiert ist. In Deutschland bleiben Kapitalerträge bis 1.000 € im Jahr steuerfrei, wenn du bei der Bank einen Freistellungsauftrag eingerichtet hast.
+
+=== fahrenheit
+@nutzer
+Wie viel sind 72 Grad Fahrenheit in Celsius?
+@max
+```werkzeug
+rechnen: (72 - 32) * 5 / 9
+```
+@ergebnis
+(72 - 32) * 5 / 9 = 22.222222222222
+@max
+Etwa **22,2 °C** – angenehme Zimmertemperatur.
+
+=== trinkgeld teilen
+@nutzer
+Die Rechnung ist 86,40 €. Mit 10 % Trinkgeld, geteilt durch drei – wie viel zahlt jeder?
+@max
+```werkzeug
+rechnen: 86.40 * 1.1 / 3
+```
+@ergebnis
+86.40 * 1.1 / 3 = 31.68
+@max
+Jeder zahlt **31,68 €** – zusammen 95,04 € mit Trinkgeld.
+
+=== excel summe
+@nutzer
+"C:\Users\sara\Documents\Strom 2026.xlsx" Wie viel haben wir im ersten Halbjahr verbraucht?
+@max
+```werkzeug
+datei: C:\Users\sara\Documents\Strom 2026.xlsx | Wie viel haben wir im ersten Halbjahr verbraucht?
+```
+@ergebnis
+Datei C:\Users\sara\Documents\Strom 2026.xlsx (9.8 KB) – Excel-Tabelle, 1 Blatt:
+--- Blatt „Verbrauch“ ---
+Monat | Zählerstand | Verbrauch kWh
+Januar | 41240 | 312
+Februar | 41528 | 288
+März | 41819 | 291
+April | 42078 | 259
+Mai | 42305 | 227
+Juni | 42520 | 215
+Juli | 42731 | 211
+@max
+```werkzeug
+rechnen: 312 + 288 + 291 + 259 + 227 + 215
+```
+@ergebnis
+312 + 288 + 291 + 259 + 227 + 215 = 1592
+@max
+Von Januar bis Juni waren es **1.592 kWh**. Der Verbrauch ist dabei von 312 kWh im Januar auf 215 kWh im Juni gesunken – im Winter brennt eben länger Licht.
+
+=== ordner dann code
+@nutzer
+Welche Python-Dateien liegen hier, und was macht main.py?
+@max
+```werkzeug
+ordner: .
+```
+@ergebnis
+Ordner /home/jan/code/wetterbot:
+- .venv/
+- tests/
+- bot.py (4.2 KB)
+- config.py (612 B)
+- main.py (209 B)
+- requirements.txt (64 B)
+@max
+```werkzeug
+datei: main.py
+```
+@ergebnis
+Datei /home/jan/code/wetterbot/main.py (209 B) – Textdatei, 13 Zeilen:
+import asyncio
+
+from bot import WetterBot
+from config import TOKEN, STADT
+
+
+async def main():
+    bot = WetterBot(TOKEN, stadt=STADT)
+    await bot.start()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+@max
+Hier liegen drei Python-Dateien: `bot.py`, `config.py` und `main.py`.
+
+`main.py` ist nur der **Startpunkt**: Es holt `TOKEN` und `STADT` aus `config.py`, baut damit einen `WetterBot` aus `bot.py` und startet ihn mit `asyncio.run`. Die eigentliche Logik steckt in `bot.py`.
+
+=== websuche zweiter versuch
+@nutzer
+Such mal, wann der Wertstoffhof in Hintertupfing aufmacht.
+@max
+```werkzeug
+websuche: Wertstoffhof Hintertupfing Öffnungszeiten
+```
+@ergebnis
+Keine Treffer für "Wertstoffhof Hintertupfing Öffnungszeiten".
+@max
+```werkzeug
+websuche: Hintertupfing Recyclinghof
+```
+@ergebnis
+Treffer für "Hintertupfing Recyclinghof":
+1. Abfallwirtschaft im Landkreis – Recyclinghöfe und Öffnungszeiten
+   https://www.abfall-landkreis.example/recyclinghoefe
+   Recyclinghof Hintertupfing, Gewerbestraße 4: Di und Do 14–18 Uhr, Sa 9–13 Uhr.
+@max
+Unter „Wertstoffhof“ gab es nichts, beim Landkreis steht er als **Recyclinghof**: Gewerbestraße 4, geöffnet **Dienstag und Donnerstag 14–18 Uhr** und **Samstag 9–13 Uhr**.
+
+=== webseite zusammenfassen
+@nutzer
+Fass mir https://example.org/blog/homeoffice-tipps kurz zusammen.
+@max
+```werkzeug
+webseite: https://example.org/blog/homeoffice-tipps
+```
+@ergebnis
+Webseite https://example.org/blog/homeoffice-tipps („Sieben Tipps fürs Homeoffice“) – Webseite, 1 Teil:
+Sieben Tipps fürs Homeoffice
+1. Ein fester Arbeitsplatz, der nicht das Sofa ist.
+2. Feste Anfangs- und Endzeiten – auch für die Mittagspause.
+3. Morgens kurz rausgehen, als wäre es der Arbeitsweg.
+4. Aufgaben für den Tag am Vorabend notieren.
+5. Benachrichtigungen bündeln, statt ständig zu reagieren.
+6. Bildschirm auf Augenhöhe, Licht von der Seite.
+7. Nach Feierabend den Laptop zuklappen und wegräumen.
+@max
+Sieben Tipps, im Kern drei Gedanken:
+
+- **Arbeit und Zuhause trennen:** ein fester Arbeitsplatz (nicht das Sofa), den Laptop nach Feierabend wegräumen.
+- **Struktur:** feste Anfangs- und Endzeiten, die Aufgaben schon am Vorabend notieren, Benachrichtigungen bündeln.
+- **Körper:** morgens kurz raus wie auf dem Arbeitsweg, Bildschirm auf Augenhöhe, Licht von der Seite.
+
+=== webseite gezielt suchen
+@nutzer
+Wie lange habe ich laut https://shop.example.com/agb Zeit, etwas zurückzuschicken?
+@max
+```werkzeug
+webseite: https://shop.example.com/agb | Rückgabe
+```
+@ergebnis
+Webseite https://shop.example.com/agb („Allgemeine Geschäftsbedingungen“) – Webseite, 9 Teile. Stellen zu „Rückgabe“:
+--- Anfang (Teil 1) ---
+Allgemeine Geschäftsbedingungen der Beispiel Shop GmbH, Stand März 2026. § 1 Geltungsbereich: Diese Bedingungen gelten für alle Bestellungen über unseren Onlineshop.
+--- Teil 6 ---
+§ 9 Widerrufsrecht und Rückgabe. Verbraucher können Verträge binnen 14 Tagen ohne Angabe von Gründen widerrufen. Zusätzlich gewähren wir ein freiwilliges Rückgaberecht von 30 Tagen ab Erhalt der Ware. Die Kosten der Rücksendung tragen wir.
+(Ganz lesen: `webseite: https://shop.example.com/agb | Teil 6`.)
+@max
+Du hast **30 Tage** ab Erhalt der Ware: Gesetzlich gelten 14 Tage Widerrufsrecht, der Shop gibt freiwillig 30 Tage Rückgaberecht (§ 9 der AGB). Die Rücksendung kostet dich nichts.
+
+=== bild hund
+@nutzer
+"C:\Users\mika\Pictures\IMG_3307.jpg" Ist da ein Hund drauf?
+@max
+```werkzeug
+bild: C:\Users\mika\Pictures\IMG_3307.jpg | Ist da ein Hund drauf?
+```
+@ergebnis
+Bild C:\Users\mika\Pictures\IMG_3307.jpg:
+Ja, auf dem Bild ist ein Hund zu sehen: ein hellbrauner Labrador, der auf einer Wiese liegt und einen roten Ball zwischen den Pfoten hält. Im Hintergrund stehen Bäume, es ist sonnig.
+@max
+Ja – ein **hellbrauner Labrador** liegt auf einer Wiese, einen roten Ball zwischen den Pfoten. Sieht nach einem sehr zufriedenen Nachmittag aus.
+
+=== schirm hamburg
+@nutzer
+Brauche ich morgen in Hamburg einen Schirm?
+@max
+```werkzeug
+wetter: Hamburg
+```
+@ergebnis
+Wetter in Hamburg (Deutschland), Stand Montag, 21:00 Uhr Ortszeit:
+Jetzt: 9 °C, gefühlt 6 °C, bedeckt, Wind 22 km/h, Luftfeuchte 86 %.
+Vorhersage:
+- Heute: 8 bis 13 °C, leichter Regen, Regenwahrscheinlichkeit 65 % (2,1 mm)
+- Morgen: 7 bis 12 °C, Regenschauer, Regenwahrscheinlichkeit 90 % (6,8 mm), Wind bis 48 km/h
+- Mi 4.11.: 6 bis 11 °C, bedeckt, Regenwahrscheinlichkeit 25 %
+Sonnenaufgang heute 07:20, Sonnenuntergang 16:46 Uhr.
+(Quelle: Open-Meteo)
+@max
+Ja: Morgen gibt es in Hamburg **Regenschauer** mit 90 % Wahrscheinlichkeit, dazu Wind bis **48 km/h**. Bei dem Wind hält ein kleiner Schirm nicht lange – eine Regenjacke ist die bessere Wahl.
+
+=== sprachnachricht englisch
+@nutzer
+"/home/chris/Downloads/voicemail.ogg" Was sagt sie? Bitte auf Deutsch.
+@max
+```werkzeug
+audio: /home/chris/Downloads/voicemail.ogg | Was sagt sie? Bitte auf Deutsch.
+```
+@ergebnis
+Aufnahme /home/chris/Downloads/voicemail.ogg (0:19 min, Sprache: Englisch, 31.7 KB) – Abschrift, 3 Zeilen:
+[0:00] Hi, it's Emma from the Lisbon apartment.
+[0:04] Just to let you know, check-in on Saturday is possible from 3 pm, the key will be in the lockbox by the door.
+[0:12] The code is 4 8 1 5. Have a safe trip!
+@max
+Emma von der Wohnung in Lissabon sagt: Du kannst am **Samstag ab 15 Uhr** einchecken. Der Schlüssel liegt in einem **Schlüsselkasten an der Tür**, der Code ist **4815**. Und sie wünscht dir eine gute Reise.
+
+=== anleitung blaettern
+@nutzer
+Lies mir die Bedienungsanleitung vom Router vor, die liegt irgendwo in den Downloads.
+@max
+```werkzeug
+finden: Router Anleitung | ~/Downloads
+```
+@ergebnis
+Gesucht nach „Router Anleitung“ in C:\Users\toni\Downloads (1.284 Dateien angesehen, 0.4 s):
+Im Namen:
+- C:\Users\toni\Downloads\Router-X300-Anleitung.pdf (6.8 MB, geändert 12.05.2026)
+(Lesen mit `datei: <Pfad>`.)
+@max
+```werkzeug
+datei: C:\Users\toni\Downloads\Router-X300-Anleitung.pdf
+```
+@ergebnis
+Datei C:\Users\toni\Downloads\Router-X300-Anleitung.pdf (6.8 MB) – PDF, 36 Seiten. Gezeigt: Seiten 1–2.
+--- Seite 1 ---
+Router X300 – Kurzanleitung und Handbuch
+--- Seite 2 ---
+Inhalt
+1 Lieferumfang 3
+2 Anschließen 4
+3 Einrichten im Browser 6
+4 WLAN 9
+5 Sicherheit 14
+6 Fehlerbehebung 28
+(Weiter mit `datei: C:\Users\toni\Downloads\Router-X300-Anleitung.pdf | Seite 3` – oder gezielt suchen: `datei: C:\Users\toni\Downloads\Router-X300-Anleitung.pdf | Suchbegriff`.)
+@max
+Die Anleitung hat 36 Seiten – am Stück vorlesen wäre eher eine Strafe. Das Inhaltsverzeichnis:
+
+1. Lieferumfang (S. 3)
+2. Anschließen (S. 4)
+3. Einrichten im Browser (S. 6)
+4. WLAN (S. 9)
+5. Sicherheit (S. 14)
+6. Fehlerbehebung (S. 28)
+@nutzer
+Das Kapitel zum WLAN bitte.
+@max
+```werkzeug
+datei: C:\Users\toni\Downloads\Router-X300-Anleitung.pdf | Seite 9
+```
+@ergebnis
+Datei C:\Users\toni\Downloads\Router-X300-Anleitung.pdf (6.8 MB) – PDF, 36 Seiten. Gezeigt: Seiten 9–10.
+--- Seite 9 ---
+4 WLAN
+Ihr Router sendet ab Werk zwei Funknetze: X300-2G (2,4 GHz) und X300-5G (5 GHz). Name und Kennwort stehen auf dem Typenschild auf der Unterseite.
+Das 2,4-GHz-Netz reicht weiter, das 5-GHz-Netz ist schneller. Mit „Band Steering“ (Menü WLAN > Funknetz) erscheinen beide als ein Netz, und der Router wählt das passende Band.
+--- Seite 10 ---
+4.1 Gastzugang
+Unter WLAN > Gastzugang richten Sie ein eigenes Netz für Besucher ein. Geräte im Gastnetz kommen ins Internet, aber nicht an Ihre Geräte im Heimnetz.
+(Weiter mit `datei: C:\Users\toni\Downloads\Router-X300-Anleitung.pdf | Seite 11` – oder gezielt suchen: `datei: C:\Users\toni\Downloads\Router-X300-Anleitung.pdf | Suchbegriff`.)
+@max
+Das Wichtigste aus dem WLAN-Kapitel (S. 9–10):
+
+- Der Router sendet **zwei Netze**: `X300-2G` (2,4 GHz, größere Reichweite) und `X300-5G` (5 GHz, schneller). Name und Kennwort stehen auf dem **Typenschild an der Unterseite**.
+- Mit **Band Steering** (*WLAN > Funknetz*) erscheinen beide als ein Netz, und der Router wählt das passende Band selbst.
+- Für Besuch gibt es einen **Gastzugang** (*WLAN > Gastzugang*): Gäste kommen ins Internet, aber nicht an deine Geräte.
+
+=== system grafikkarte
+@nutzer
+Welche Grafikkarte hab ich eigentlich?
+@max
+```werkzeug
+system
+```
+@ergebnis
+Betriebssystem: Linux (Ubuntu 24.04.3 LTS)
+Prozessor: AMD Ryzen 5 7600 6-Core Processor, 12 Kerne
+Arbeitsspeicher: 32 GB, davon frei: 21,4 GB
+Grafikkarte: AMD Radeon RX 7800 XT, 16 GB
+Läuft seit: 6 Stunden, 40 Minuten
+Laufwerke:
+- /: 318 GB frei von 931 GB
+@max
+Eine **AMD Radeon RX 7800 XT** mit **16 GB** Grafikspeicher – eine kräftige Mittelklasse-Karte, die aktuelle Spiele in WQHD flüssig schafft.

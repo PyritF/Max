@@ -21,7 +21,7 @@ Ich brauche Laminat für 22 m², ein Paket hat 2,13 m². Wie viele Pakete mit 10
 rechnen: 22 * 1.1 / 2.13
 ```
 @ergebnis
-22 * 1.1 / 2.13 = 11.3615023474
+22 * 1.1 / 2.13 = 11.361502347418
 @max
 Rechnerisch 11,36 Pakete – kauf also **12 Pakete**. Damit hast du knapp 25,6 m², genug Reserve für Verschnitt und ein verpatztes Brett.
 
@@ -47,9 +47,9 @@ Der Nutzer will eine Annuität ausrechnen. Formel: K * q^n * (q-1) / (q^n - 1) m
 rechnen: 200000 * (0.038/12) * (1 + 0.038/12)^300 / ((1 + 0.038/12)^300 - 1)
 ```
 @ergebnis
-200000 * (0.038/12) * (1 + 0.038/12)^300 / ((1 + 0.038/12)^300 - 1) = 1033.7166
+200000 * (0.038/12) * (1 + 0.038/12)^300 / ((1 + 0.038/12)^300 - 1) = 1033.713123381471
 @max
-Die Monatsrate liegt bei etwa **1.033,72 €** – gerechnet als gleichbleibende Rate über 300 Monate. Insgesamt zahlst du damit rund 310.115 €, also gut 110.000 € Zinsen.
+Die Monatsrate liegt bei etwa **1.033,71 €** – gerechnet als gleichbleibende Rate über 300 Monate. Insgesamt zahlst du damit rund 310.114 €, also gut 110.000 € Zinsen.
 
 === rechnen fehler
 @nutzer
@@ -59,7 +59,7 @@ Rechne mal (12 + 5 * 3
 rechnen: (12 + 5 * 3
 ```
 @ergebnis
-Fehler: Eine Klammer ist nicht geschlossen.
+Das kann ich so nicht rechnen: Eine Klammer wird nicht geschlossen.
 @max
 Da fehlt eine schließende Klammer. Meintest du **(12 + 5 · 3)**? Das wären 27 – Punkt vor Strich.
 
@@ -89,7 +89,7 @@ Der Preis ist von 1,49 € auf 1,89 € gestiegen. Um wie viel Prozent?
 rechnen: (1.89 - 1.49) / 1.49 * 100
 ```
 @ergebnis
-(1.89 - 1.49) / 1.49 * 100 = 26.8456375839
+(1.89 - 1.49) / 1.49 * 100 = 26.845637583893
 @max
 Um **26,8 %**. Klingt nach 40 Cent, ist aber gut ein Viertel mehr.
 
@@ -113,7 +113,7 @@ Ich bin 612 km gefahren und hab 38,4 Liter getankt. Wie viel braucht mein Auto?
 rechnen: 38.4 / 612 * 100
 ```
 @ergebnis
-38.4 / 612 * 100 = 6.2745098039
+38.4 / 612 * 100 = 6.274509803922
 @max
 Dein Auto braucht **6,3 Liter auf 100 km**.
 
@@ -161,7 +161,7 @@ Welchen Prozessor hab ich?
 system
 ```
 @ergebnis
-Betriebssystem: Ubuntu 24.04 (Linux 6.8.0-45-generic)
+Betriebssystem: Linux (Ubuntu 24.04.3 LTS)
 Prozessor: AMD Ryzen 5 5600X 6-Core Processor, 12 Kerne
 Arbeitsspeicher: 32 GB, davon frei: 21,4 GB
 Grafikkarte: AMD Radeon RX 6600, 8 GB
@@ -203,7 +203,7 @@ Arbeitsspeicher: 16 GB, davon frei: 9,7 GB
 Grafikkarte: NVIDIA GeForce GTX 1660 SUPER, 6 GB
 Läuft seit: 2 Stunden, 40 Minuten
 Laufwerke:
-- C:\: 74 GB frei von 476 GB
+- C:\: 74,2 GB frei von 476 GB
 @max
 Ja, für **mittlere Einstellungen in Full HD** reicht es: Der i5-10400F und 16 GB RAM sind ordentlich, die GTX 1660 Super mit 6 GB ist der Engpass – Raytracing kannst du vergessen, aber mit DLSS-Ersatz (FSR) und mittleren Details läuft es flüssig.
 

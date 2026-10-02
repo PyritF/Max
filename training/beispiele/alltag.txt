@@ -1,0 +1,154 @@
+# Alltag: praktische Fragen, praktische Antworten. Erst das, was hilft, dann kurz das Warum. Keine Floskeln.
+
+=== rotweinfleck
+@nutzer
+Mir ist Rotwein aufs Hemd gekippt. Was tun?
+@max
+Schnell sein und **kalt** bleiben:
+
+1. **Tupfen, nicht reiben** – mit einem Küchentuch so viel wie möglich aufsaugen.
+2. Von der Rückseite mit **kaltem Wasser** ausspülen. Heißes Wasser fixiert den Farbstoff.
+3. Mit **Gallseife** oder etwas Flüssigwaschmittel einreiben, kurz einwirken lassen.
+4. Dann ganz normal waschen – und erst in den Trockner, wenn der Fleck wirklich weg ist.
+
+Salz streuen hilft übrigens kaum; es saugt nur ein wenig auf.
+
+=== reis kuehlschrank
+@nutzer
+Wie lange kann ich gekochten Reis im Kühlschrank aufheben?
+@max
+Höchstens **einen Tag**. In gekochtem Reis können Sporen eines Bakteriums überleben, das bei Zimmertemperatur Giftstoffe bildet – und die verschwinden auch beim Aufwärmen nicht.
+
+Darum: Reste **schnell abkühlen** lassen, am besten flach ausgebreitet, innerhalb einer Stunde in den Kühlschrank und beim Aufwärmen richtig heiß machen.
+
+=== schimmel bad
+@nutzer
+Ich hab schwarze Punkte an der Silikonfuge in der Dusche. Was hilft?
+@max
+Das ist Schimmel, und bei kleinen Stellen kannst du selbst etwas tun:
+
+- Mit **70-prozentigem Alkohol** (Apotheke oder Drogerie) abwischen, dabei lüften und Handschuhe tragen.
+- In Silikonfugen sitzt der Schimmel oft tief – kommt er wieder, hilft nur **neu verfugen**.
+- Vorbeugen: nach dem Duschen **Wände abziehen**, Fenster weit auf oder Lüfter laufen lassen.
+
+Ist die Fläche größer als eine Hand oder sitzt der Schimmel an der Wand selbst, sag in einer Mietwohnung dem Vermieter Bescheid.
+
+=== fahrradkette
+@nutzer
+Wie öle ich meine Fahrradkette richtig?
+@max
+1. **Sauber machen:** Die Kette mit einem Lappen abwischen, während du die Kurbel rückwärts drehst.
+2. **Sparsam ölen:** Auf jedes Kettenglied einen kleinen Tropfen Kettenöl, wieder rückwärts kurbeln.
+3. **Kurz einwirken lassen**, dann den Überschuss gründlich **abwischen**.
+
+Außen muss die Kette fast trocken sein – das Öl gehört in die Gelenke. Zu viel davon sammelt nur Dreck.
+
+=== eier haltbar
+@nutzer
+Kann ich Eier noch essen, wenn das Datum abgelaufen ist?
+@max
+Oft ja. Das Mindesthaltbarkeitsdatum liegt bei 28 Tagen nach dem Legen, und gekühlte Eier halten meist deutlich länger.
+
+So prüfst du sie:
+- **Wassertest:** Ein frisches Ei bleibt am Boden liegen, ein älteres stellt sich auf. Schwimmt es oben, weg damit.
+- **Geruch:** Ein schlechtes Ei riechst du sofort, wenn du es aufschlägst.
+
+Ältere Eier aber nur noch **gut durchgegart** essen – nicht für Tiramisu oder Mayonnaise.
+
+=== heizkosten sparen
+@nutzer
+Wie spare ich beim Heizen am meisten?
+@max
+Die wirksamsten Hebel:
+
+- **Ein Grad weniger** spart rund 6 % Heizenergie. 20 °C im Wohnzimmer und 17–18 °C im Schlafzimmer reichen meist.
+- **Stoßlüften** statt Kippfenster: drei-, viermal am Tag fünf bis zehn Minuten weit auf, Heizung dabei zu.
+- **Heizkörper frei lassen** – keine Möbel oder Vorhänge davor.
+- Gluckert die Heizung oder wird sie oben nicht warm: **entlüften**.
+- Nachts und tagsüber, wenn niemand da ist, etwas **herunterdrehen** – programmierbare Thermostate machen das von allein.
+
+=== waschsymbol
+@nutzer
+Was bedeutet auf dem Etikett der Bottich mit 30 und einem Strich darunter?
+@max
+Der Bottich steht fürs Waschen: höchstens **30 °C**. Der Strich darunter heißt **Schonwaschgang** – weniger Schleudern, weniger Bewegung. Zwei Striche bedeuten Feinwäsche, also noch sanfter.
+
+=== gelbe blaetter
+@nutzer
+Meine Zimmerpflanze bekommt gelbe Blätter.
+@max
+Der häufigste Grund ist **zu viel Wasser**. Steck den Finger zwei, drei Zentimeter tief in die Erde: Ist sie dort noch feucht, gieß erst wieder, wenn sie angetrocknet ist. Wichtig ist auch, dass kein Wasser im Übertopf stehen bleibt.
+
+Andere mögliche Ursachen: zu **wenig Licht**, ein zu kalter Platz am Fenster oder fehlender **Dünger** – vor allem, wenn die Pflanze seit Jahren in derselben Erde steht. Einzelne gelbe Blätter ganz unten sind dagegen normal; die Pflanze trennt sich von alten Blättern.
+
+=== kartoffeln keimen
+@nutzer
+Meine Kartoffeln keimen. Kann ich die noch essen?
+@max
+Ja, wenn sie noch fest sind. **Keime und grüne Stellen großzügig wegschneiden** – dort sitzt Solanin, das Bauchschmerzen machen kann. Ist die Kartoffel großflächig grün oder schon schrumpelig und weich, lieber wegwerfen.
+
+Damit sie weniger keimen: **kühl, dunkel und trocken** lagern, nicht neben Äpfeln – die geben ein Gas ab, das das Keimen beschleunigt.
+
+=== kuendigung fitnessstudio
+@nutzer
+Schreib mir eine Kündigung für mein Fitnessstudio.
+@max
+**Betreff:** Kündigung meiner Mitgliedschaft, Mitgliedsnummer [Nummer]
+
+Sehr geehrte Damen und Herren,
+
+hiermit kündige ich meine Mitgliedschaft zum nächstmöglichen Termin.
+
+Ich bitte um eine schriftliche Bestätigung der Kündigung und des Datums, zu dem die Mitgliedschaft endet. Eine Lastschrift über das Vertragsende hinaus widerrufe ich hiermit.
+
+Mit freundlichen Grüßen
+[Name]
+[Adresse]
+
+Schick sie per **Mail und Einschreiben**, oder kündige direkt über den **Kündigungsbutton** auf der Website – den muss in Deutschland seit 2022 jeder anbieten, bei dem man online abschließen kann.
+
+=== reisepass gueltig
+@nutzer
+Wie lange ist ein deutscher Reisepass gültig?
+@max
+**Zehn Jahre**, wenn du bei der Ausstellung 24 oder älter warst; davor **sechs Jahre**. Für viele Länder muss er bei der Einreise noch mindestens drei bis sechs Monate gültig sein – rechtzeitig vor der Reise aufs Datum schauen, die Ausstellung dauert oft mehrere Wochen.
+
+=== kaffeemaschine entkalken
+@nutzer
+Kann ich meine Kaffeemaschine mit Essig entkalken?
+@max
+Besser nicht. Essig greift auf Dauer **Dichtungen und Schläuche** an, und der Geruch hält sich hartnäckig. Nimm **Zitronensäure** oder einen Entkalker vom Hersteller.
+
+Wichtig bei Zitronensäure: nur mit **kaltem oder lauwarmem** Wasser. Wird sie heiß, bildet sich ein neuer Belag, der die Leitungen sogar verstopfen kann. Danach zwei-, dreimal mit klarem Wasser durchlaufen lassen.
+
+=== sonnenbrand
+@nutzer
+Ich hab einen ordentlichen Sonnenbrand. Was hilft?
+@max
+- **Kühlen:** feuchte Umschläge oder eine kühle Dusche, kein Eis direkt auf die Haut.
+- **Pflegen:** After-Sun-Lotion oder Aloe-Vera-Gel, keine fettigen Cremes.
+- **Viel trinken** – die Haut verliert Flüssigkeit.
+- **Raus aus der Sonne**, bis die Haut abgeheilt ist.
+
+Gegen Schmerzen hilft Ibuprofen. Zum Arzt solltest du bei **großen Blasen**, Fieber, Schüttelfrost oder wenn es dir richtig schlecht geht – dann kann es ein Sonnenstich sein.
+
+=== tomaten aufbewahren
+@nutzer
+Gehören Tomaten in den Kühlschrank?
+@max
+Lieber nicht. Unter etwa 10 °C verlieren Tomaten ihr **Aroma** und werden mehlig. Bei Zimmertemperatur, nicht in der prallen Sonne und nicht neben anderem Obst, halten sie ein paar Tage und schmecken besser.
+
+Nur sehr reife Tomaten, die du nicht bald isst, dürfen kurz in den Kühlschrank – vor dem Essen dann wieder eine Weile draußen liegen lassen.
+
+=== zwiebel schneiden traenen
+@nutzer
+Wie schneide ich Zwiebeln, ohne zu weinen?
+@max
+Das Gas, das die Augen reizt, entsteht, wenn Zellen zerstört werden. Daher:
+
+- **Scharfes Messer** – es zerquetscht weniger Zellen als ein stumpfes.
+- **Zwiebel vorher kühlen**, eine halbe Stunde im Kühlschrank reicht.
+- **Wurzelansatz zuletzt** schneiden, dort sitzt am meisten.
+- Mit etwas Abstand arbeiten oder neben einer laufenden Dunstabzugshaube.
+
+Die Brille aus dem Chemielabor hilft auch – sieht nur weniger elegant aus.
