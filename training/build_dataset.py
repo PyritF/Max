@@ -128,6 +128,8 @@ def check_answer(text: str, name: str, last: bool):
         raise Problem(f"{name}: Verlauf nicht geschlossen")
     if re.search(r"[{}]", re.sub(r"\{/?[^{}]+\}", "", plain)):
         raise Problem(f"{name}: geschweifte Klammer im Fließtext (geht nur als Farb-Tag oder in `Code`)")
+    if re.search(r"\n\s*([-*_])(\s*\1){2,}\s*$", "\n" + text.rstrip()):
+        raise Problem(f"{name}: endet mit einer Trennlinie (wie ClosingFilter: fällt weg und steckt sonst an)")
     last_paragraph = text.rstrip().split("\n\n")[-1].lstrip("*_ {")
     if last and "\n\n" in text.strip() and any(last_paragraph.lower().startswith(p.lower()) for p in CLOSING):
         raise Problem(f"{name}: endet mit einer Floskel ('{last_paragraph[:40]}')")
